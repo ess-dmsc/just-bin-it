@@ -102,3 +102,12 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# PyCharm
+.idea/
+
+# Coverage
+.coverage
+
+# pytest
+.pytest_cache/

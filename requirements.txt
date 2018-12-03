@@ -1,0 +1,8 @@
+fast-histogram
+numpy
+kafka-python
+flatbuffers
+pytest
+matplotlib
+confluent-kafka
+pytest-cov

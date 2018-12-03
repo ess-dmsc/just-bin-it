@@ -1,0 +1,5 @@
+[run]
+omit =
+    # Ignore schemas
+    ./fbschemas/*
+    ./tests/*
