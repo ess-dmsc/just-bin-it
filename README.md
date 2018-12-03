@@ -30,6 +30,19 @@ Currently only supports the [ev42](https://github.com/ess-dmsc/streaming-data-ty
 
 ## For developers
 
+### Install the commit hooks (important)
+The commit hooks are handled using [pre-commit](https://pre-commit.com).
+
+To install the hooks for this project run:
+```
+>>> pre-commit install
+```
+
+To test the hooks run:
+```
+>>> pre-commit run --all-files
+```
+
 ### Running unit tests
 From the top directory:
 ```
@@ -39,14 +52,11 @@ From the top directory:
 ### Formatting
 Formatting is handled by [Black](https://black.readthedocs.io/en/stable/).
 
-It can be added as a commit hook using [pre-commit](https://pre-commit.com):
-```
->>> pre-commit install
-```
+It is automatically added as a commit hook.
 
 To run manually:
 ```
 >>> pre-commit run --all-files
 ```
 
-Flake8 is also run as part of the commit hook.
+Flake8 is also run as a commit hook.
