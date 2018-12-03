@@ -19,9 +19,9 @@ class TestDeserialiser(object):
         data = deserialise(self.buf)
 
         assert 300 == data["message_id"]
-        assert 1542876129940000057 == data["pulse_time"]
+        assert 1_542_876_129_940_000_057 == data["pulse_time"]
         assert "NeXus-Streamer" == data["source"]
         assert 794 == len(data["det_ids"])
         assert 794 == len(data["tofs"])
         assert 99406 == data["det_ids"][0]
-        assert 11660506 == data["tofs"][0]
+        assert 11_660_506 == data["tofs"][0]

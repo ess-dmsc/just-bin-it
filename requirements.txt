@@ -1,8 +1,11 @@
-fast-histogram
-numpy
-kafka-python
+black
+confluent - kafka
+fast - histogram
+flake8
 flatbuffers
-pytest
+kafka - python
 matplotlib
-confluent-kafka
-pytest-cov
+numpy
+pre - commit
+pytest
+pytest - cov

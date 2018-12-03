@@ -11,11 +11,7 @@ class TestHistogramFactory(object):
             "data_brokers": ["localhost:9092", "someserver:9092"],
             "data_topics": ["my_topic"],
             "histograms": [
-                {
-                    "num_dims": 1,
-                    "det_range": [20, 2000],
-                    "num_bins": 50,
-                },
+                {"num_dims": 1, "det_range": [20, 2000], "num_bins": 50},
                 {
                     "num_dims": 2,
                     "tof_range": [30, 3000],
@@ -25,6 +21,7 @@ class TestHistogramFactory(object):
             ],
         }
         import json
+
         print(json.dumps(self.config))
 
     def test_factory_creates_histograms_correctly(self):

@@ -9,6 +9,7 @@ class Consumer:
     This contains the least amount of logic because it is hard to effectively
     mock the Kafka side without making the tests trivial/pointless.
     """
+
     def __init__(self, brokers, topics):
         """
         Constructor.
@@ -36,7 +37,6 @@ class Consumer:
                 print(self.consumer.position(topic))
         except KafkaError as err:
             raise Exception(err)
-
 
     def get_new_messages(self):
         """
