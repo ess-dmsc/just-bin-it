@@ -5,8 +5,8 @@ A lightweight program for histogramming neutron event data for diagnostic purpos
 ## How to run
 Python 3.7+ only. Might work on older version of Python 3 but not tested.
 
-This assumes you have Kafka running on localhost and have recently run the NeXus-Streamer
-using the SANS_test_reduced.hdf5 dataset.
+This assumes you have Kafka running on localhost and have the NeXus-Streamer
+running in the background using the SANS_test_reduced.hdf5 dataset.
 
 ```
 >>> pip install -r requirements.txt

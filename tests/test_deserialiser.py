@@ -1,7 +1,7 @@
 import pytest
 import os
 import tests
-from deserialisation import deserialise
+from deserialisation import deserialise_ev42
 
 
 class TestDeserialiser(object):
@@ -12,11 +12,11 @@ class TestDeserialiser(object):
         with open(os.path.join(path, "example_fb.dat"), "rb") as f:
             self.buf = f.read()
 
-    def test_deserialises_message_correctly(self):
+    def test_deserialises_ev42_message_correctly(self):
         """
         Sanity check: checks the combination of libraries work as expected.
         """
-        data = deserialise(self.buf)
+        data = deserialise_ev42(self.buf)
 
         assert 300 == data["message_id"]
         assert 1_542_876_129_940_000_057 == data["pulse_time"]

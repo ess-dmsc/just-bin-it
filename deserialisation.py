@@ -1,9 +1,9 @@
 from fbschemas.ev42.EventMessage import EventMessage as event_msg
 
 
-def deserialise(buf):
+def deserialise_ev42(buf):
     """
-    Deserialise a FlatBuffers message.
+    Deserialise an ev42 FlatBuffers message.
 
     :param buf: The raw buffer of the FlatBuffers message.
     :return: A dictionary of the deserialised values

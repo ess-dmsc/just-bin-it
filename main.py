@@ -8,44 +8,54 @@ from histogrammer1d import Histogrammer1d
 from histogram_factory import HistogramFactory
 
 
-def main(brokers, topic, json_config):
+def plot_histogram(hist):
+    """
+    Plot a histogram.
+
+    :param hist: The histogram to plot.
+    """
+    import matplotlib.pyplot as plt
+
+    if isinstance(hist, Histogrammer1d):
+        width = 0.7 * (hist.x_edges[1] - hist.x_edges[0])
+        center = (hist.x_edges[:-1] + hist.x_edges[1:]) / 2
+        plt.bar(center, hist.histogram, align="center", width=width)
+        plt.show()
+    elif isinstance(hist, Histogrammer2d):
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        x, y = np.meshgrid(hist.x_edges, hist.y_edges)
+        ax.pcolormesh(x, y, hist.histogram)
+        plt.show()
+
+
+def main(brokers, topic, json_config, debug):
     # Extract the configuration from the JSON.
     config = json.loads(json_config)
     # Create the histograms
     histograms = HistogramFactory.generate(config)
 
     # Initialisation
-    ec = Consumer(config["data_brokers"], config["data_topics"])
-    es = EventSource(ec)
+    config_consumer = Consumer(config["data_brokers"], config["data_topics"])
+    event_source = EventSource(config_consumer)
 
-    buffs = []
+    while True:
+        buffs = []
 
-    while len(buffs) == 0:
-        buffs = es.get_data()
+        while len(buffs) == 0:
+            buffs = event_source.get_data()
 
-    for hist in histograms:
-        for b in buffs:
-            x = b["tofs"]
-            y = b["det_ids"]
-            hist.add_data(x, y)
+        for hist in histograms:
+            for b in buffs:
+                x = b["tofs"]
+                y = b["det_ids"]
+                hist.add_data(x, y)
 
-    # Just for debugging purposes plot the data
-    # TODO: remove at a later date
-    import matplotlib.pyplot as plt
-
-    h = histograms[0]
-
-    if isinstance(h, Histogrammer1d):
-        width = 0.7 * (h.x_edges[1] - h.x_edges[0])
-        center = (h.x_edges[:-1] + h.x_edges[1:]) / 2
-        plt.bar(center, h.histogram, align="center", width=width)
-        plt.show()
-    elif isinstance(h, Histogrammer2d):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, title="Hello")
-        x, y = np.meshgrid(h.x_edges, h.y_edges)
-        ax.pcolormesh(x, y, h.histogram)
-        plt.show()
+        if debug:
+            # Only plot the first histogram
+            plot_histogram(histograms[0])
+            # Exit the program when the graph is closed
+            return
 
 
 if __name__ == "__main__":
@@ -67,6 +77,13 @@ if __name__ == "__main__":
     #     "-t", "--topic", type=str, help="the information topic", required=True,
     # )
 
+    parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="runs the program until it gets some data then plots it",
+    )
+
     # This argument is temporary while we are decided on how to configure the
     # histogrammer via Kafka.
     parser.add_argument(
@@ -78,4 +95,4 @@ if __name__ == "__main__":
     with open(args.config, "r") as f:
         json_str = f.read()
 
-    main(None, None, json_str)
+    main(None, None, json_str, args.debug)

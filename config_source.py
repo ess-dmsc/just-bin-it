@@ -1,7 +1,7 @@
-from deserialisation import deserialise_ev42
+import json
 
 
-class EventSource:
+class ConfigSource:
     def __init__(self, consumer):
         """
         Constructor.
@@ -12,17 +12,22 @@ class EventSource:
             raise Exception("Event source must have a consumer")
         self.consumer = consumer
 
-    def get_data(self):
+    def get_new_config(self):
         """
         Get the latest data from the consumer.
 
         :return: The list of data.
         """
-        data = []
+        data = None
         msgs = self.consumer.get_new_messages()
 
         # Unwrap the messages from a topic based dict into a list
         for topic, records in msgs.items():
             for i in records:
-                data.append(deserialise_ev42(i.value))
+                try:
+                    data = json.loads(i.value)
+                except json.decoder.JSONDecodeError:
+                    # Ignore it and do nothing
+                    pass
+
         return data
