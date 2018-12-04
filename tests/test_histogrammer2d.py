@@ -17,7 +17,7 @@ class TestHistogrammer2d(object):
         assert self.hist.x_edges is None
         assert self.hist.y_edges is None
 
-    def test_adding_data_to_unintialised_histogram_initialises_it(self):
+    def test_adding_data_to_uninitialised_histogram_initialises_it(self):
         self.hist.add_data(self.data, self.data)
 
         assert self.hist.histogram is not None
