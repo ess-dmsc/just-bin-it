@@ -29,5 +29,4 @@ class ConfigSource:
                 except json.decoder.JSONDecodeError:
                     # Ignore it and do nothing
                     pass
-
         return data

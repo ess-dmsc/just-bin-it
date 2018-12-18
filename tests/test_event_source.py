@@ -7,7 +7,7 @@ from tests.mock_consumer import MockConsumer
 TEST_MESSAGE = b"this is a byte message"
 
 
-class TestEventSource(object):
+class TestEventSource:
     @pytest.fixture(autouse=True)
     def prepare(self):
         pass

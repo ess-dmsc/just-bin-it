@@ -4,7 +4,7 @@ import tests
 from deserialisation import deserialise_ev42
 
 
-class TestDeserialiser(object):
+class TestDeserialiser:
     @pytest.fixture(autouse=True)
     def prepare(self):
         # Trick to get path of test data

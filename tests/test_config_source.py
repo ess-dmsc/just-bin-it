@@ -27,10 +27,14 @@ VALID_JSON_2 = """
 INVALID_JSON = '{ "malformed": 123]'
 
 
-class TestConfigSource(object):
+class TestConfigSource:
     @pytest.fixture(autouse=True)
     def prepare(self):
         pass
+
+    def test_if_no_consumer_supplied_then_raises(self):
+        with pytest.raises(Exception, message="Expecting Exception from Constructor"):
+            ConfigSource(None)
 
     def test_received_configuration_converted_correctly(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"], [VALID_JSON_1])

@@ -4,7 +4,7 @@ from histogrammer1d import Histogrammer1d
 from histogrammer2d import Histogrammer2d
 
 
-class TestHistogramFactory(object):
+class TestHistogramFactory:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.config = {

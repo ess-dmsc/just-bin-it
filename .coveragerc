@@ -3,3 +3,6 @@ omit =
     # Ignore schemas
     ./fbschemas/*
     ./tests/*
+    # Ignore non-testables
+    kafka_consumer.py
+    main.py

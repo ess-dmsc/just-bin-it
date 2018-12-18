@@ -3,7 +3,7 @@ import numpy as np
 from histogrammer2d import Histogrammer2d
 
 
-class TestHistogrammer2d(object):
+class TestHistogrammer2d:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.num_bins = 5
