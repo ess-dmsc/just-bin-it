@@ -4,12 +4,12 @@ import tests
 from deserialisation import deserialise_ev42
 
 
-class TestDeserialiser:
+class TestDeserialisation:
     @pytest.fixture(autouse=True)
     def prepare(self):
         # Trick to get path of test data
         path = os.path.dirname(tests.__file__)
-        with open(os.path.join(path, "example_fb.dat"), "rb") as f:
+        with open(os.path.join(path, "example_ev42_fb.dat"), "rb") as f:
             self.buf = f.read()
 
     def test_deserialises_ev42_message_correctly(self):
