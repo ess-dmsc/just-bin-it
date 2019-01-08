@@ -25,6 +25,24 @@ def deserialise_ev42(buf):
     return data
 
 
+def _serialise_metadata(builder, edges, length):
+    ArrayFloat.ArrayFloatStartValueVector(builder, len(edges))
+    # FlatBuffers builds arrays backwards
+    for x in reversed(edges):
+        builder.PrependFloat32(x)
+    bins = builder.EndVector(len(edges))
+    # Add the bins
+    ArrayFloat.ArrayFloatStart(builder)
+    ArrayFloat.ArrayFloatAddValue(builder, bins)
+    pos_bin = ArrayFloat.ArrayFloatEnd(builder)
+
+    DimensionMetaData.DimensionMetaDataStart(builder)
+    DimensionMetaData.DimensionMetaDataAddLength(builder, length)
+    DimensionMetaData.DimensionMetaDataAddBinBoundaries(builder, pos_bin)
+    DimensionMetaData.DimensionMetaDataAddBinBoundariesType(builder, Array.ArrayFloat)
+    return DimensionMetaData.DimensionMetaDataEnd(builder)
+
+
 def serialise_hs00(histogrammer):
     """
     Serialise a histogram as an hs00 FlatBuffers message.
@@ -33,14 +51,13 @@ def serialise_hs00(histogrammer):
     :return: The raw buffer of the FlatBuffers message.
     """
     histogram = histogrammer.histogram
-
     builder = flatbuffers.Builder(1024)
-
     source = builder.CreateString("just-bin-it")
 
-    # Build shape array - FlatBuffers requires the vector backwards
+    # Build shape array
     rank = len(histogram.shape)
     EventHistogram.EventHistogramStartCurrentShapeVector(builder, rank)
+    # FlatBuffers builds arrays backwards
     for s in reversed(histogram.shape):
         builder.PrependUint32(s)
     shape = builder.EndVector(rank)
@@ -48,50 +65,41 @@ def serialise_hs00(histogrammer):
     # Build dimensions metadata
     metadata = []
     # Build the x bins vector
-    ArrayFloat.ArrayFloatStartValueVector(builder, len(histogrammer.x_edges))
-    for x in reversed(histogrammer.x_edges):
-        builder.PrependFloat32(x)
-    x_bins = builder.EndVector(len(histogrammer.x_edges))
-    # Add the bins
-    ArrayFloat.ArrayFloatStart(builder)
-    ArrayFloat.ArrayFloatAddValue(builder, x_bins)
-    x_pos_bin = ArrayFloat.ArrayFloatEnd(builder)
-
-    DimensionMetaData.DimensionMetaDataStart(builder)
-    DimensionMetaData.DimensionMetaDataAddLength(builder, histogram.shape[0])
-    DimensionMetaData.DimensionMetaDataAddBinBoundaries(builder, x_pos_bin)
-    DimensionMetaData.DimensionMetaDataAddBinBoundariesType(builder, Array.ArrayFloat)
-    metadata.append(DimensionMetaData.DimensionMetaDataEnd(builder))
+    metadata = [_serialise_metadata(builder, histogrammer.x_edges, histogram.shape[0])]
 
     # Build the y bins vector, if present
     if hasattr(histogrammer, "y_edges"):
-        ArrayFloat.ArrayFloatStartValueVector(builder, len(histogrammer.x_edges))
-        for y in reversed(histogrammer.y_edges):
-            builder.PrependFloat32(y)
-        y_bins = builder.EndVector(len(histogrammer.y_edges))
-        # Add the bins
-        ArrayFloat.ArrayFloatStart(builder)
-        ArrayFloat.ArrayFloatAddValue(builder, y_bins)
-        y_pos_bin = ArrayFloat.ArrayFloatEnd(builder)
-
-        DimensionMetaData.DimensionMetaDataStart(builder)
-        DimensionMetaData.DimensionMetaDataAddLength(builder, histogram.shape[1])
-        DimensionMetaData.DimensionMetaDataAddBinBoundaries(builder, y_pos_bin)
-        DimensionMetaData.DimensionMetaDataAddBinBoundariesType(
-            builder, Array.ArrayFloat
+        metadata.append(
+            _serialise_metadata(builder, histogrammer.y_edges, histogram.shape[1])
         )
-        metadata.append(DimensionMetaData.DimensionMetaDataEnd(builder))
 
     EventHistogram.EventHistogramStartDimMetadataVector(builder, rank)
+    # FlatBuffers builds arrays backwards
     for m in reversed(metadata):
         builder.PrependUOffsetTRelative(m)
     metadata_vector = builder.EndVector(rank)
+
+    # Build the data
+    data_len = len(histogram)
+    if len(histogram.shape) == 2:
+        # 2-D data will be flattened into one array
+        data_len = histogram.shape[0] * histogram.shape[1]
+
+    ArrayFloat.ArrayFloatStartValueVector(builder, data_len)
+    # FlatBuffers builds arrays backwards
+    for x in reversed(histogram.flatten()):
+        builder.PrependFloat32(x)
+    data = builder.EndVector(data_len)
+    ArrayFloat.ArrayFloatStart(builder)
+    ArrayFloat.ArrayFloatAddValue(builder, data)
+    pos_data = ArrayFloat.ArrayFloatEnd(builder)
 
     # Build the actual buffer
     EventHistogram.EventHistogramStart(builder)
     EventHistogram.EventHistogramAddSource(builder, source)
     EventHistogram.EventHistogramAddCurrentShape(builder, shape)
     EventHistogram.EventHistogramAddDimMetadata(builder, metadata_vector)
+    EventHistogram.EventHistogramAddData(builder, pos_data)
     hist = EventHistogram.EventHistogramEnd(builder)
     builder.Finish(hist)
     return builder.Output()

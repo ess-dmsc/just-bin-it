@@ -1,4 +1,4 @@
-from deserialisation import deserialise_ev42
+from serialisation import deserialise_ev42
 
 
 class EventSource:
