@@ -4,7 +4,7 @@ from histogrammer1d import Histogrammer1d
 from histogrammer2d import Histogrammer2d
 from serialisation import serialise_hs00
 from fbschemas.hs00.EventHistogram import EventHistogram
-import fbschemas.hs00.ArrayFloat as ArrayFloat
+import fbschemas.hs00.ArrayDouble as ArrayDouble
 from fbschemas.hs00.Array import Array
 
 
@@ -31,15 +31,15 @@ def _deserialise(buf):
         bins_fb = event_hist.DimMetadata(i).BinBoundaries()
 
         # Get bins
-        temp = ArrayFloat.ArrayFloat()
+        temp = ArrayDouble.ArrayDouble()
         temp.Init(bins_fb.Bytes, bins_fb.Pos)
         bins = temp.ValueAsNumpy()
 
         # Get type
-        if event_hist.DimMetadata(i).BinBoundariesType() == Array.ArrayFloat:
-            bin_type = np.float32
+        if event_hist.DimMetadata(i).BinBoundariesType() == Array.ArrayDouble:
+            bin_type = np.float64
         else:
-            raise TypeError("Could not determine bin boundaries type")
+            raise TypeError("Type of the bin boundaries is incorrect")
 
         info = {
             "length": event_hist.DimMetadata(i).Length(),
@@ -49,8 +49,11 @@ def _deserialise(buf):
         dims.append(info)
 
     # Get the data
+    if event_hist.DataType() != Array.ArrayDouble:
+        raise TypeError("Type of the data array is incorrect")
+
     data_fb = event_hist.Data()
-    temp = ArrayFloat.ArrayFloat()
+    temp = ArrayDouble.ArrayDouble()
     temp.Init(data_fb.Bytes, data_fb.Pos)
     data = temp.ValueAsNumpy()
     shape = event_hist.CurrentShapeAsNumpy().tolist()
@@ -65,13 +68,13 @@ def _deserialise(buf):
 
 
 def _create_1d_histogrammer():
-    histogrammer = Histogrammer1d(X_RANGE, NUM_BINS)
+    histogrammer = Histogrammer1d(X_RANGE, NUM_BINS, "topic")
     histogrammer.add_data(TOF_DATA)
     return histogrammer
 
 
 def _create_2d_histogrammer():
-    histogrammer = Histogrammer2d(X_RANGE, Y_RANGE, NUM_BINS)
+    histogrammer = Histogrammer2d(X_RANGE, Y_RANGE, NUM_BINS, "topic")
     histogrammer.add_data(TOF_DATA, DET_DATA)
     return histogrammer
 
@@ -93,7 +96,7 @@ class TestSerialisation:
         assert [self.hist_1d.num_bins] == hist["shape"]
         assert self.hist_1d.x_edges.tolist() == hist["dims"][0]["edges"]
         assert self.hist_1d.num_bins == hist["dims"][0]["length"]
-        assert np.float32 == hist["dims"][0]["type"]
+        assert np.float64 == hist["dims"][0]["type"]
         assert np.array_equal(self.hist_1d.histogram, hist["data"])
 
     def test_serialises_hs00_message_correctly_for_2d(self):
@@ -109,6 +112,6 @@ class TestSerialisation:
         assert self.hist_2d.y_edges.tolist() == hist["dims"][1]["edges"]
         assert self.hist_2d.num_bins == hist["dims"][0]["length"]
         assert self.hist_2d.num_bins == hist["dims"][1]["length"]
-        assert np.float32 == hist["dims"][0]["type"]
-        assert np.float32 == hist["dims"][1]["type"]
+        assert np.float64 == hist["dims"][0]["type"]
+        assert np.float64 == hist["dims"][1]["type"]
         assert np.array_equal(self.hist_2d.histogram, hist["data"])

@@ -5,4 +5,5 @@ omit =
     ./tests/*
     # Ignore non-testables
     kafka_consumer.py
+    kafka_producer.py
     main.py

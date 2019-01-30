@@ -8,8 +8,8 @@ VALID_JSON_1 = """
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
-    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50},
-    {"num_dims": 2, "det_range": [10, 1234], "num_bins": 100}
+    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50, "topic": "topic1"},
+    {"num_dims": 2, "det_range": [10, 1234], "num_bins": 100, "topic": "topic2"}
   ]
 }
 """
@@ -19,7 +19,7 @@ VALID_JSON_2 = """
   "data_brokers": ["differenthost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
-    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50}
+    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50, "topic": "topic1"}
   ]
 }
 """
@@ -53,6 +53,8 @@ class TestConfigSource:
         assert 2 == config["histograms"][1]["num_dims"]
         assert [10, 1234] == config["histograms"][1]["det_range"]
         assert 100 == config["histograms"][1]["num_bins"]
+        assert "topic1" == config["histograms"][0]["topic"]
+        assert "topic2" == config["histograms"][1]["topic"]
 
     def test_no_messages_returns_none(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"], [])

@@ -10,7 +10,9 @@ class TestHistogrammer2d:
         self.tof_range = (0, 5)
         self.det_range = (0, 5)
         self.data = np.array([x for x in range(self.num_bins)])
-        self.hist = Histogrammer2d(self.tof_range, self.det_range, self.num_bins)
+        self.hist = Histogrammer2d(
+            self.tof_range, self.det_range, self.num_bins, "topic"
+        )
 
     def test_on_construction_histogram_is_uninitialised(self):
         assert self.hist.histogram is None

@@ -40,5 +40,5 @@ class Consumer:
         :return: The dict containing the messages.
         """
         data = self.consumer.poll(5)
-        print(self.consumer.position(self.topics[0]))
+        print("Consumer position:", self.consumer.position(self.topics[0]))
         return data

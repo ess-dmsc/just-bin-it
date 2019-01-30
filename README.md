@@ -3,7 +3,7 @@
 A lightweight program for histogramming neutron event data for diagnostic purposes.
 
 ## Setup
-Python 3.7+ only. Might work on older version of Python 3 but not tested.
+Python 3.7+ only. Might work on older versions of Python 3 but not tested.
 
 ```
 >>> pip install -r requirements.txt
@@ -46,7 +46,7 @@ CONFIG_JSON = b"""
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
-    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50}
+    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50, "topic": "topic1"}
   ]
 }
 """
@@ -60,11 +60,14 @@ This should plot a 1-D histogram with some data in it.
 
 ## Supported schemas
 
-Currently only supports the [ev42](https://github.com/ess-dmsc/streaming-data-types) event schema.
+Input data: [ev42](https://github.com/ess-dmsc/streaming-data-types) only.
+Output data: [hs00](https://github.com/ess-dmsc/streaming-data-types) only.
 
 ## For developers
 
 ### Install the commit hooks (important)
+There are commit hooks for Black and Flake8.
+
 The commit hooks are handled using [pre-commit](https://pre-commit.com).
 
 To install the hooks for this project run:
@@ -76,6 +79,7 @@ To test the hooks run:
 ```
 >>> pre-commit run --all-files
 ```
+This command can also be used to run the hooks manually.
 
 ### Running unit tests
 From the top directory:
@@ -86,11 +90,4 @@ From the top directory:
 ### Formatting
 Formatting is handled by [Black](https://black.readthedocs.io/en/stable/).
 
-It is automatically added as a commit hook.
-
-To run manually:
-```
->>> pre-commit run --all-files
-```
-
-Flake8 is also run as a commit hook.
+It should be added as a commit hook (see above).

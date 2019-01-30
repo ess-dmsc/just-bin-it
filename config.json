@@ -2,6 +2,6 @@
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
-    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50}
+    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50, "topic": "hist-topic1"}
   ]
 }

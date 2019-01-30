@@ -3,17 +3,19 @@ from fast_histogram import histogram1d
 
 
 class Histogrammer1d:
-    def __init__(self, det_range, num_bins):
+    def __init__(self, det_range, num_bins, topic):
         """
         Constructor.
 
         :param det_range: The range of sequential detectors to histogram over.
         :param num_bins: The number of bins to divide the time-of-flight up into.
+        :param topic: The name of the Kafka topic to publish to.
         """
         self.histogram = None
         self.x_edges = None
         self.det_range = det_range
         self.num_bins = num_bins
+        self.topic = topic
 
     def add_data(self, x, y=None):
         """

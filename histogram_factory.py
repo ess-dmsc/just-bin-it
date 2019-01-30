@@ -18,10 +18,13 @@ class HistogramFactory:
 
             if h["num_dims"] == 1:
                 range = tuple(h["det_range"])
-                hist = Histogrammer1d(range, h["num_bins"])
+                hist = Histogrammer1d(range, h["num_bins"], h["topic"])
             elif h["num_dims"] == 2:
                 hist = Histogrammer2d(
-                    tuple(h["tof_range"]), tuple(h["det_range"]), h["num_bins"]
+                    tuple(h["tof_range"]),
+                    tuple(h["det_range"]),
+                    h["num_bins"],
+                    h["topic"],
                 )
             else:
                 # TODO: skip it, throw or what?

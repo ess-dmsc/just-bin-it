@@ -2,11 +2,13 @@ import argparse
 import numpy as np
 from time import sleep
 from kafka_consumer import Consumer
+from kafka_producer import Producer
 from event_source import EventSource
 from histogrammer2d import Histogrammer2d
 from histogrammer1d import Histogrammer1d
 from histogram_factory import HistogramFactory
 from config_source import ConfigSource
+from histogram_sink import HistogramSink
 
 
 def plot_histogram(hist):
@@ -43,6 +45,7 @@ def main(brokers, topic, one_shot):
     config_source = ConfigSource(config_consumer)
 
     event_source = None
+    hist_sink = None
     histograms = []
 
     while True:
@@ -54,7 +57,9 @@ def main(brokers, topic, one_shot):
         if config is not None:
             # Configure the event source and create the histograms
             consumer = Consumer(config["data_brokers"], config["data_topics"])
+            producer = Producer(config["data_brokers"])
             event_source = EventSource(consumer)
+            hist_sink = HistogramSink(producer)
             histograms = HistogramFactory.generate(config)
 
         if event_source is None:
@@ -77,6 +82,10 @@ def main(brokers, topic, one_shot):
             plot_histogram(histograms[0])
             # Exit the program when the graph is closed
             return
+        else:
+            # Publish histogram data
+            for h in histograms:
+                hist_sink.send_histogram(h.topic, h)
 
 
 if __name__ == "__main__":
@@ -100,7 +109,7 @@ if __name__ == "__main__":
         "-o",
         "--one-shot-plot",
         action="store_true",
-        help="runs the program until it gets some data then plots it then exits."
+        help="runs the program until it gets some data, plot it and then exit."
         " Used for testing",
     )
 
