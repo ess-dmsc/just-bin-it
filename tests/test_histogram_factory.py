@@ -1,7 +1,7 @@
 import pytest
-from histogram_factory import HistogramFactory
-from histogrammer1d import Histogrammer1d
-from histogrammer2d import Histogrammer2d
+from histograms.histogram_factory import HistogramFactory
+from histograms.histogrammer1d import Histogrammer1d
+from histograms.histogrammer2d import Histogrammer2d
 
 
 class TestHistogramFactory:

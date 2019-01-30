@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from histogrammer2d import Histogrammer2d
+from histograms.histogrammer2d import Histogrammer2d
 
 
 class TestHistogrammer2d:

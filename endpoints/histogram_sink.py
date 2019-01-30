@@ -1,4 +1,4 @@
-from serialisation import serialise_hs00
+from endpoints.serialisation import serialise_hs00
 
 
 class HistogramSink:

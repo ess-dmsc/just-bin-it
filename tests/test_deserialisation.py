@@ -1,7 +1,7 @@
 import pytest
 import os
 import tests
-from serialisation import deserialise_ev42
+from endpoints.serialisation import deserialise_ev42
 
 
 class TestDeserialisation:

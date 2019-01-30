@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
-from histogrammer1d import Histogrammer1d
-from histogrammer2d import Histogrammer2d
-from serialisation import serialise_hs00
+from histograms.histogrammer1d import Histogrammer1d
+from histograms.histogrammer2d import Histogrammer2d
+from endpoints.serialisation import serialise_hs00
 from fbschemas.hs00.EventHistogram import EventHistogram
 import fbschemas.hs00.ArrayDouble as ArrayDouble
 from fbschemas.hs00.Array import Array

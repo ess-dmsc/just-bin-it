@@ -1,5 +1,5 @@
 import pytest
-from config_source import ConfigSource
+from endpoints.config_source import ConfigSource
 from tests.mock_consumer import MockConsumer
 
 

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from event_source import EventSource
+from endpoints.event_source import EventSource
 from tests.mock_consumer import MockConsumer
 
 
@@ -22,7 +22,7 @@ class TestEventSource:
         data = es.get_data()
         assert 0 == len(data)
 
-    @patch("event_source.deserialise_ev42", return_value=TEST_MESSAGE)
+    @patch("endpoints.event_source.deserialise_ev42", return_value=TEST_MESSAGE)
     def test_if_five_new_messages_on_one_topic_then_data_has_five_items(
         self, mock_method
     ):

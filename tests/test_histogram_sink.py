@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from histogram_sink import HistogramSink
+from endpoints.histogram_sink import HistogramSink
 from tests.mock_producer import MockProducer, MockThrowsProducer
 
 
@@ -8,7 +8,7 @@ TEST_MESSAGE = "this is a message"
 TEST_TOPIC = "topic1"
 
 
-class TestConfigSource:
+class TestHistogramSink:
     @pytest.fixture(autouse=True)
     def prepare(self):
         pass
@@ -17,7 +17,7 @@ class TestConfigSource:
         with pytest.raises(Exception, message="Expecting Exception from Constructor"):
             HistogramSink(None)
 
-    @patch("histogram_sink.serialise_hs00", return_value=TEST_MESSAGE)
+    @patch("endpoints.histogram_sink.serialise_hs00", return_value=TEST_MESSAGE)
     def test_sending_a_message_sends_a_message(self, mock_method):
         producer = MockProducer()
         sink = HistogramSink(producer)

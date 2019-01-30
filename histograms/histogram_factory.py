@@ -1,5 +1,5 @@
-from histogrammer1d import Histogrammer1d
-from histogrammer2d import Histogrammer2d
+from histograms.histogrammer1d import Histogrammer1d
+from histograms.histogrammer2d import Histogrammer2d
 
 
 class HistogramFactory:
