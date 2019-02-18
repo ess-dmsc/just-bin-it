@@ -3,11 +3,10 @@ import numpy as np
 from time import sleep
 from endpoints.kafka_consumer import Consumer
 from endpoints.kafka_producer import Producer
-from endpoints.event_source import EventSource
 from histograms.histogrammer2d import Histogrammer2d
 from histograms.histogrammer1d import Histogrammer1d
 from histograms.histogram_factory import HistogramFactory
-from endpoints.config_source import ConfigSource
+from endpoints.config_source import ConfigSource, EventSource
 from endpoints.histogram_sink import HistogramSink
 
 
@@ -52,9 +51,12 @@ def main(brokers, topic, one_shot):
         sleep(0.5)
 
         # Check for a configuration change
-        config = config_source.get_new_config()
+        configs = config_source.get_new_data()
 
-        if config is not None:
+        if len(configs) > 0:
+            # We are only interested in the "latest" config
+            config = configs[-1]
+
             # Configure the event source and create the histograms
             consumer = Consumer(config["data_brokers"], config["data_topics"])
             producer = Producer(config["data_brokers"])
@@ -69,7 +71,7 @@ def main(brokers, topic, one_shot):
         buffs = []
 
         while len(buffs) == 0:
-            buffs = event_source.get_data()
+            buffs = event_source.get_new_data()
 
         for hist in histograms:
             for b in buffs:

@@ -19,12 +19,12 @@ class TestHistogrammer1d:
         self.hist.add_data(self.data)
 
         assert self.hist.histogram is not None
-        assert (self.num_bins,) == self.hist.histogram.shape
-        assert 5 == sum(self.hist.histogram)
+        assert self.hist.histogram.shape == (self.num_bins,)
+        assert sum(self.hist.histogram) == 5
         # Edges is 1 more than the number of bins
-        assert self.num_bins + 1 == len(self.hist.x_edges)
-        assert self.data[0] == self.hist.x_edges[0]
-        assert 5 == self.hist.x_edges[-1]
+        assert len(self.hist.x_edges) == self.num_bins + 1
+        assert self.hist.x_edges[0] == self.data[0]
+        assert self.hist.x_edges[-1] == 5
 
     def test_adding_data_to_initialised_histogram_new_data_is_added(self):
         self.hist.add_data(self.data)
@@ -34,7 +34,7 @@ class TestHistogrammer1d:
         self.hist.add_data(self.data)
 
         # Sum should be double
-        assert first_sum * 2 == sum(self.hist.histogram)
+        assert sum(self.hist.histogram) == first_sum * 2
 
     def test_adding_data_outside_initial_bins_is_ignored(self):
         self.hist.add_data(self.data)
@@ -46,6 +46,6 @@ class TestHistogrammer1d:
         self.hist.add_data(new_data)
 
         # Sum should not change
-        assert first_sum == sum(self.hist.histogram)
+        assert sum(self.hist.histogram) == first_sum
         # Edges should not change
-        assert np.array_equal(x_edges, self.hist.x_edges)
+        assert np.array_equal(self.hist.x_edges, x_edges)

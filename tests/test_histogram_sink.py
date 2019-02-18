@@ -24,8 +24,8 @@ class TestHistogramSink:
 
         sink.send_histogram(TEST_TOPIC, TEST_MESSAGE)
 
-        assert 1 == len(producer.messages)
-        assert TEST_TOPIC, TEST_MESSAGE == producer.messages[0]
+        assert len(producer.messages) == 1
+        assert producer.messages[0] == (TEST_TOPIC, TEST_MESSAGE)
 
     def test_failure_to_send_raises(self):
         with pytest.raises(Exception, message="Expecting Exception from sending"):

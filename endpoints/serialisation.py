@@ -1,4 +1,5 @@
 import flatbuffers
+import numpy as np
 from fbschemas.ev42.EventMessage import EventMessage
 import fbschemas.hs00.EventHistogram as EventHistogram
 import fbschemas.hs00.DimensionMetaData as DimensionMetaData
@@ -23,6 +24,56 @@ def deserialise_ev42(buf):
         "tofs": event.TimeOfFlightAsNumpy(),
     }
     return data
+
+
+def deserialise_hs00(buf):
+    """
+    Convert flatbuffer into a histogram.
+
+    :param buf:
+    :return: dict of histogram information
+    """
+    event_hist = EventHistogram.EventHistogram.GetRootAsEventHistogram(buf, 0)
+
+    dims = []
+    for i in range(event_hist.DimMetadataLength()):
+        bins_fb = event_hist.DimMetadata(i).BinBoundaries()
+
+        # Get bins
+        temp = ArrayDouble.ArrayDouble()
+        temp.Init(bins_fb.Bytes, bins_fb.Pos)
+        bins = temp.ValueAsNumpy()
+
+        # Get type
+        if event_hist.DimMetadata(i).BinBoundariesType() == Array.ArrayDouble:
+            bin_type = np.float64
+        else:
+            raise TypeError("Type of the bin boundaries is incorrect")
+
+        info = {
+            "length": event_hist.DimMetadata(i).Length(),
+            "edges": bins.tolist(),
+            "type": bin_type,
+        }
+        dims.append(info)
+
+    # Get the data
+    if event_hist.DataType() != Array.ArrayDouble:
+        raise TypeError("Type of the data array is incorrect")
+
+    data_fb = event_hist.Data()
+    temp = ArrayDouble.ArrayDouble()
+    temp.Init(data_fb.Bytes, data_fb.Pos)
+    data = temp.ValueAsNumpy()
+    shape = event_hist.CurrentShapeAsNumpy().tolist()
+
+    hist = {
+        "source": event_hist.Source().decode("utf-8"),
+        "shape": shape,
+        "dims": dims,
+        "data": data.reshape(shape),
+    }
+    return hist
 
 
 def _serialise_metadata(builder, edges, length):
@@ -109,4 +160,4 @@ def serialise_hs00(histogrammer):
     # Generate the output and replace the file_identifier
     buff = builder.Output()
     buff[4:8] = file_identifier
-    return bytes(buff)
+    return buff
