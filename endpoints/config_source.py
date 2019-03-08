@@ -2,6 +2,10 @@ import json
 from endpoints.serialisation import deserialise_ev42, deserialise_hs00
 
 
+class SourceException(Exception):
+    pass
+
+
 class BaseSource:
     def __init__(self, consumer):
         """
@@ -24,7 +28,11 @@ class BaseSource:
 
         for topic, records in msgs.items():
             for i in records:
-                data.append(self._process_record(i.value))
+                try:
+                    data.append(self._process_record(i.value))
+                except SourceException as error:
+                    # TODO: log exception
+                    print(error)
 
         return data
 
@@ -34,7 +42,10 @@ class BaseSource:
 
 class ConfigSource(BaseSource):
     def _process_record(self, record):
-        return json.loads(record)
+        try:
+            return json.loads(record)
+        except json.JSONDecodeError as error:
+            raise SourceException(error.msg)
 
 
 class EventSource(BaseSource):

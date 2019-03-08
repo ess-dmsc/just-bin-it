@@ -19,7 +19,7 @@ class Consumer:
         """
         try:
             self.consumer = KafkaConsumer(bootstrap_servers=brokers)
-            self.topics = []
+            self.topic_partitions = []
             available_topics = self.consumer.topics()
 
             for t in topics:
@@ -27,7 +27,7 @@ class Consumer:
                     raise Exception("Requested topic not available")
 
                 topic = TopicPartition(t, 0)
-                self.topics.append(topic)
+                self.topic_partitions.append(topic)
                 self.consumer.assign([topic])
                 self.consumer.seek_to_end(topic)
         except KafkaError as err:
@@ -40,5 +40,6 @@ class Consumer:
         :return: The dict containing the messages.
         """
         data = self.consumer.poll(5)
-        print("Consumer position:", self.consumer.position(self.topics[0]))
+        for tp in self.topic_partitions:
+            print(f"{tp.topic} - current position: {self.consumer.position(tp)}")
         return data

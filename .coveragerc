@@ -4,6 +4,7 @@ omit =
     ./fbschemas/*
     ./tests/*
     # Ignore non-testables
-    kafka_consumer.py
-    kafka_producer.py
+    ./endpoints/kafka_consumer.py
+    ./endpoints/kafka_producer.py
     main.py
+    ./client/client.py
