@@ -5,6 +5,7 @@ from tests.mock_consumer import MockConsumer
 
 
 TEST_MESSAGE = b"this is a byte message"
+INVALID_FB = b"this is an invalid fb message"
 
 
 class TestEventSource:
@@ -31,3 +32,9 @@ class TestEventSource:
         data = es.get_new_data()
         assert len(data) == 5
         assert data[0] == TEST_MESSAGE
+
+    def test_deserialising_invalid_fb_does_not_throw(self):
+        mock_consumer = MockConsumer(["broker1"], ["topic1"], [INVALID_FB])
+        es = EventSource(mock_consumer)
+
+        es.get_new_data()

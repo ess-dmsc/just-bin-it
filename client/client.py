@@ -35,8 +35,8 @@ def plot_histogram(hist):
 def main(brokers, topic):
     """
 
-    :param brokers: The brokers to listen for the configuration commands on.
-    :param topic: The topic to listen for commands on.
+    :param brokers: The brokers to listen for data on.
+    :param topic: The topic to listen for data on.
     """
     # Create the listener
     hist_consumer = Consumer(brokers, [topic])
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     )
 
     required_args.add_argument(
-        "-t", "--topic", type=str, help="the configuration topic", required=True
+        "-t", "--topic", type=str, help="the histogram data topic", required=True
     )
 
     args = parser.parse_args()

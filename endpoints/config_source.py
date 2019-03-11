@@ -50,9 +50,15 @@ class ConfigSource(BaseSource):
 
 class EventSource(BaseSource):
     def _process_record(self, record):
-        return deserialise_ev42(record)
+        try:
+            return deserialise_ev42(record)
+        except Exception as error:
+            raise SourceException(error)
 
 
 class HistogramSource(BaseSource):
     def _process_record(self, record):
-        return deserialise_hs00(record)
+        try:
+            return deserialise_hs00(record)
+        except Exception as error:
+            raise SourceException(error)
