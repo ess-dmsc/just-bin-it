@@ -2,6 +2,8 @@
 
 A lightweight program for histogramming neutron event data for diagnostic purposes.
 
+**NOTE: only 1-D histogramming works correctly at the moment.**
+
 ## Setup
 Python 3.7+ only. Might work on older versions of Python 3 but not tested.
 
