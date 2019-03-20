@@ -2,3 +2,4 @@
 ignore = E501   # Formatting handled by Black
 exclude =
     fbschemas
+    README.md

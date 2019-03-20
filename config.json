@@ -1,7 +1,7 @@
 {
   "data_brokers": ["localhost:9092"],
-  "data_topics": ["TEST_events"],
+  "data_topics": ["LOQ_events"],
   "histograms": [
-    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50, "topic": "hist-topic1"}
+    {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "hist-topic1"}
   ]
 }

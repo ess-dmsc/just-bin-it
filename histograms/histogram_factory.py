@@ -16,18 +16,18 @@ class HistogramFactory:
         for h in configuration["histograms"]:
             hist = None
 
-            if h["num_dims"] == 1:
-                range = tuple(h["det_range"])
-                hist = Histogrammer1d(range, h["num_bins"], h["topic"])
-            elif h["num_dims"] == 2:
+            if h["type"] == "hist1d":
+                hist = Histogrammer1d(h["topic"], h["num_bins"], tuple(h["tof_range"]))
+            elif h["type"] == "hist2d":
                 hist = Histogrammer2d(
+                    h["topic"],
+                    h["num_bins"],
                     tuple(h["tof_range"]),
                     tuple(h["det_range"]),
-                    h["num_bins"],
-                    h["topic"],
                 )
             else:
                 # TODO: skip it, throw or what?
+                print(f"Unrecognised histogram type: {h['type']}")
                 pass
 
             if hist is not None:

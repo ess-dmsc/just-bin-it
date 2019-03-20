@@ -10,17 +10,18 @@ X_RANGE = (0, 5)
 Y_RANGE = (0, 10)
 TOF_DATA = np.array([x for x in range(NUM_BINS)])
 DET_DATA = np.array([x for x in range(NUM_BINS)])
+PULSE_TIME = 12345
 
 
 def _create_1d_histogrammer():
-    histogrammer = Histogrammer1d(X_RANGE, NUM_BINS, "topic")
-    histogrammer.add_data(TOF_DATA)
+    histogrammer = Histogrammer1d("topic", NUM_BINS, X_RANGE)
+    histogrammer.add_data(PULSE_TIME, TOF_DATA)
     return histogrammer
 
 
 def _create_2d_histogrammer():
-    histogrammer = Histogrammer2d(X_RANGE, Y_RANGE, NUM_BINS, "topic")
-    histogrammer.add_data(TOF_DATA, DET_DATA)
+    histogrammer = Histogrammer2d("topic", NUM_BINS, X_RANGE, Y_RANGE)
+    histogrammer.add_data(PULSE_TIME, TOF_DATA, DET_DATA)
     return histogrammer
 
 

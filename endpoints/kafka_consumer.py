@@ -30,8 +30,8 @@ class Consumer:
                 self.topic_partitions.append(topic)
                 self.consumer.assign([topic])
                 self.consumer.seek_to_end(topic)
-        except KafkaError as err:
-            raise Exception(err)
+        except KafkaError as error:
+            raise Exception(error)
 
     def get_new_messages(self):
         """

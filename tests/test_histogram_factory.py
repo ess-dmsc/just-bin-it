@@ -12,13 +12,13 @@ class TestHistogramFactory:
             "data_topics": ["my_topic"],
             "histograms": [
                 {
-                    "num_dims": 1,
-                    "det_range": [20, 2000],
+                    "type": "hist1d",
+                    "tof_range": [20, 2000],
                     "num_bins": 50,
                     "topic": "topic0",
                 },
                 {
-                    "num_dims": 2,
+                    "type": "hist2d",
                     "tof_range": [30, 3000],
                     "det_range": [40, 4000],
                     "num_bins": 100,
@@ -31,7 +31,7 @@ class TestHistogramFactory:
         histograms = HistogramFactory.generate(self.config)
 
         assert isinstance(histograms[0], Histogrammer1d)
-        assert histograms[0].det_range == (20, 2000)
+        assert histograms[0].tof_range == (20, 2000)
         assert histograms[0].num_bins == 50
         assert histograms[0].topic == "topic0"
 

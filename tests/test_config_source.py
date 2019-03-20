@@ -8,8 +8,8 @@ VALID_JSON_1 = """
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
-    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50, "topic": "topic1"},
-    {"num_dims": 2, "det_range": [10, 1234], "num_bins": 100, "topic": "topic2"}
+    {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "topic1"},
+    {"type": "hist2d", "det_range": [10, 1234], "num_bins": 100, "topic": "topic2"}
   ]
 }
 """
@@ -19,7 +19,7 @@ VALID_JSON_2 = """
   "data_brokers": ["differenthost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
-    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50, "topic": "topic1"}
+    {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "topic1"}
   ]
 }
 """
@@ -47,10 +47,10 @@ class TestConfigSource:
         assert len(config["data_topics"]) == 1
         assert config["data_topics"][0] == "TEST_events"
         assert len(config["histograms"]) == 2
-        assert config["histograms"][0]["num_dims"] == 1
-        assert config["histograms"][0]["det_range"] == [0, 100000000]
+        assert config["histograms"][0]["type"] == "hist1d"
+        assert config["histograms"][0]["tof_range"] == [0, 100000000]
         assert config["histograms"][0]["num_bins"] == 50
-        assert config["histograms"][1]["num_dims"] == 2
+        assert config["histograms"][1]["type"] == "hist2d"
         assert config["histograms"][1]["det_range"] == [10, 1234]
         assert config["histograms"][1]["num_bins"] == 100
         assert config["histograms"][0]["topic"] == "topic1"

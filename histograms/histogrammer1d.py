@@ -3,30 +3,60 @@ from fast_histogram import histogram1d
 
 
 class Histogrammer1d:
-    def __init__(self, det_range, num_bins, topic):
+    """Histograms time-of-flight for a range of detectors into a 1-D histogram."""
+
+    def __init__(self, topic, num_bins=50, tof_range=None, preprocessor=None):
         """
         Constructor.
 
-        :param det_range: The range of sequential detectors to histogram over.
-        :param num_bins: The number of bins to divide the time-of-flight up into.
+        Note on preprocessing functions: this should used for relatively low impact
+        processing, i.e. avoid CPU intense algorithms.
+
         :param topic: The name of the Kafka topic to publish to.
+        :param num_bins: The number of bins to divide the time-of-flight up into.
+        :param tof_range: The time-of-flight range to histogram over.
+        :param preprocessor: The function to apply to the data before adding.
         """
         self.histogram = None
         self.x_edges = None
-        self.det_range = det_range
+        self.tof_range = tof_range
         self.num_bins = num_bins
         self.topic = topic
+        self.preprocessor = preprocessor
 
-    def add_data(self, x, y=None):
+    def add_data(self, pulse_time, x, y=None):
         """
         Add data to the histogram.
 
+        :param pulse_time: The pulse time.
         :param x: The time-of-flight data.
         :param y: Ignored parameter.
         """
+        if self.preprocessor is not None:
+            x = self._preprocess_data(pulse_time, x)
+
         if self.histogram is None:
+            # If no tof range defined then generate one
+            if self.tof_range is None:
+                self.tof_range = (0, max(x))
+
             # Assumes that fast_histogram produces the same bins as numpy.
-            self.x_edges = np.histogram_bin_edges(x, self.num_bins, self.det_range)
-            self.histogram = histogram1d(x, range=self.det_range, bins=self.num_bins)
+            self.x_edges = np.histogram_bin_edges(x, self.num_bins, self.tof_range)
+            self.histogram = histogram1d(x, range=self.tof_range, bins=self.num_bins)
         else:
-            self.histogram += histogram1d(x, range=self.det_range, bins=self.num_bins)
+            self.histogram += histogram1d(x, range=self.tof_range, bins=self.num_bins)
+
+    def _preprocess_data(self, pulse_time, x):
+        """
+        Apply the defined processing function to the data.
+
+        :param pulse_time: The pulse time.
+        :param x: The time-of-flight data.
+        :return: The newly processed data
+        """
+        try:
+            x = self.preprocessor(pulse_time, x)
+        except Exception:
+            # TODO: log
+            print("Exception while preprocessing data")
+        return x

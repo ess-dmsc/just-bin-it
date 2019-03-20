@@ -2,14 +2,14 @@ import numpy as np
 
 
 class Histogrammer2d:
-    def __init__(self, tof_range, det_range, num_bins, topic):
+    def __init__(self, topic, num_bins, tof_range, det_range):
         """
         Constructor.
 
+        :param topic: The name of the Kafka topic to publish to.
+        :param num_bins: The number of bins to divide the data up into.
         :param tof_range: The range of time-of-flights to histogram over.
         :param det_range: The range of sequential detectors to histogram over.
-        :param num_bins: The number of bins to divide the time-of-flight up into.
-        :param topic: The name of the Kafka topic to publish to.
         """
         self.histogram = None
         self.x_edges = None
@@ -19,10 +19,11 @@ class Histogrammer2d:
         self.num_bins = num_bins
         self.topic = topic
 
-    def add_data(self, x, y):
+    def add_data(self, pulse_time, x, y):
         """
         Add data to the histogram.
 
+        :param pulse_time: The pulse time.
         :param x: The time-of-flight data.
         :param y: The detector data.
         """

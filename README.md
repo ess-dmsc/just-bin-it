@@ -16,6 +16,8 @@ usage: main.py [-h] -b BROKERS [BROKERS ...] -t TOPIC [-o]
 
 optional arguments:
   -h, --help            show this help message and exit
+  -c CONFIG_FILE, --config-file CONFIG_FILE
+                        configure an inital histogram from a JSON file
   -o, --one-shot-plot   runs the program until it gets some data then plots it
                         then exits. Used for testing
 
@@ -40,7 +42,10 @@ Start the histogrammer from the command-line:
 python main.py --brokers localhost:9092 --topic hist_commands
 ```
 
-Next send a JSON command; a Python example might be:
+Next send a JSON configuration via Kafka (the format of the message is described
+in greater detail below).
+
+An example of sending a configuration via Python might look like:
 
 ```python
 from kafka import KafkaProducer
@@ -50,7 +55,12 @@ CONFIG_JSON = b"""
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
-    {"num_dims": 1, "det_range": [0, 100000000], "num_bins": 50, "topic": "output_topic"}
+    {
+      "type": "hist1d",
+      "tof_range": [0, 100000000],
+      "num_bins": 50,
+      "topic": "output_topic"
+    }
   ]
 }
 """
@@ -70,20 +80,75 @@ python client/client.py --brokers localhost:9092 --topic output_topic
 ```
 This will plot a graph of the most recent histogram.
 
-## Configuring the histogramming
+### Configuring histogramming
 
-A JSON configuration command has the following parameters:
+A JSON histogramming configuration has the following parameters:
 
 * "data_brokers" (string array): the addresses of the Kafka brokers
 * "data_topics" (string array): the topics to listen for event data on
 * "histograms" (array of dicts): the histograms to create, contains the following:
-    * "num_dims" (int): the number of dimenstions for the histogram (1 or 2)
-    * "det_range" (array of ints): the range of detectors to histogram
+    * "type" (string): the histogram type (hist1d or hist2d)
+    * "tof_range" (array of ints): the time-of-flight range to histogram [optional]
+    * "det_range" (array of ints): the range of detectors to histogram [2-D only]
     * "num_bins" (int): the number of histogram bins
     * "topic" (string): the topic to write histogram data to
 
+For example:
+```json
+{
+  "data_brokers": ["localhost:9092"],
+  "data_topics": ["TEST_events"],
+  "histograms": [
+    {
+      "type": "hist1d",
+      "tof_range": [0, 100000000],
+      "num_bins": 50,
+      "topic": "output_topic_for_1d"
+    },
+    {
+      "type": "hist2d",
+      "tof_range": [0, 100000000],
+      "det_range": [100, 1000],
+      "num_bins": 50,
+      "topic": "output_topic_for_2d"
+    }
+  ]
+}
+```
+
+If the `tof_range` is not supplied then it will set a range based on the first
+set of data it receives.
+
 Note: sending a new configuration replace the existing configuration meaning that
 existing histograms will no longer be updated.
+
+### One-shot plot
+When the `one-shot-plot` option is specified then the program with collect a
+small amount of data, histogram it and then plot the histogram before stopping.
+This can be useful for checking that the data and program are behaving correctly.
+
+Note: no histogram data is written to the output topic in Kafka with this mode.
+
+```
+python main.py --brokers localhost:9092 --topic hist_commands --one-shot-plot
+```
+
+### Supplying a configuration file
+An initial histogramming configuration can be supplied via the `config-file`
+commandline option.
+This enables a histogram to be created without the need to send a command from a
+Kafka client, this could be useful for debugging as it allows the system to be
+set up quickly.
+
+The configuration file should contain the standard JSON for configuring histograms
+as described above.
+
+```
+python main.py --brokers localhost:9092 --topic hist_commands --config_file ../example_config.json
+```
+
+Note: this configuration will be replaced if a new configuration is sent the command
+topic.
 
 ## Supported schemas
 
@@ -118,15 +183,3 @@ From the top directory:
 Formatting is handled by [Black](https://black.readthedocs.io/en/stable/).
 
 It should be added as a commit hook (see above).
-
-### Debugging
-
-When the `one-shot-plot` option is specified then the program with collect a
-small amount of data, histogram it and then plot the histogram before stopping.
-This can be useful for checking that the data and program are behaving correctly.
-
-Note: no histogram data is written to Kafka in this mode.
-
-```
-python main.py --brokers localhost:9092 --topic hist_commands --one-shot-plot
-```

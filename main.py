@@ -1,4 +1,6 @@
 import argparse
+import os
+import json
 import numpy as np
 from time import sleep
 from endpoints.kafka_consumer import Consumer
@@ -31,13 +33,47 @@ def plot_histogram(hist):
         plt.show()
 
 
-def main(brokers, topic, one_shot):
+def load_config_file(file):
+    """
+    Load the configuration file, if present.
+
+    :param file: The file path.
+    :return: The extracted data as JSON.
+    """
+    try:
+        path = os.path.abspath(file)
+        with open(path, "r") as f:
+            data = f.read()
+
+        return json.loads(data)
+    except Exception as error:
+        raise Exception("Could not load configuration file") from error
+
+
+def configure_histogramming(config):
+    """
+    Configure histogramming based on the supplied configuration.
+
+    :param config: The configuration.
+    :return: A tuple of the event source, the histogram sink and the histograms.
+    """
+    consumer = Consumer(config["data_brokers"], config["data_topics"])
+    producer = Producer(config["data_brokers"])
+    event_source = EventSource(consumer)
+    hist_sink = HistogramSink(producer)
+    histograms = HistogramFactory.generate(config)
+
+    return event_source, hist_sink, histograms
+
+
+def main(brokers, topic, one_shot, initial_config=None):
     """
     The main execution function.
 
     :param brokers: The brokers to listen for the configuration commands on.
     :param topic: The topic to listen for commands on.
     :param one_shot: Run in one-shot mode.
+    :param initial_config: A histogram configuration to start with.
     """
     # Create the config listener
     config_consumer = Consumer(brokers, [topic])
@@ -46,6 +82,10 @@ def main(brokers, topic, one_shot):
     event_source = None
     hist_sink = None
     histograms = []
+
+    if initial_config:
+        # Create the histograms based on the supplied configuration
+        event_source, hist_sink, histograms = configure_histogramming(initial_config)
 
     while True:
         sleep(0.5)
@@ -56,13 +96,7 @@ def main(brokers, topic, one_shot):
         if len(configs) > 0:
             # We are only interested in the "latest" config
             config = configs[-1]
-
-            # Configure the event source and create the histograms
-            consumer = Consumer(config["data_brokers"], config["data_topics"])
-            producer = Producer(config["data_brokers"])
-            event_source = EventSource(consumer)
-            hist_sink = HistogramSink(producer)
-            histograms = HistogramFactory.generate(config)
+            event_source, hist_sink, histograms = configure_histogramming(config)
 
         if event_source is None:
             # No event source means we are waiting for a configuration
@@ -75,9 +109,10 @@ def main(brokers, topic, one_shot):
 
         for hist in histograms:
             for b in buffs:
+                pt = b["pulse_time"]
                 x = b["tofs"]
                 y = b["det_ids"]
-                hist.add_data(x, y)
+                hist.add_data(pt, x, y)
 
         if one_shot:
             # Only plot the first histogram
@@ -108,6 +143,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-c",
+        "--config-file",
+        type=str,
+        help="configure an inital histogram from a JSON file",
+    )
+
+    parser.add_argument(
         "-o",
         "--one-shot-plot",
         action="store_true",
@@ -116,4 +158,9 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args.brokers, args.topic, args.one_shot_plot)
+
+    init_hist_json = None
+    if args.config_file:
+        init_hist_json = load_config_file(args.config_file)
+
+    main(args.brokers, args.topic, args.one_shot_plot, init_hist_json)

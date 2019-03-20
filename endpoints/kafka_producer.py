@@ -18,8 +18,8 @@ class Producer:
         """
         try:
             self.producer = KafkaProducer(bootstrap_servers=brokers)
-        except KafkaError as err:
-            raise Exception(err)
+        except KafkaError as error:
+            raise Exception(error)
 
     def publish_message(self, topic, message):
         """
@@ -30,5 +30,5 @@ class Producer:
         """
         try:
             self.producer.send(topic, message)
-        except KafkaError as err:
-            raise Exception(err)
+        except KafkaError as error:
+            raise Exception(error)
