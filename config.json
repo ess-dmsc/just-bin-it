@@ -2,6 +2,6 @@
   "data_brokers": ["localhost:9092"],
   "data_topics": ["LOQ_events"],
   "histograms": [
-    {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "hist-topic1"}
+    {"type": "sehist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "hist-topic1"}
   ]
 }

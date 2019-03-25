@@ -2,6 +2,7 @@ import pytest
 from histograms.histogram_factory import HistogramFactory
 from histograms.histogrammer1d import Histogrammer1d
 from histograms.histogrammer2d import Histogrammer2d
+from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d
 
 
 class TestHistogramFactory:
@@ -24,6 +25,12 @@ class TestHistogramFactory:
                     "num_bins": 100,
                     "topic": "topic1",
                 },
+                {
+                    "type": "sehist1d",
+                    "tof_range": [0, 3000],
+                    "num_bins": 200,
+                    "topic": "topic2",
+                },
             ],
         }
 
@@ -40,3 +47,8 @@ class TestHistogramFactory:
         assert histograms[1].det_range == (40, 4000)
         assert histograms[1].num_bins == 100
         assert histograms[1].topic == "topic1"
+
+        assert isinstance(histograms[2], SingleEventHistogrammer1d)
+        assert histograms[2].tof_range == (0, 3000)
+        assert histograms[2].num_bins == 200
+        assert histograms[2].topic == "topic2"

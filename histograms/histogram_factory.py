@@ -1,5 +1,6 @@
 from histograms.histogrammer1d import Histogrammer1d
 from histograms.histogrammer2d import Histogrammer2d
+from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d
 
 
 class HistogramFactory:
@@ -24,6 +25,10 @@ class HistogramFactory:
                     h["num_bins"],
                     tuple(h["tof_range"]),
                     tuple(h["det_range"]),
+                )
+            elif h["type"] == "sehist1d":
+                hist = SingleEventHistogrammer1d(
+                    h["topic"], h["num_bins"], tuple(h["tof_range"])
                 )
             else:
                 # TODO: skip it, throw or what?

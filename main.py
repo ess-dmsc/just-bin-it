@@ -6,7 +6,8 @@ from time import sleep
 from endpoints.kafka_consumer import Consumer
 from endpoints.kafka_producer import Producer
 from histograms.histogrammer2d import Histogrammer2d
-from histograms.histogrammer1d import Histogrammer1d
+from histograms.histogrammer1d import Histogrammer1d  # NOQA
+from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d  # NOQA
 from histograms.histogram_factory import HistogramFactory
 from endpoints.config_source import ConfigSource, EventSource
 from endpoints.histogram_sink import HistogramSink
@@ -20,16 +21,16 @@ def plot_histogram(hist):
     """
     import matplotlib.pyplot as plt
 
-    if isinstance(hist, Histogrammer1d):
-        width = 0.7 * (hist.x_edges[1] - hist.x_edges[0])
-        center = (hist.x_edges[:-1] + hist.x_edges[1:]) / 2
-        plt.bar(center, hist.histogram, align="center", width=width)
-        plt.show()
-    elif isinstance(hist, Histogrammer2d):
+    if isinstance(hist, Histogrammer2d):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         x, y = np.meshgrid(hist.x_edges, hist.y_edges)
         ax.pcolormesh(x, y, hist.histogram)
+        plt.show()
+    else:
+        width = 0.7 * (hist.x_edges[1] - hist.x_edges[0])
+        center = (hist.x_edges[:-1] + hist.x_edges[1:]) / 2
+        plt.bar(center, hist.histogram, align="center", width=width)
         plt.show()
 
 

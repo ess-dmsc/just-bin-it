@@ -166,19 +166,19 @@ The commit hooks are handled using [pre-commit](https://pre-commit.com).
 
 To install the hooks for this project run:
 ```
->>> pre-commit install
+pre-commit install
 ```
 
 To test the hooks run:
 ```
->>> pre-commit run --all-files
+pre-commit run --all-files
 ```
 This command can also be used to run the hooks manually.
 
 ### Running unit tests
 From the top directory:
 ```
->>> py.test --cov .
+py.test --cov .
 ```
 
 ### Formatting
