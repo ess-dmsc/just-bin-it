@@ -96,6 +96,7 @@ def main(brokers, topic, one_shot, initial_config=None):
 
         if len(configs) > 0:
             # We are only interested in the "latest" config
+            print("NEW CONFIGURATION RECEIVED")
             config = configs[-1]
             event_source, hist_sink, histograms = configure_histogramming(config)
 
