@@ -8,3 +8,4 @@ numpy
 pre-commit
 pytest
 pytest-cov
+pyepics
