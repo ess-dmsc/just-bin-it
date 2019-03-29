@@ -14,7 +14,7 @@ class TestHistogramSink:
         pass
 
     def test_if_no_producer_supplied_then_raises(self):
-        with pytest.raises(Exception, message="Expecting Exception from Constructor"):
+        with pytest.raises(Exception):
             HistogramSink(None)
 
     @patch("endpoints.histogram_sink.serialise_hs00", return_value=TEST_MESSAGE)
@@ -28,6 +28,6 @@ class TestHistogramSink:
         assert producer.messages[0] == (TEST_TOPIC, TEST_MESSAGE)
 
     def test_failure_to_send_raises(self):
-        with pytest.raises(Exception, message="Expecting Exception from sending"):
+        with pytest.raises(Exception):
             sink = HistogramSink(MockThrowsProducer())
             sink.send_histogram(TEST_TOPIC, TEST_MESSAGE)

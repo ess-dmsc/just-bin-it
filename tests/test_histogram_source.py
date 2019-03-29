@@ -14,7 +14,7 @@ class TestHistogramSource:
         pass
 
     def test_if_no_consumer_supplied_then_raises(self):
-        with pytest.raises(Exception, message="Expecting Exception from Constructor"):
+        with pytest.raises(Exception):
             HistogramSource(None)
 
     def test_if_no_new_messages_then_no_data(self):

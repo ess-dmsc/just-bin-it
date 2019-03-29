@@ -33,7 +33,7 @@ class TestConfigSource:
         pass
 
     def test_if_no_consumer_supplied_then_raises(self):
-        with pytest.raises(Exception, message="Expecting Exception from Constructor"):
+        with pytest.raises(Exception):
             ConfigSource(None)
 
     def test_received_configuration_converted_correctly(self):

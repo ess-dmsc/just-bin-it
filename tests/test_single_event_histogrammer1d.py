@@ -23,7 +23,7 @@ class TestSingleEventHistogrammer1d:
         assert self.hist.x_edges[-1] == self.range[-1]
 
     def test_pulse_times_are_correctly_initialised_in_nanoseconds(self):
-        assert len(self.hist.pulse_times) == 14
+        assert len(self.hist.pulse_times) == 15
         assert self.hist.pulse_times[0] == 0
         assert self.hist.pulse_times[1] == 1 / 14 * 10 ** 9
         assert self.hist.pulse_times[2] == 2 / 14 * 10 ** 9
