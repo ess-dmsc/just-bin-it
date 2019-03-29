@@ -2,7 +2,7 @@
 import ecdcpipeline.ContainerBuildNode
 import ecdcpipeline.PipelineBuilder
 
-project = "kafka-to-nexus"
+project = "just-bin-it"
 
 clangformat_os = "debian9"
 test_and_coverage_os = "centos7"
