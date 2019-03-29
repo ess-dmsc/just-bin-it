@@ -46,16 +46,20 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Dependencies") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
-      pip install --upgrade pip
-      pip install -r just-bin-it/requirements.txt
+      python3.6 -m pip install --user --upgrade pip
+      python3.6 -m pip install --user -r ${project}/requirements.txt
     """
   } // stage
 
   pipeline_builder.stage("${container.key}: Test") {
+    def test_output = "TestResults.xml"
     container.sh """
-      pytest --junitxml=results.xml
-      junit 'results.xml'
+      cd ${project}
+      python3.6 -m pytest -s --junitxml=${test_output}
     """
+    container.copyFrom('just-bin-it/*.xml', '.')
+    junit "${test_output}"
+
   } // stage
 
 }  // createBuilders
