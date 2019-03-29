@@ -46,6 +46,8 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Dependencies") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
+        python --version
+        python3 --version
       python3.6 -m pip install --user --upgrade pip
       python3.6 -m pip install --user -r ${project}/requirements.txt
     """
