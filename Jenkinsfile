@@ -55,7 +55,7 @@ builders = pipeline_builder.createBuilders { container ->
     def test_output = "TestResults.xml"
     container.sh """
       cd ${project}
-      pytest -s --junitxml=${test_output}
+      python -m pytest --junitxml=${test_output}
     """
     container.copyFrom('just-bin-it/*.xml', '.')
     junit "${test_output}"
