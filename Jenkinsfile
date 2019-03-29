@@ -15,6 +15,7 @@ container_build_nodes = [
 //  'ubuntu1804': new ContainerBuildNode('essdmscdm/ubuntu18.04-build-node:1.2.0', 'bash -e')
 ]
 
+
 // Define number of old builds to keep.
 num_artifacts_to_keep = '1'
 
