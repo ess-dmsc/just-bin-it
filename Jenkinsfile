@@ -63,11 +63,7 @@ builders = pipeline_builder.createBuilders { container ->
 
 node {
   dir("${project}") {
-    try {
-      scm_vars = checkout scm
-    } catch (e) {
-      failure_function(e, 'Checkout failed')
-    }
+    scm_vars = checkout scm
   }
 
   try {
