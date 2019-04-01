@@ -54,7 +54,7 @@ builders = pipeline_builder.createBuilders { container ->
       cd ${project}
       python3.6 -m pytest --junitxml=${test_output}
     """
-    junit /home/jenkins/just-bin-it/TestResults.xml
+    junit "/home/jenkins/just-bin-it/TestResults.xml"
 
   } // stage
 
