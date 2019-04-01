@@ -54,7 +54,7 @@ builders = pipeline_builder.createBuilders { container ->
       cd ${project}
       python3.6 -m pytest --junitxml=${test_output}
     """
-    container.copyFrom('just-bin-it/*.xml', '.')
+    container.copyFrom('${project}/${test_output}', '.')
     junit "${test_output}"
 
   } // stage
