@@ -1,4 +1,5 @@
 import pytest
+import math
 from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d
 
 
@@ -25,11 +26,11 @@ class TestSingleEventHistogrammer1d:
     def test_pulse_times_are_correctly_initialised_in_nanoseconds(self):
         assert len(self.hist.pulse_times) == 15
         assert self.hist.pulse_times[0] == 0
-        assert self.hist.pulse_times[1] == 1 / 14 * 10 ** 9
-        assert self.hist.pulse_times[2] == 2 / 14 * 10 ** 9
-        assert self.hist.pulse_times[6] == 6 / 14 * 10 ** 9
-        assert self.hist.pulse_times[10] == 10 / 14 * 10 ** 9
-        assert self.hist.pulse_times[13] == 13 / 14 * 10 ** 9
+        assert self.hist.pulse_times[1] == math.floor(1 / 14 * 10 ** 9)
+        assert self.hist.pulse_times[2] == math.floor(2 / 14 * 10 ** 9)
+        assert self.hist.pulse_times[6] == math.floor(6 / 14 * 10 ** 9)
+        assert self.hist.pulse_times[10] == math.floor(10 / 14 * 10 ** 9)
+        assert self.hist.pulse_times[13] == math.floor(13 / 14 * 10 ** 9)
 
     def test_event_times_are_corrected_wrt_which_pulse_they_are_in(self):
         # event in the "first" pulse, should be histogrammed as 1, 1, 2, 0, 0
