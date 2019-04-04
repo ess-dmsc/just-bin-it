@@ -24,7 +24,7 @@ class Consumer:
 
             for t in topics:
                 if t not in available_topics:
-                    raise Exception("Requested topic not available")
+                    raise Exception(f"Requested topic {t} not available")
 
                 topic = TopicPartition(t, 0)
                 self.topic_partitions.append(topic)

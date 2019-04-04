@@ -5,12 +5,17 @@ import json
 from endpoints.serialisation import deserialise_hs00
 from epics import PV
 
+# For Utgard
+# import os
+# os.environ["EPICS_CA_ADDR_LIST"] = "10.4.3.217"
+
 
 # Edit these settings as appropriate
 POSITIONS_1 = [0, 1, 2, 3, 4, 5]
 POSITIONS_2 = [0, 1, 2, 3, 4, 5]
-MOTOR_PV_1 = "IOC:m1"
-MOTOR_PV_2 = "IOC:m2"
+MOTOR_PREFIX = "SES-PREMP:MC-MCU-01"
+MOTOR_PV_1 = f"{MOTOR_PREFIX}:m1"
+MOTOR_PV_2 = f"{MOTOR_PREFIX}:m2"
 KAFKA_ADDRESS = ["localhost:9092"]
 JUST_BIN_IT_COMMAND_TOPIC = "hist_commands"
 EVENT_TOPIC = "LOQ_events"
@@ -22,7 +27,7 @@ CONFIG = {
     "data_topics": [EVENT_TOPIC],
     "histograms": [
         {
-            "type": "hist1d",
+            "type": "sehist1d",
             "tof_range": [0, 100_000_000],
             "num_bins": 50,
             "topic": HISTOGRAM_TOPIC,
@@ -45,6 +50,11 @@ def move_motor(motor_pv, position):
     # TODO: Using EPICS for now, but at some point we should use NICOS
     pv = PV(motor_pv)
     pv.put(position, wait=True, timeout=120)
+
+
+def read_position(pv):
+    pv = PV(pv)
+    return pv.get()
 
 
 if __name__ == "__main__":
