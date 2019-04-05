@@ -49,3 +49,23 @@ class TestSingleEventHistogrammer1d:
         assert self.hist.histogram[2] == 6
         assert self.hist.histogram[3] == 1
         assert self.hist.histogram[4] == 1
+
+    def test_if_roi_function_supplied_as__non_interesting_data_ignored(self):
+        # Ignore outside ROI
+        def _roi_check(event_time, x, detector):
+            if detector in [3, 4]:
+                return True
+            return False
+
+        hist = SingleEventHistogrammer1d(
+            "topic1", self.num_bins, self.range, roi=_roi_check
+        )
+
+        event_times = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
+        det_ids = [1, 2, 3, 4, 5, 6, 3, 4, 2]
+
+        for et, d in zip(event_times, det_ids):
+            # Must be in nanoseconds
+            hist.add_data(et * 10 ** 9, detector=d)
+
+        assert sum(hist.histogram) == 4

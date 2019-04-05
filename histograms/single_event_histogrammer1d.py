@@ -4,7 +4,7 @@ import math
 
 
 class SingleEventHistogrammer1d:
-    def __init__(self, topic, num_bins=50, tof_range=None, preprocessor=None):
+    def __init__(self, topic, num_bins=50, tof_range=None, preprocessor=None, roi=None):
         """
         Constructor.
 
@@ -15,6 +15,7 @@ class SingleEventHistogrammer1d:
         :param num_bins: The number of bins to divide the time-of-flight up into.
         :param tof_range: The time-of-flight range to histogram over (nanoseconds).
         :param preprocessor: The function to apply to the data before adding.
+        :param roi: The function for checking data is within the region of interest.
         """
         self.histogram = None
         self.x_edges = None
@@ -22,6 +23,7 @@ class SingleEventHistogrammer1d:
         self.num_bins = num_bins
         self.topic = topic
         self.preprocessor = preprocessor
+        self.roi = roi
 
         # Create a list of pulse times assuming the first pulse is at 0.00
         # i.e on the second.
@@ -32,13 +34,13 @@ class SingleEventHistogrammer1d:
             self.pulse_times.append(math.floor(i / pulse_freq * 10 ** 9))
         self.pulse_times.append(10 ** 9)
 
-    def add_data(self, event_time, x=None, y=None):
+    def add_data(self, event_time, x=None, detector=None):
         """
         Add data to the histogram.
 
         :param event_time: The pulse time which is used as the event time.
         :param x: Ignored parameter.
-        :param y: Ignored parameter.
+        :param detector: An array of one value which is the detector hit.
         """
         # Throw away the seconds part
         nanosecs = event_time % 1_000_000_000
@@ -46,6 +48,13 @@ class SingleEventHistogrammer1d:
         bin_num = np.digitize([nanosecs], self.pulse_times)
 
         corrected_time = nanosecs - self.pulse_times[bin_num[0] - 1]
+
+        if self.preprocessor is not None:
+            pulse_time, x, y = self._preprocess_data(event_time, x, detector)
+
+        if self.roi is not None:
+            if not self._within_roi(event_time, x, detector):
+                return
 
         if self.histogram is None:
             # Assumes that fast_histogram produces the same bins as numpy.
@@ -59,3 +68,36 @@ class SingleEventHistogrammer1d:
             self.histogram += histogram1d(
                 [corrected_time], range=self.tof_range, bins=self.num_bins
             )
+
+    def _preprocess_data(self, event_time, x, detector):
+        """
+        Apply the defined processing function to the data.
+
+        :param event_time: The pulse time which is used as the event time.
+        :param x: Ignored parameter.
+        :param detector: The detector hit.
+        :return: The newly processed data
+        """
+        try:
+            event_time, detector = self.preprocessor(event_time, detector)
+        except Exception:
+            # TODO: log
+            print("Exception while preprocessing data")
+        return event_time, x, detector
+
+    def _within_roi(self, event_time, x, detector):
+        """
+        Apply the defined processing function to the data.
+
+        :param event_time: The pulse time which is used as the event time.
+        :param x: Ignored parameter.
+        :param detector: The detector hit.
+        :return: The newly processed data
+        """
+        try:
+            within = self.roi(event_time, x, detector)
+        except Exception:
+            # TODO: log
+            print("Exception while try to check ROI")
+            within = True
+        return within
