@@ -50,7 +50,7 @@ class TestSingleEventHistogrammer1d:
         assert self.hist.histogram[3] == 1
         assert self.hist.histogram[4] == 1
 
-    def test_if_roi_function_supplied_as__non_interesting_data_ignored(self):
+    def test_if_roi_function_supplied_then_outside_data_ignored(self):
         # Ignore outside ROI
         def _roi_check(event_time, x, detector):
             if detector in [3, 4]:
