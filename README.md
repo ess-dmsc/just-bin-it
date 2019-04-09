@@ -94,6 +94,7 @@ A JSON histogramming configuration has the following parameters:
     * "det_range" (array of ints): the range of detectors to histogram [2-D only]
     * "num_bins" (int): the number of histogram bins
     * "topic" (string): the topic to write histogram data to
+    * "source" (string): the name of the source to accept data from
 
 For example:
 ```json
@@ -106,6 +107,7 @@ For example:
       "tof_range": [0, 100000000],
       "num_bins": 50,
       "topic": "output_topic_for_1d"
+      "source": "monitor1"
     },
     {
       "type": "hist2d",

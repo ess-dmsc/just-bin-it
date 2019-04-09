@@ -66,6 +66,17 @@ class TestSingleEventHistogrammer1d:
 
         for et, d in zip(event_times, det_ids):
             # Must be in nanoseconds
-            hist.add_data(et * 10 ** 9, detector=d)
+            hist.add_data(et * 10 ** 9, pixel=d)
 
         assert sum(hist.histogram) == 4
+
+    def test_only_data_with_correct_source_is_added(self):
+        hist = SingleEventHistogrammer1d(
+            "topic1", self.num_bins, self.range, source="source1"
+        )
+
+        hist.add_data(0.01, 1, source="source1")
+        hist.add_data(0.02, 2, source="source1")
+        hist.add_data(0.03, 3, source="OTHER")
+
+        assert sum(hist.histogram) == 2

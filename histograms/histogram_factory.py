@@ -17,22 +17,28 @@ class HistogramFactory:
         for h in configuration["histograms"]:
             hist = None
 
-            if h["type"] == "hist1d":
-                hist = Histogrammer1d(h["topic"], h["num_bins"], tuple(h["tof_range"]))
-            elif h["type"] == "hist2d":
+            hist_type = h["type"]
+            topic = h["topic"]
+            num_bins = h["num_bins"] if "num_bins" in h else 50
+            tof_range = tuple(h["tof_range"]) if "tof_range" in h else None
+            det_range = tuple(h["det_range"]) if "det_range" in h else None
+            source = h["source"] if "source" in h else None
+
+            if hist_type == "hist1d":
+                hist = Histogrammer1d(topic, num_bins, tof_range, source)
+            elif hist_type == "hist2d":
                 hist = Histogrammer2d(
-                    h["topic"],
-                    h["num_bins"],
-                    tuple(h["tof_range"]),
-                    tuple(h["det_range"]),
+                    topic,
+                    num_bins,
+                    tof_range,
+                    det_range,
+                    # source,
                 )
-            elif h["type"] == "sehist1d":
-                hist = SingleEventHistogrammer1d(
-                    h["topic"], h["num_bins"], tuple(h["tof_range"])
-                )
+            elif hist_type == "sehist1d":
+                hist = SingleEventHistogrammer1d(topic, num_bins, tof_range, source)
             else:
                 # TODO: skip it, throw or what?
-                print(f"Unrecognised histogram type: {h['type']}")
+                print(f"Unrecognised histogram type: {hist_type}")
                 pass
 
             if hist is not None:

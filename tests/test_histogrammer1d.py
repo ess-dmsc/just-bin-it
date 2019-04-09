@@ -60,7 +60,7 @@ class TestHistogrammer1d:
                 return np.zeros(0)
 
         self.hist = Histogrammer1d(
-            "topic1", self.num_bins, self.range, _preprocess_step
+            "topic1", self.num_bins, self.range, preprocessor=_preprocess_step
         )
         self.hist.add_data(3, self.data)
 
@@ -81,3 +81,12 @@ class TestHistogrammer1d:
 
         assert self.hist.tof_range[0] == 0
         assert self.hist.tof_range[1] == max(self.data)
+
+    def test_only_data_with_correct_source_is_added(self):
+        hist = Histogrammer1d("topic1", self.num_bins, self.range, source="source1")
+
+        hist.add_data(self.pulse_time, self.data, source="source1")
+        hist.add_data(self.pulse_time, self.data, source="source1")
+        hist.add_data(self.pulse_time, self.data, source="OTHER")
+
+        assert sum(hist.histogram) == 10

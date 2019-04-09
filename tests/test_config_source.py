@@ -8,8 +8,8 @@ VALID_JSON_1 = """
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
-    {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "topic1"},
-    {"type": "hist2d", "det_range": [10, 1234], "num_bins": 100, "topic": "topic2"}
+    {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "topic1", "source": "source1"},
+    {"type": "hist2d", "det_range": [10, 1234], "num_bins": 100, "topic": "topic2", "source": "source2"}
   ]
 }
 """
@@ -55,6 +55,8 @@ class TestConfigSource:
         assert config["histograms"][1]["num_bins"] == 100
         assert config["histograms"][0]["topic"] == "topic1"
         assert config["histograms"][1]["topic"] == "topic2"
+        assert config["histograms"][0]["source"] == "source1"
+        assert config["histograms"][1]["source"] == "source2"
 
     def test_no_messages_returns_none(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"], [])

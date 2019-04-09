@@ -114,7 +114,8 @@ def main(brokers, topic, one_shot, initial_config=None):
                 pt = b["pulse_time"]
                 x = b["tofs"]
                 y = b["det_ids"]
-                hist.add_data(pt, x, y)
+                src = b["source"]
+                hist.add_data(pt, x, y, src)
 
         if one_shot:
             # Only plot the first histogram

@@ -17,6 +17,7 @@ class TestHistogramFactory:
                     "tof_range": [20, 2000],
                     "num_bins": 50,
                     "topic": "topic0",
+                    "source": "source1",
                 },
                 {
                     "type": "hist2d",
@@ -30,6 +31,7 @@ class TestHistogramFactory:
                     "tof_range": [0, 3000],
                     "num_bins": 200,
                     "topic": "topic2",
+                    "source": "source2",
                 },
             ],
         }
@@ -41,6 +43,7 @@ class TestHistogramFactory:
         assert histograms[0].tof_range == (20, 2000)
         assert histograms[0].num_bins == 50
         assert histograms[0].topic == "topic0"
+        assert histograms[0].source == "source1"
 
         assert isinstance(histograms[1], Histogrammer2d)
         assert histograms[1].tof_range == (30, 3000)
@@ -52,3 +55,6 @@ class TestHistogramFactory:
         assert histograms[2].tof_range == (0, 3000)
         assert histograms[2].num_bins == 200
         assert histograms[2].topic == "topic2"
+        assert histograms[2].source == "source2"
+
+    # TODO: More tests for when data is missing
