@@ -63,3 +63,9 @@ class TestDeserialisationHs00:
         assert len(data["dims"][0]["edges"]) == 51
         assert data["dims"][0]["edges"][0] == 0.0
         assert data["dims"][0]["edges"][50] == 100_000_000.0
+
+    def test_if_schema_is_incorrect_then_throws(self):
+        new_buf = self.buf[:4] + b"na12" + self.buf[8:]
+
+        with pytest.raises(Exception):
+            deserialise_hs00(new_buf)

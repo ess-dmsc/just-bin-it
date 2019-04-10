@@ -47,6 +47,10 @@ def deserialise_hs00(buf):
     :param buf:
     :return: dict of histogram information
     """
+    # Check schema is correct
+    if get_schema(buf) != "hs00":
+        raise Exception(f"Incorrect schema: expected hs00 but got {get_schema(buf)}")
+
     event_hist = EventHistogram.EventHistogram.GetRootAsEventHistogram(buf, 0)
 
     dims = []
