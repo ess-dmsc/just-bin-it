@@ -7,6 +7,16 @@ import fbschemas.hs00.ArrayDouble as ArrayDouble
 from fbschemas.hs00.Array import Array
 
 
+def get_schema(buf):
+    """
+    Extract the schema code embedded in the buffer
+
+    :param buf: The raw buffer of the FlatBuffers message.
+    :return: The schema name
+    """
+    return buf[4:8].decode("utf-8")
+
+
 def deserialise_ev42(buf):
     """
     Deserialise an ev42 FlatBuffers message.
@@ -14,6 +24,10 @@ def deserialise_ev42(buf):
     :param buf: The raw buffer of the FlatBuffers message.
     :return: A dictionary of the deserialised values.
     """
+    # Check schema is correct
+    if get_schema(buf) != "ev42":
+        raise Exception(f"Incorrect schema: expected ev42 but got {get_schema(buf)}")
+
     event = EventMessage.GetRootAsEventMessage(buf, 0)
 
     data = {

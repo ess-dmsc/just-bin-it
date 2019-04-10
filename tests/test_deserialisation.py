@@ -2,7 +2,7 @@ import pytest
 import os
 import tests
 import numpy as np
-from endpoints.serialisation import deserialise_ev42, deserialise_hs00
+from endpoints.serialisation import deserialise_ev42, deserialise_hs00, get_schema
 
 
 class TestDeserialisationEv42:
@@ -26,6 +26,17 @@ class TestDeserialisationEv42:
         assert len(data["tofs"]) == 794
         assert data["det_ids"][0] == 99406
         assert data["tofs"][0] == 11_660_506
+
+    def test_can_extract_the_schema_type(self):
+        schema = get_schema(self.buf)
+
+        assert schema == "ev42"
+
+    def test_if_schema_is_incorrect_then_throws(self):
+        new_buf = self.buf[:4] + b"na12" + self.buf[8:]
+
+        with pytest.raises(Exception):
+            deserialise_ev42(new_buf)
 
 
 class TestDeserialisationHs00:

@@ -32,7 +32,7 @@ class BaseSource:
                     data.append(self._process_record(i.value))
                 except SourceException as error:
                     # TODO: log exception
-                    print(error)
+                    print(f"SourceException: {error}")
 
         return data
 
