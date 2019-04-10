@@ -52,13 +52,14 @@ class TestSingleEventHistogrammer1d:
 
     def test_if_roi_function_supplied_then_outside_data_ignored(self):
         # Ignore outside ROI
-        def _roi_check(event_time, x, detector):
+        def _create_mask(event_time, x, detector):
             if detector in [3, 4]:
-                return True
-            return False
+                return [0]
+            else:
+                return [1]
 
         hist = SingleEventHistogrammer1d(
-            "topic1", self.num_bins, self.range, roi=_roi_check
+            "topic1", self.num_bins, self.range, roi=_create_mask
         )
 
         event_times = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
@@ -66,7 +67,7 @@ class TestSingleEventHistogrammer1d:
 
         for et, d in zip(event_times, det_ids):
             # Must be in nanoseconds
-            hist.add_data(et * 10 ** 9, pixel=d)
+            hist.add_data(et * 10 ** 9, det_ids=d)
 
         assert sum(hist.histogram) == 4
 

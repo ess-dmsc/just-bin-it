@@ -4,6 +4,8 @@ import math
 
 
 class SingleEventHistogrammer1d:
+    """Histograms time-of-flight for the denex detector into a 1-D histogram."""
+
     def __init__(
         self,
         topic,
@@ -45,13 +47,13 @@ class SingleEventHistogrammer1d:
             self.pulse_times.append(math.floor(i / pulse_freq * 10 ** 9))
         self.pulse_times.append(10 ** 9)
 
-    def add_data(self, event_time, x=None, pixel=None, source=""):
+    def add_data(self, pulse_time, tofs=None, det_ids=None, source=""):
         """
         Add data to the histogram.
 
-        :param event_time: The pulse time which is used as the event time.
-        :param x: Ignored parameter.
-        :param pixel: An array of one value which is the pixel hit.
+        :param pulse_time: The pulse time which is used as the event time.
+        :param tofs: Ignored parameter.
+        :param det_ids: An array of one value which is the pixel hit.
         :param source: The source of the event.
         """
         # Discard any messages not from the specified source.
@@ -59,17 +61,18 @@ class SingleEventHistogrammer1d:
             return
 
         # Throw away the seconds part
-        nanosecs = event_time % 1_000_000_000
+        nanosecs = pulse_time % 1_000_000_000
 
         bin_num = np.digitize([nanosecs], self.pulse_times)
 
         corrected_time = nanosecs - self.pulse_times[bin_num[0] - 1]
 
         if self.preprocessor is not None:
-            pulse_time, x, y = self._preprocess_data(event_time, x, pixel)
+            pulse_time, tofs, y = self._preprocess_data(pulse_time, tofs, det_ids)
 
         if self.roi is not None:
-            if not self._within_roi(event_time, x, pixel):
+            # Mask will contain one value if that is 1 then the value is not added.
+            if self._get_mask(pulse_time, tofs, det_ids)[0]:
                 return
 
         if self.histogram is None:
@@ -85,35 +88,38 @@ class SingleEventHistogrammer1d:
                 [corrected_time], range=self.tof_range, bins=self.num_bins
             )
 
-    def _preprocess_data(self, event_time, x, pixel):
+    def _preprocess_data(self, pulse_time, tof, det_id):
         """
         Apply the defined processing function to the data.
 
-        :param event_time: The pulse time which is used as the event time.
-        :param x: Ignored parameter.
-        :param pixel: The pixel hit.
-        :return: The newly processed data
+        :param pulse_time: The pulse time which is used as the event time.
+        :param tof: Ignored parameter.
+        :param det_id: The pixel hit.
+        :return: The newly processed data.
         """
         try:
-            event_time, pixel = self.preprocessor(event_time, pixel)
+            pulse_time, tof, det_id = self.preprocessor(pulse_time, tof, det_id)
         except Exception:
             # TODO: log
             print("Exception while preprocessing data")
-        return event_time, x, pixel
+        return pulse_time, tof, det_id
 
-    def _within_roi(self, event_time, x, pixel):
+    def _get_mask(self, event_time, tof, det_id):
         """
         Apply the defined processing function to the data.
 
+        1 is used to indicate a masked value.
+        0 is used to indicate an unmasked value.
+
         :param event_time: The pulse time which is used as the event time.
-        :param x: Ignored parameter.
-        :param pixel: The pixel hit.
-        :return: The newly processed data
+        :param tof: Ignored parameter.
+        :param det_id: The pixel hit.
+        :return: The newly processed data.
         """
         try:
-            within = self.roi(event_time, x, pixel)
+            mask = self.roi(event_time, tof, det_id)
         except Exception:
             # TODO: log
             print("Exception while try to check ROI")
-            within = True
-        return within
+            mask = None
+        return mask

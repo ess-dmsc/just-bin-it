@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.ma as ma
 from fast_histogram import histogram1d
 
 
@@ -36,13 +37,13 @@ class Histogrammer1d:
         self.preprocessor = preprocessor
         self.roi = roi
 
-    def add_data(self, pulse_time, x, y=None, source=""):
+    def add_data(self, pulse_time, tofs, det_ids=None, source=""):
         """
         Add data to the histogram.
 
         :param pulse_time: The pulse time.
-        :param x: The time-of-flight data.
-        :param y: Ignored parameter.
+        :param tofs: The time-of-flight data.
+        :param det_ids: The detector ids.
         :param source: The source of the event.
         """
         # Discard any messages not from the specified source.
@@ -50,31 +51,58 @@ class Histogrammer1d:
             return
 
         if self.preprocessor is not None:
-            pulse_time, x, y = self._preprocess_data(pulse_time, x, y)
+            pulse_time, tofs, det_ids = self._preprocess_data(pulse_time, tofs, det_ids)
+
+        if self.roi is not None:
+            mask = self._get_mask(pulse_time, tofs, det_ids)
+            if mask:
+                tofs = ma.array(tofs, mask=mask).compressed()
 
         if self.histogram is None:
-            # If no tof range defined then generate one
+            # If no tof range defined then guess one
             if self.tof_range is None:
-                self.tof_range = (0, max(x))
+                self.tof_range = (0, max(tofs))
 
             # Assumes that fast_histogram produces the same bins as numpy.
-            self.x_edges = np.histogram_bin_edges(x, self.num_bins, self.tof_range)
-            self.histogram = histogram1d(x, range=self.tof_range, bins=self.num_bins)
+            self.x_edges = np.histogram_bin_edges(tofs, self.num_bins, self.tof_range)
+            self.histogram = histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
         else:
-            self.histogram += histogram1d(x, range=self.tof_range, bins=self.num_bins)
+            self.histogram += histogram1d(
+                tofs, range=self.tof_range, bins=self.num_bins
+            )
 
-    def _preprocess_data(self, pulse_time, x, y=None):
+    def _preprocess_data(self, pulse_time, tofs, det_ids):
         """
         Apply the defined processing function to the data.
 
         :param pulse_time: The pulse time.
-        :param x: The time-of-flight data.
-        :param y: Ignored parameter.
-        :return: The newly processed data
+        :param tofs: The time-of-flight data.
+        :param det_ids: The detector ids.
+        :return: The newly processed data.
         """
         try:
-            x = self.preprocessor(pulse_time, x)
+            pulse_time, tofs, det_ids = self.preprocessor(pulse_time, tofs, det_ids)
         except Exception:
             # TODO: log
             print("Exception while preprocessing data")
-        return pulse_time, x, y
+        return pulse_time, tofs, det_ids
+
+    def _get_mask(self, pulse_time, tofs, det_ids):
+        """
+        Apply the defined processing function to the data to generate a mask.
+
+        1 is used to indicate a masked value.
+        0 is used to indicate an unmasked value.
+
+        :param pulse_time: The pulse time.
+        :param tofs: The time-of-flight data.
+        :param det_ids: The detector ids.
+        :return: The newly processed data.
+        """
+        try:
+            mask = self.roi(pulse_time, tofs, det_ids)
+        except Exception:
+            # TODO: log
+            print("Exception while try to check ROI")
+            mask = None
+        return mask
