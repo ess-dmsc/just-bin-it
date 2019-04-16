@@ -8,7 +8,7 @@ class TestHistogrammer2d:
     def prepare(self):
         self.pulse_time = 1234
         self.num_bins = 5
-        self.tof_range = (0, 5)
+        self.tof_range = (0, 10)
         self.det_range = (0, 5)
         self.data = np.array([x for x in range(self.num_bins)])
         self.hist = Histogrammer2d(
@@ -30,7 +30,8 @@ class TestHistogrammer2d:
         assert len(self.hist.x_edges) == self.num_bins + 1
         assert len(self.hist.y_edges) == self.num_bins + 1
         assert self.hist.x_edges[0] == self.data[0]
-        assert self.hist.x_edges[-1] == 5
+        assert self.hist.x_edges[-1] == 10
+        assert self.hist.y_edges[-1] == 5
 
     def test_adding_data_to_initialised_histogram_new_data_is_added(self):
         self.hist.add_data(self.pulse_time, self.data, self.data)

@@ -187,3 +187,24 @@ py.test --cov .
 Formatting is handled by [Black](https://black.readthedocs.io/en/stable/).
 
 It should be added as a commit hook (see above).
+
+### mutmut
+Occasionally run mutmut to check that mutating the code causes tests to fail.
+
+To run:
+```
+mutmut run --use-coverage  --paths-to-mutate .
+```
+
+To see the ID of the mutations that survived the tests run:
+```
+mutmut results
+```
+This produces a list of the mutation numbers that survived, to see the actual
+code change for the ID run:
+```
+mutmut show 56
+```
+where 56 can be replaced with the appropriate ID.
+
+Note: there will be a number of false-positives.

@@ -134,7 +134,6 @@ def serialise_hs00(histogrammer):
     shape = builder.EndVector(rank)
 
     # Build dimensions metadata
-    metadata = []
     # Build the x bins vector
     metadata = [_serialise_metadata(builder, histogrammer.x_edges, histogram.shape[0])]
 
