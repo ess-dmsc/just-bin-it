@@ -78,6 +78,7 @@ def main(brokers, topic, one_shot, initial_config=None):
     :param initial_config: A histogram configuration to start with.
     """
     # Create the config listener
+    logging.info("Creating configuration consumer")
     config_consumer = Consumer(brokers, [topic])
     config_source = ConfigSource(config_consumer)
 
@@ -130,6 +131,8 @@ def main(brokers, topic, one_shot, initial_config=None):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
+
     parser = argparse.ArgumentParser()
 
     required_args = parser.add_argument_group("required arguments")
