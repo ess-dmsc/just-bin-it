@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.ma as ma
+import logging
 from fast_histogram import histogram1d
 
 
@@ -83,8 +84,7 @@ class Histogrammer1d:
         try:
             pulse_time, tofs, det_ids = self.preprocessor(pulse_time, tofs, det_ids)
         except Exception:
-            # TODO: log
-            print("Exception while preprocessing data")
+            logging.warning("Exception while preprocessing data")
         return pulse_time, tofs, det_ids
 
     def _get_mask(self, pulse_time, tofs, det_ids):
@@ -102,7 +102,6 @@ class Histogrammer1d:
         try:
             mask = self.roi(pulse_time, tofs, det_ids)
         except Exception:
-            # TODO: log
-            print("Exception while try to check ROI")
+            logging.warning("Exception while try to check ROI")
             mask = None
         return mask

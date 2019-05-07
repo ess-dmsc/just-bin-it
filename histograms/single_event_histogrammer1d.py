@@ -1,6 +1,7 @@
 import numpy as np
 from fast_histogram import histogram1d
 import math
+import logging
 
 
 class SingleEventHistogrammer1d:
@@ -100,8 +101,7 @@ class SingleEventHistogrammer1d:
         try:
             pulse_time, tof, det_id = self.preprocessor(pulse_time, tof, det_id)
         except Exception:
-            # TODO: log
-            print("Exception while preprocessing data")
+            logging.warning("Exception while preprocessing data")
         return pulse_time, tof, det_id
 
     def _get_mask(self, event_time, tof, det_id):
@@ -120,6 +120,6 @@ class SingleEventHistogrammer1d:
             mask = self.roi(event_time, tof, det_id)
         except Exception:
             # TODO: log
-            print("Exception while try to check ROI")
+            logging.warning("Exception while try to check ROI")
             mask = None
         return mask

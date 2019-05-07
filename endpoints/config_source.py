@@ -1,4 +1,5 @@
 import json
+import logging
 from endpoints.serialisation import deserialise_ev42, deserialise_hs00
 
 
@@ -31,8 +32,7 @@ class BaseSource:
                 try:
                     data.append(self._process_record(i.value))
                 except SourceException as error:
-                    # TODO: log exception
-                    print(f"SourceException: {error}")
+                    logging.warning(f"SourceException: {error}")
 
         return data
 

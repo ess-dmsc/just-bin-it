@@ -1,3 +1,4 @@
+import logging
 from histograms.histogrammer1d import Histogrammer1d
 from histograms.histogrammer2d import Histogrammer2d
 from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d
@@ -38,7 +39,7 @@ class HistogramFactory:
                 hist = SingleEventHistogrammer1d(topic, num_bins, tof_range, source)
             else:
                 # TODO: skip it, throw or what?
-                print(f"Unrecognised histogram type: {hist_type}")
+                logging.warning(f"Unrecognised histogram type: {hist_type}")
                 pass
 
             if hist is not None:
