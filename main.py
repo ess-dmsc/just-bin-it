@@ -123,14 +123,21 @@ def main(brokers, topic, one_shot, simulation, initial_config=None):
     while True:
         time.sleep(0.5)
 
-        # Check for a configuration change
-        configs = config_source.get_new_data()
+        # Check for a configuration message
+        config_msg = config_source.get_new_data()
 
-        if len(configs) > 0:
-            # We are only interested in the "latest" config
-            logging.info("New configuration received")
-            config = configs[-1]
-            event_source, hist_sink, histograms = configure_histogramming(config)
+        if len(config_msg) > 0:
+            # We are only interested in the "latest" message
+            logging.info("New configuration message received")
+            msg = config_msg[-1]
+
+            if msg["cmd"] == "restart":
+                for hist in histograms:
+                    hist.clear_data()
+            elif msg["cmd"] == "config":
+                event_source, hist_sink, histograms = configure_histogramming(msg)
+            else:
+                logging.warning(f'Unknown command received: {msg["cmd"]}')
 
         if event_source is None:
             # No event source means we are waiting for a configuration

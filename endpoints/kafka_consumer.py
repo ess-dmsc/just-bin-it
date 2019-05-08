@@ -1,3 +1,4 @@
+import logging
 from kafka import KafkaConsumer, TopicPartition
 from kafka.errors import KafkaError
 
@@ -41,5 +42,5 @@ class Consumer:
         """
         data = self.consumer.poll(5)
         for tp in self.topic_partitions:
-            print(f"{tp.topic} - current position: {self.consumer.position(tp)}")
+            logging.info(f"{tp.topic} - current position: {self.consumer.position(tp)}")
         return data

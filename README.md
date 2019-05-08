@@ -54,6 +54,7 @@ from kafka import KafkaProducer
 
 CONFIG_JSON = b"""
 {
+  "cmd": "config",
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
@@ -153,6 +154,16 @@ python main.py --brokers localhost:9092 --topic hist_commands --config_file ../e
 
 Note: this configuration will be replaced if a new configuration is sent the command
 topic.
+
+### Restarting the count
+To restarting the histograms counting from zero, send the restart command:
+```json
+{
+  "cmd": "restart"
+}
+```
+This will start all the histograms counting from zero but will not change any other
+settings, such as bin edges etc.
 
 ## Supported schemas
 

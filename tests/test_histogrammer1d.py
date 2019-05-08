@@ -109,3 +109,19 @@ class TestHistogrammer1d:
         hist.add_data(self.pulse_time, self.data, det_ids)
 
         assert sum(hist.histogram) == 2
+
+    def test_clearing_histogram_data_clears_histogram(self):
+        self.hist.add_data(self.pulse_time, self.data)
+
+        self.hist.clear_data()
+
+        assert sum(self.hist.histogram) == 0
+
+    def test_after_clearing_histogram_can_add_data(self):
+        self.hist.add_data(self.pulse_time, self.data)
+        self.hist.clear_data()
+
+        self.hist.add_data(self.pulse_time, self.data)
+
+        assert self.hist.histogram.shape == (self.num_bins,)
+        assert sum(self.hist.histogram) == 5

@@ -105,3 +105,10 @@ class Histogrammer1d:
             logging.warning("Exception while try to check ROI")
             mask = None
         return mask
+
+    def clear_data(self):
+        """
+        Clears the histogram data, but maintains the other values (e.g. edges etc.)
+        """
+        logging.info("Clearing data")
+        self.histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)
