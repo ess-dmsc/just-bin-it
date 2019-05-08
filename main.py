@@ -3,14 +3,14 @@ import os
 import json
 import logging
 import numpy as np
-from time import sleep
+import time
 from endpoints.kafka_consumer import Consumer
 from endpoints.kafka_producer import Producer
 from histograms.histogrammer2d import Histogrammer2d
 from histograms.histogrammer1d import Histogrammer1d  # NOQA
 from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d  # NOQA
 from histograms.histogram_factory import HistogramFactory
-from endpoints.config_source import ConfigSource, EventSource
+from endpoints.sources import ConfigSource, EventSource
 from endpoints.histogram_sink import HistogramSink
 
 
@@ -20,7 +20,10 @@ def plot_histogram(hist):
 
     :param hist: The histogram to plot.
     """
-    import matplotlib.pyplot as plt
+    import matplotlib
+
+    matplotlib.use("TkAgg")
+    from matplotlib import pyplot as plt
 
     if isinstance(hist, Histogrammer2d):
         fig = plt.figure()
@@ -68,15 +71,42 @@ def configure_histogramming(config):
     return event_source, hist_sink, histograms
 
 
-def main(brokers, topic, one_shot, initial_config=None):
+def run_simulation(brokers, one_shot):
+    producer = Producer(brokers)
+    hist_sink = HistogramSink(producer)
+    hist = Histogrammer1d(topic="jbi_sim_data", tof_range=(0, 10000))
+
+    while True:
+        time.sleep(1)
+
+        # Generate gaussian data centred around 3000
+        tofs = np.random.normal(3000, 1000, 1000)
+        hist.add_data(time.time_ns(), tofs)
+
+        if one_shot:
+            plot_histogram(hist)
+            # Exit the program when the graph is closed
+            return
+        else:
+            # Publish histogram data
+            hist_sink.send_histogram(hist.topic, hist)
+
+
+def main(brokers, topic, one_shot, simulation, initial_config=None):
     """
     The main execution function.
 
     :param brokers: The brokers to listen for the configuration commands on.
     :param topic: The topic to listen for commands on.
     :param one_shot: Run in one-shot mode.
+    :param simulation: Run in simulation mode.
     :param initial_config: A histogram configuration to start with.
     """
+    if simulation:
+        logging.info("Running in simulation mode")
+        run_simulation(brokers, one_shot)
+        return
+
     # Create the config listener
     logging.info("Creating configuration consumer")
     config_consumer = Consumer(brokers, [topic])
@@ -91,7 +121,7 @@ def main(brokers, topic, one_shot, initial_config=None):
         event_source, hist_sink, histograms = configure_histogramming(initial_config)
 
     while True:
-        sleep(0.5)
+        time.sleep(0.5)
 
         # Check for a configuration change
         configs = config_source.get_new_data()
@@ -164,10 +194,24 @@ if __name__ == "__main__":
         " Used for testing",
     )
 
+    parser.add_argument(
+        "-s",
+        "--simulation-mode",
+        action="store_true",
+        help="runs the program in simulation mode. 1-D histogram data is written"
+        " to jbi_sim_data. The configuration topic is ignored",
+    )
+
     args = parser.parse_args()
 
     init_hist_json = None
     if args.config_file:
         init_hist_json = load_config_file(args.config_file)
 
-    main(args.brokers, args.topic, args.one_shot_plot, init_hist_json)
+    main(
+        args.brokers,
+        args.topic,
+        args.one_shot_plot,
+        args.simulation_mode,
+        init_hist_json,
+    )

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from endpoints.config_source import EventSource
+from endpoints.sources import EventSource
 from tests.mock_consumer import MockConsumer
 
 

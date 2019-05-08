@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 from endpoints.kafka_consumer import Consumer
-from endpoints.config_source import HistogramSource
+from endpoints.sources import HistogramSource
 
 
 def plot_histogram(hist):
@@ -10,7 +10,10 @@ def plot_histogram(hist):
 
     :param hist: The histogram to plot.
     """
-    import matplotlib.pyplot as plt
+    import matplotlib
+
+    matplotlib.use("TkAgg")
+    from matplotlib import pyplot as plt
 
     n_dims = len(hist["dims"])
 

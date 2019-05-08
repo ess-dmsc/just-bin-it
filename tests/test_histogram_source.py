@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from endpoints.config_source import HistogramSource
+from endpoints.sources import HistogramSource
 from tests.mock_consumer import MockConsumer
 
 
