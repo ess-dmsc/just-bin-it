@@ -8,13 +8,7 @@ class Histogrammer1d:
     """Histograms time-of-flight for a range of detectors into a 1-D histogram."""
 
     def __init__(
-        self,
-        topic,
-        num_bins=50,
-        tof_range=None,
-        source=None,
-        preprocessor=None,
-        roi=None,
+        self, topic, num_bins, tof_range, source=None, preprocessor=None, roi=None
     ):
         """
         Constructor.
@@ -60,10 +54,6 @@ class Histogrammer1d:
                 tofs = ma.array(tofs, mask=mask).compressed()
 
         if self.histogram is None:
-            # If no tof range defined then guess one
-            if self.tof_range is None:
-                self.tof_range = (0, max(tofs))
-
             # Assumes that fast_histogram produces the same bins as numpy.
             self.x_edges = np.histogram_bin_edges(tofs, self.num_bins, self.tof_range)
             self.histogram = histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
@@ -110,5 +100,5 @@ class Histogrammer1d:
         """
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
-        logging.info("Clearing data")
+        logging.info("Clearing data")  # pragma: no mutate
         self.histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)

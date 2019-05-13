@@ -1,6 +1,7 @@
 import logging
 from kafka import KafkaConsumer, TopicPartition
 from kafka.errors import KafkaError
+from typing import List
 
 
 class Consumer:
@@ -11,12 +12,12 @@ class Consumer:
     mock the Kafka side without making the tests trivial or pointless.
     """
 
-    def __init__(self, brokers, topics):
+    def __init__(self, brokers: List[str], topics: List[str]):
         """
         Constructor.
 
-        :param brokers: The brokers to connect to.
-        :param topics: The data topics.
+        :param brokers: The names of the brokers to connect to.
+        :param topics: The names of the data topics.
         """
         try:
             self.consumer = KafkaConsumer(bootstrap_servers=brokers)

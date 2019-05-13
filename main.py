@@ -6,6 +6,7 @@ import numpy as np
 import time
 from endpoints.kafka_consumer import Consumer
 from endpoints.kafka_producer import Producer
+from endpoints.kafka_tools import kafka_settings_valid
 from histograms.histogrammer2d import Histogrammer2d
 from histograms.histogrammer1d import Histogrammer1d  # NOQA
 from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d  # NOQA
@@ -62,6 +63,10 @@ def configure_histogramming(config):
     :param config: The configuration.
     :return: A tuple of the event source, the histogram sink and the histograms.
     """
+    # Check brokers and data topics exist
+    if not kafka_settings_valid(config["data_brokers"], config["data_topics"]):
+        raise Exception("Could not configure histogramming as Kafka settings invalid")
+
     consumer = Consumer(config["data_brokers"], config["data_topics"])
     producer = Producer(config["data_brokers"])
     event_source = EventSource(consumer)
@@ -72,6 +77,10 @@ def configure_histogramming(config):
 
 
 def run_simulation(brokers, one_shot):
+    if not kafka_settings_valid(brokers, []):
+        logging.error(f"Could not connect to Kafka brokers to write simulated data")
+        return
+
     producer = Producer(brokers)
     hist_sink = HistogramSink(producer)
     hist = Histogrammer1d(topic="jbi_sim_data", tof_range=(0, 10000))
@@ -92,12 +101,12 @@ def run_simulation(brokers, one_shot):
             hist_sink.send_histogram(hist.topic, hist)
 
 
-def main(brokers, topic, one_shot, simulation, initial_config=None):
+def main(brokers, config_topic, one_shot, simulation, initial_config=None):
     """
     The main execution function.
 
     :param brokers: The brokers to listen for the configuration commands on.
-    :param topic: The topic to listen for commands on.
+    :param config_topic: The topic to listen for commands on.
     :param one_shot: Run in one-shot mode.
     :param simulation: Run in simulation mode.
     :param initial_config: A histogram configuration to start with.
@@ -109,44 +118,72 @@ def main(brokers, topic, one_shot, simulation, initial_config=None):
 
     # Create the config listener
     logging.info("Creating configuration consumer")
-    config_consumer = Consumer(brokers, [topic])
+    while not kafka_settings_valid(brokers, [config_topic]):
+        logging.error(
+            f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
+        )
+        time.sleep(5)
+
+    config_consumer = Consumer(brokers, [config_topic])
     config_source = ConfigSource(config_consumer)
 
     event_source = None
     hist_sink = None
     histograms = []
+    config_messages = []
 
     if initial_config:
         # Create the histograms based on the supplied configuration
-        event_source, hist_sink, histograms = configure_histogramming(initial_config)
+        try:
+            event_source, hist_sink, histograms = configure_histogramming(
+                initial_config
+            )
+        except Exception as error:
+            logging.error(f"Could not use supplied configuration: {error}")
 
     while True:
         time.sleep(0.5)
 
-        # Check for a configuration message
-        config_msg = config_source.get_new_data()
-
-        if len(config_msg) > 0:
+        # Handle configuration message(s)
+        if len(config_messages) > 0:
             # We are only interested in the "latest" message
             logging.info("New configuration message received")
-            msg = config_msg[-1]
+            msg = config_messages[-1]
+            config_messages = []
 
             if msg["cmd"] == "restart":
                 for hist in histograms:
                     hist.clear_data()
             elif msg["cmd"] == "config":
-                event_source, hist_sink, histograms = configure_histogramming(msg)
+                try:
+                    event_source, hist_sink, histograms = configure_histogramming(msg)
+                except Exception as error:
+                    logging.error(f"Could not use received configuration: {error}")
             else:
                 logging.warning(f'Unknown command received: {msg["cmd"]}')
 
+        # Check for a configuration message
+        config_messages = config_source.get_new_data()
+
         if event_source is None:
-            # No event source means we are waiting for a configuration
+            # No event source means we are waiting for a configuration.
             continue
 
         buffs = []
 
         while len(buffs) == 0:
             buffs = event_source.get_new_data()
+
+            # If we haven't data then quickly check to see if there is a new
+            # configuration message
+            # TODO: Time for a class? and mock more stuff out?
+            if len(buffs) == 0:
+                config_messages = config_source.get_new_data()
+                if len(config_messages) > 0:
+                    break
+
+        if len(config_messages) > 0:
+            continue
 
         for hist in histograms:
             for b in buffs:

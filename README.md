@@ -194,6 +194,11 @@ From the top directory:
 py.test --cov .
 ```
 
+For HTML output:
+```
+pytest --cov --cov-report html .
+```
+
 ### Formatting
 Formatting is handled by [Black](https://black.readthedocs.io/en/stable/).
 

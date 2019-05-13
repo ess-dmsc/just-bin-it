@@ -9,7 +9,7 @@ class HistogramSink:
         :param producer: The underlying Kafka producer to publish to.
         """
         if producer is None:
-            raise Exception("Event source must have a consumer")
+            raise Exception("Event source must have a consumer")  # pragma: no mutate
         self.producer = producer
 
     def send_histogram(self, topic, histogram):

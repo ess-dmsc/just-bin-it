@@ -77,7 +77,7 @@ def deserialise_hs00(buf):
 
     # Get the data
     if event_hist.DataType() != Array.ArrayDouble:
-        raise TypeError("Type of the data array is incorrect")
+        raise TypeError("Type of the data array is incorrect")  # pragma: no mutate
 
     data_fb = event_hist.Data()
     temp = ArrayDouble.ArrayDouble()

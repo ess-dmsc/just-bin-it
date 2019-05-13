@@ -74,14 +74,6 @@ class TestHistogrammer1d:
         self.hist = Histogrammer1d("topic1", self.num_bins, self.range, _preprocess)
         self.hist.add_data(self.pulse_time, self.data)
 
-    def test_if_no_tof_range_given_then_sets_upper_limit_to_max_value(self):
-        self.hist = Histogrammer1d("topic1", self.num_bins)
-
-        self.hist.add_data(self.pulse_time, self.data)
-
-        assert self.hist.tof_range[0] == 0
-        assert self.hist.tof_range[1] == max(self.data)
-
     def test_only_data_with_correct_source_is_added(self):
         hist = Histogrammer1d("topic1", self.num_bins, self.range, source="source1")
 
@@ -125,3 +117,8 @@ class TestHistogrammer1d:
 
         assert self.hist.histogram.shape == (self.num_bins,)
         assert sum(self.hist.histogram) == 5
+
+    def test_adding_empty_data_gives_histogram_of_zeroes(self):
+        self.hist.add_data(self.pulse_time, [])
+
+        assert sum(self.hist.histogram) == 0

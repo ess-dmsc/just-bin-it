@@ -26,6 +26,18 @@ CONFIG_JSON_2 = """
 }
 """
 
+CONFIG_JSON_3 = """
+{
+  "cmd": "config",
+  "data_brokers": ["differenthost:9092"],
+  "data_topics": ["TEST_events"],
+  "time_range": [
+  "histograms": [
+    {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "topic1"}
+  ]
+}
+"""
+
 RESTART_JSON = """
 {
   "cmd": "restart"
