@@ -23,7 +23,7 @@ class TestEventSource:
         data = es.get_new_data()
         assert len(data) == 0
 
-    @patch("endpoints.config_source.deserialise_ev42", return_value=TEST_MESSAGE)
+    @patch("endpoints.sources.deserialise_ev42", return_value=TEST_MESSAGE)
     def test_if_five_new_messages_on_one_topic_then_data_has_five_items(
         self, mock_method
     ):
