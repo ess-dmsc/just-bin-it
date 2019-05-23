@@ -3,7 +3,7 @@ from endpoints.sources import ConfigSource
 from tests.mock_consumer import MockConsumer
 
 
-CONFIG_JSON_1 = """
+CONFIG_BASIC_1 = """
 {
   "cmd": "config",
   "data_brokers": ["localhost:9092"],
@@ -15,7 +15,7 @@ CONFIG_JSON_1 = """
 }
 """
 
-CONFIG_JSON_2 = """
+CONFIG_BASIC_2 = """
 {
   "cmd": "config",
   "data_brokers": ["differenthost:9092"],
@@ -26,19 +26,20 @@ CONFIG_JSON_2 = """
 }
 """
 
-CONFIG_JSON_3 = """
+CONFIG_START_AND_STOP = """
 {
   "cmd": "config",
   "data_brokers": ["differenthost:9092"],
   "data_topics": ["TEST_events"],
-  "time_range": [
+  "start": 1558596988319002000,
+  "stop": 1558597215933670000,
   "histograms": [
     {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "topic1"}
   ]
 }
 """
 
-RESTART_JSON = """
+RESTART_CMD = """
 {
   "cmd": "restart"
 }
@@ -57,7 +58,7 @@ class TestConfigSource:
             ConfigSource(None)
 
     def test_received_configuration_converted_correctly(self):
-        mock_consumer = MockConsumer(["broker1"], ["topic1"], [CONFIG_JSON_1])
+        mock_consumer = MockConsumer(["broker1"], ["topic1"], [CONFIG_BASIC_1])
         src = ConfigSource(mock_consumer)
 
         config = src.get_new_data()[-1]
@@ -80,7 +81,7 @@ class TestConfigSource:
         assert config["histograms"][1]["source"] == "source2"
 
     def test_received_restart_message_converted_correctly(self):
-        mock_consumer = MockConsumer(["broker1"], ["topic1"], [RESTART_JSON])
+        mock_consumer = MockConsumer(["broker1"], ["topic1"], [RESTART_CMD])
         src = ConfigSource(mock_consumer)
 
         message = src.get_new_data()[-1]
@@ -95,7 +96,7 @@ class TestConfigSource:
 
     def test_if_multiple_new_messages_gets_the_most_recent_one(self):
         mock_consumer = MockConsumer(
-            ["broker1"], ["topic1"], [CONFIG_JSON_1, CONFIG_JSON_1, CONFIG_JSON_2]
+            ["broker1"], ["topic1"], [CONFIG_BASIC_1, CONFIG_BASIC_1, CONFIG_BASIC_2]
         )
         src = ConfigSource(mock_consumer)
 
@@ -111,10 +112,19 @@ class TestConfigSource:
 
     def test_if_multiple_new_messages_gets_the_most_recent_valid_one(self):
         mock_consumer = MockConsumer(
-            ["broker1"], ["topic1"], [CONFIG_JSON_1, CONFIG_JSON_2, INVALID_JSON]
+            ["broker1"], ["topic1"], [CONFIG_BASIC_1, CONFIG_BASIC_2, INVALID_JSON]
         )
         src = ConfigSource(mock_consumer)
 
         config = src.get_new_data()[-1]
 
         assert config["data_brokers"][0] == "differenthost:9092"
+
+    def test_start_and_stop_time_converted_correctly(self):
+        mock_consumer = MockConsumer(["broker1"], ["topic1"], [CONFIG_START_AND_STOP])
+        src = ConfigSource(mock_consumer)
+
+        config = src.get_new_data()[-1]
+
+        assert config["start"] == 1558596988319002000
+        assert config["stop"] == 1558597215933670000

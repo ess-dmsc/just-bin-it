@@ -12,22 +12,15 @@ class TestHistogrammer1d:
         self.data = np.array([x for x in range(self.num_bins)])
         self.hist = Histogrammer1d("topic1", self.num_bins, self.range)
 
-    def test_on_construction_histogram_is_uninitialised(self):
-        assert self.hist.histogram is None
-        assert self.hist.x_edges is None
-
-    def test_adding_data_to_uninitialised_histogram_initialises_it(self):
-        self.hist.add_data(self.pulse_time, self.data)
-
+    def test_on_construction_histogram_is_initialised_empty(self):
         assert self.hist.histogram is not None
+        assert self.hist.x_edges is not None
         assert self.hist.histogram.shape == (self.num_bins,)
-        assert sum(self.hist.histogram) == 5
-        # Edges is 1 more than the number of bins
         assert len(self.hist.x_edges) == self.num_bins + 1
         assert self.hist.x_edges[0] == self.data[0]
         assert self.hist.x_edges[-1] == 5
 
-    def test_adding_data_to_initialised_histogram_new_data_is_added(self):
+    def test_adding_data_to_histogram_adds_data(self):
         self.hist.add_data(self.pulse_time, self.data)
         first_sum = sum(self.hist.histogram)
 
@@ -118,7 +111,7 @@ class TestHistogrammer1d:
         assert self.hist.histogram.shape == (self.num_bins,)
         assert sum(self.hist.histogram) == 5
 
-    def test_adding_empty_data_gives_histogram_of_zeroes(self):
+    def test_adding_empty_data_does_nothing(self):
         self.hist.add_data(self.pulse_time, [])
 
         assert sum(self.hist.histogram) == 0

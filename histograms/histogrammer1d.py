@@ -32,6 +32,15 @@ class Histogrammer1d:
         self.preprocessor = preprocessor
         self.roi = roi
 
+        self._intialise_histogram()
+
+    def _intialise_histogram(self):
+        """
+        Create a zeroed histogram with the correct shape.
+        """
+        self.x_edges = np.histogram_bin_edges([], self.num_bins, self.tof_range)
+        self.histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)
+
     def add_data(self, pulse_time, tofs, det_ids=None, source=""):
         """
         Add data to the histogram.
@@ -53,14 +62,7 @@ class Histogrammer1d:
             if mask:
                 tofs = ma.array(tofs, mask=mask).compressed()
 
-        if self.histogram is None:
-            # Assumes that fast_histogram produces the same bins as numpy.
-            self.x_edges = np.histogram_bin_edges(tofs, self.num_bins, self.tof_range)
-            self.histogram = histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
-        else:
-            self.histogram += histogram1d(
-                tofs, range=self.tof_range, bins=self.num_bins
-            )
+        self.histogram += histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
 
     def _preprocess_data(self, pulse_time, tofs, det_ids):
         """
