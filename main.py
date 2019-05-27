@@ -188,6 +188,12 @@ class Main:
         return hist_sink, histograms
 
     def configure_event_source(self, config):
+        """
+        Configure the event source.
+
+        :param config: The configuration.
+        :return: The new event source.
+        """
         # Check brokers and data topics exist
         if not kafka_settings_valid(config["data_brokers"], config["data_topics"]):
             raise Exception(
@@ -203,6 +209,12 @@ class Main:
         return event_source
 
     def handle_command_message(self, message, simulation):
+        """
+        Handle the message received.
+
+        :param message: The message.
+        :param simulation: Has simulation mode been set
+        """
         if message["cmd"] == "restart":
             for hist in self.histograms:
                 hist.clear_data()
@@ -220,7 +232,9 @@ class Main:
             logging.warning(f'Unknown command received: {message["cmd"]}')
 
     def publish_histograms(self):
-        # Publish histogram data
+        """
+        Publish histogram data to the histogram sink.
+        """
         for h in self.histograms:
             self.hist_sink.send_histogram(h.topic, h)
 
