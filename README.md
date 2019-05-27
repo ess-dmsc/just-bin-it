@@ -100,6 +100,7 @@ A JSON histogramming configuration has the following parameters:
 For example:
 ```json
 {
+  "cmd": "config",
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [

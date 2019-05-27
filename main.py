@@ -11,8 +11,53 @@ from histograms.histogrammer2d import Histogrammer2d
 from histograms.histogrammer1d import Histogrammer1d  # NOQA
 from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d  # NOQA
 from histograms.histogram_factory import HistogramFactory
-from endpoints.sources import ConfigSource, EventSource
+from endpoints.sources import ConfigSource, EventSource, SimulatedEventSource1D
 from endpoints.histogram_sink import HistogramSink
+
+
+class ConfigListener:
+    def __init__(self, brokers, config_topic):
+        self.brokers = brokers
+        self.config_topic = config_topic
+        self.config_source = None
+        self.message = None
+
+    def connect(self):
+        logging.info("Creating configuration consumer")
+        while not kafka_settings_valid(self.brokers, [self.config_topic]):
+            logging.error(
+                f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
+            )
+            time.sleep(5)
+        config_consumer = Consumer(self.brokers, [self.config_topic])
+        self.config_source = ConfigSource(config_consumer)
+
+    def check_for_messages(self):
+        """
+        Checks for unconsumed messages.
+
+        :return: True if there is a message available.
+        """
+        messages = self.config_source.get_new_data()
+        if messages:
+            # Only interested in the "latest" message
+            self.message = messages[-1]
+            logging.info("New configuration message received")
+            return True
+        else:
+            # Return whether there is a message waiting
+            return self.message is not None
+
+    def consume_message(self):
+        """
+        :return: The waiting message.
+        """
+        if self.message:
+            msg = self.message
+            self.message = None
+            return msg
+        else:
+            raise Exception("No message available")
 
 
 def plot_histogram(hist):
@@ -50,158 +95,134 @@ def load_config_file(file):
         path = os.path.abspath(file)
         with open(path, "r") as f:
             data = f.read()
-
         return json.loads(data)
     except Exception as error:
         raise Exception("Could not load configuration file") from error
 
 
-def configure_histogramming(config):
-    """
-    Configure histogramming based on the supplied configuration.
+class Main:
+    def __init__(
+        self, brokers, config_topic, one_shot, simulation, initial_config=None
+    ):
+        """
+        The main execution function.
 
-    :param config: The configuration.
-    :return: A tuple of the event source, the histogram sink and the histograms.
-    """
-    # Check brokers and data topics exist
-    if not kafka_settings_valid(config["data_brokers"], config["data_topics"]):
-        raise Exception("Could not configure histogramming as Kafka settings invalid")
+        :param brokers: The brokers to listen for the configuration commands on.
+        :param config_topic: The topic to listen for commands on.
+        :param one_shot: Histogram some data then plot it. Does not publish results.
+        :param simulation: Run in simulation mode.
+        :param initial_config: A histogram configuration to start with.
+        """
+        self.event_source = None
+        self.hist_sink = None
+        self.histograms = []
 
-    consumer = Consumer(config["data_brokers"], config["data_topics"])
-    producer = Producer(config["data_brokers"])
-    event_source = EventSource(consumer)
-    hist_sink = HistogramSink(producer)
-    histograms = HistogramFactory.generate(config)
+        if simulation:
+            logging.info("RUNNING IN SIMULATION MODE")
 
-    return event_source, hist_sink, histograms
+        # Blocks until it connects to the topic
+        config_listener = ConfigListener(brokers, config_topic)
+        config_listener.connect()
 
+        while True:
+            # Handle configuration messages
+            if initial_config or config_listener.check_for_messages():
+                if initial_config:
+                    # If initial configuration supplied, use it only once.
+                    msg = initial_config
+                    initial_config = None
+                else:
+                    msg = config_listener.consume_message()
 
-def run_simulation(brokers, one_shot):
-    if not kafka_settings_valid(brokers, []):
-        logging.error(f"Could not connect to Kafka brokers to write simulated data")
-        return
-
-    producer = Producer(brokers)
-    hist_sink = HistogramSink(producer)
-    hist = Histogrammer1d(topic="jbi_sim_data", tof_range=(0, 10000))
-
-    while True:
-        time.sleep(1)
-
-        # Generate gaussian data centred around 3000
-        tofs = np.random.normal(3000, 1000, 1000)
-        hist.add_data(time.time_ns(), tofs)
-
-        if one_shot:
-            plot_histogram(hist)
-            # Exit the program when the graph is closed
-            return
-        else:
-            # Publish histogram data
-            hist_sink.send_histogram(hist.topic, hist)
-
-
-def main(brokers, config_topic, one_shot, simulation, initial_config=None):
-    """
-    The main execution function.
-
-    :param brokers: The brokers to listen for the configuration commands on.
-    :param config_topic: The topic to listen for commands on.
-    :param one_shot: Run in one-shot mode.
-    :param simulation: Run in simulation mode.
-    :param initial_config: A histogram configuration to start with.
-    """
-    if simulation:
-        logging.info("Running in simulation mode")
-        run_simulation(brokers, one_shot)
-        return
-
-    # Create the config listener
-    logging.info("Creating configuration consumer")
-    while not kafka_settings_valid(brokers, [config_topic]):
-        logging.error(
-            f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
-        )
-        time.sleep(5)
-
-    config_consumer = Consumer(brokers, [config_topic])
-    config_source = ConfigSource(config_consumer)
-
-    event_source = None
-    hist_sink = None
-    histograms = []
-    config_messages = []
-
-    if initial_config:
-        # Create the histograms based on the supplied configuration
-        try:
-            event_source, hist_sink, histograms = configure_histogramming(
-                initial_config
-            )
-        except Exception as error:
-            logging.error(f"Could not use supplied configuration: {error}")
-
-    while True:
-        time.sleep(0.5)
-
-        # Handle configuration message(s)
-        if len(config_messages) > 0:
-            # We are only interested in the "latest" message
-            logging.info("New configuration message received")
-            msg = config_messages[-1]
-            config_messages = []
-
-            if msg["cmd"] == "restart":
-                for hist in histograms:
-                    hist.clear_data()
-            elif msg["cmd"] == "config":
                 try:
-                    event_source, hist_sink, histograms = configure_histogramming(msg)
+                    self.handle_command_message(msg, simulation)
+                    if not one_shot:
+                        # Publish initial empty histograms.
+                        self.publish_histograms()
                 except Exception as error:
-                    logging.error(f"Could not use received configuration: {error}")
-            else:
-                logging.warning(f'Unknown command received: {msg["cmd"]}')
+                    logging.error(f"Could not handle configuration: {error}")
 
-        # Check for a configuration message
-        config_messages = config_source.get_new_data()
+            if self.event_source is None:
+                # No event source means we are waiting for a configuration.
+                continue
 
-        if event_source is None:
-            # No event source means we are waiting for a configuration.
-            continue
+            event_buffer = []
 
-        buffs = []
+            while len(event_buffer) == 0:
+                event_buffer = self.event_source.get_new_data()
 
-        while len(buffs) == 0:
-            buffs = event_source.get_new_data()
+                # If we haven't data then quickly check to see if there is a new
+                # configuration message
+                if len(event_buffer) == 0:
+                    if config_listener.check_for_messages():
+                        break
 
-            # If we haven't data then quickly check to see if there is a new
-            # configuration message
-            # TODO: Time for a class? and mock more stuff out?
-            if len(buffs) == 0:
-                config_messages = config_source.get_new_data()
-                if len(config_messages) > 0:
-                    break
+            if event_buffer:
+                for hist in self.histograms:
+                    for b in event_buffer:
+                        pt = b["pulse_time"]
+                        x = b["tofs"]
+                        y = b["det_ids"]
+                        src = b["source"] if not simulation else hist.source
+                        hist.add_data(pt, x, y, src)
 
-        if len(config_messages) > 0:
-            continue
+                if one_shot:
+                    # Only plot the first histogram
+                    plot_histogram(self.histograms[0])
+                    # Exit the program when the graph is closed
+                    return
 
-        for hist in histograms:
-            for b in buffs:
-                pt = b["pulse_time"]
-                x = b["tofs"]
-                y = b["det_ids"]
-                src = b["source"]
-                hist.add_data(pt, x, y, src)
+            self.publish_histograms()
+            time.sleep(0.5)
 
-        if one_shot:
-            # Only plot the first histogram
-            plot_histogram(histograms[0])
-            # Exit the program when the graph is closed
-            return
+    def configure_histograms(self, config):
+        """
+        Configure histogramming based on the supplied configuration.
+
+        :param config: The configuration.
+        :return Tuple of the histogram sink and the histograms.
+        """
+        producer = Producer(config["data_brokers"])
+        hist_sink = HistogramSink(producer)
+        histograms = HistogramFactory.generate(config)
+        return hist_sink, histograms
+
+    def configure_event_source(self, config):
+        # Check brokers and data topics exist
+        if not kafka_settings_valid(config["data_brokers"], config["data_topics"]):
+            raise Exception(
+                "Could not configure histogramming as Kafka settings invalid"
+            )
+
+        consumer = Consumer(config["data_brokers"], config["data_topics"])
+        event_source = EventSource(consumer)
+
+        if "start" in config:
+            event_source.seek_to_pulse_time(config["start"])
+
+        return event_source
+
+    def handle_command_message(self, message, simulation):
+        if message["cmd"] == "restart":
+            for hist in self.histograms:
+                hist.clear_data()
+        elif message["cmd"] == "config":
+            try:
+                if simulation:
+                    logging.info("RUNNING IN SIMULATION MODE")
+                    self.event_source = SimulatedEventSource1D(message)
+                else:
+                    self.event_source = self.configure_event_source(message)
+                self.hist_sink, self.histograms = self.configure_histograms(message)
+            except Exception as error:
+                logging.error(f"Could not use received configuration: {error}")
         else:
-            # Publish histogram data
-            for h in histograms:
-                hist_sink.send_histogram(h.topic, h)
+            logging.warning(f'Unknown command received: {message["cmd"]}')
+
+    def publish_histograms(self):
+        # Publish histogram data
+        for h in self.histograms:
+            self.hist_sink.send_histogram(h.topic, h)
 
 
 if __name__ == "__main__":
@@ -227,7 +248,7 @@ if __name__ == "__main__":
         "-c",
         "--config-file",
         type=str,
-        help="configure an inital histogram from a JSON file",
+        help="configure an initial histogram from a JSON file",
     )
 
     parser.add_argument(
@@ -252,7 +273,7 @@ if __name__ == "__main__":
     if args.config_file:
         init_hist_json = load_config_file(args.config_file)
 
-    main(
+    Main(
         args.brokers,
         args.topic,
         args.one_shot_plot,

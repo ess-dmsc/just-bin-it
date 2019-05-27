@@ -1,6 +1,8 @@
 {
+  "cmd": "config",
   "data_brokers": ["localhost:9092"],
   "data_topics": ["LOQ_events"],
+  "start": 1558676657538999557,
   "histograms": [
     {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "hist-topic2"}
   ]
