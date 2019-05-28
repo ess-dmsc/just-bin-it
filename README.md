@@ -57,6 +57,8 @@ CONFIG_JSON = b"""
   "cmd": "config",
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
+  "start": 1558676657538999557,
+  "stop":  1558677657538999557,
   "histograms": [
     {
       "type": "hist1d",
@@ -89,13 +91,18 @@ A JSON histogramming configuration has the following parameters:
 
 * "data_brokers" (string array): the addresses of the Kafka brokers
 * "data_topics" (string array): the topics to listen for event data on
+* "start" (seconds since epoch in ns): only histogram data after this time [optional]
+* "stop" (seconds since epoch in ns): only histogram data up to this time [optional]
 * "histograms" (array of dicts): the histograms to create, contains the following:
     * "type" (string): the histogram type (hist1d or hist2d)
-    * "tof_range" (array of ints): the time-of-flight range to histogram [optional]
+    * "tof_range" (array of ints): the time-of-flight range to histogram
     * "det_range" (array of ints): the range of detectors to histogram [2-D only]
     * "num_bins" (int): the number of histogram bins
     * "topic" (string): the topic to write histogram data to
     * "source" (string): the name of the source to accept data from
+
+If start is not defined then counting with start with the next message.
+If stop is not defined then counting will not stop.
 
 For example:
 ```json
@@ -103,6 +110,8 @@ For example:
   "cmd": "config",
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
+  "start": 1558676657538999557,
+  "stop":  1558677657538999557,
   "histograms": [
     {
       "type": "hist1d",
@@ -121,9 +130,6 @@ For example:
   ]
 }
 ```
-
-If the `tof_range` is not supplied then it will set a range based on the first
-set of data it receives.
 
 Note: sending a new configuration replace the existing configuration meaning that
 existing histograms will no longer be updated.

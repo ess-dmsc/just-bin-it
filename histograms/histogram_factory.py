@@ -1,7 +1,7 @@
 import logging
-from histograms.histogrammer1d import Histogrammer1d
-from histograms.histogrammer2d import Histogrammer2d
-from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d
+from histograms.histogram1d import Histogram1d
+from histograms.histogram2d import Histogram2d
+from histograms.single_event_histogram1d import SingleEventHistogram1d
 
 
 class HistogramFactory:
@@ -15,6 +15,9 @@ class HistogramFactory:
         """
         histograms = []
 
+        if "histograms" not in configuration:
+            return histograms
+
         for h in configuration["histograms"]:
             hist = None
 
@@ -27,9 +30,9 @@ class HistogramFactory:
 
             if hist_type == "hist1d":
                 HistogramFactory.check_1d_info(num_bins, tof_range)
-                hist = Histogrammer1d(topic, num_bins, tof_range, source)
+                hist = Histogram1d(topic, num_bins, tof_range, source)
             elif hist_type == "hist2d":
-                hist = Histogrammer2d(
+                hist = Histogram2d(
                     topic,
                     num_bins,
                     tof_range,
@@ -37,7 +40,7 @@ class HistogramFactory:
                     # source,
                 )
             elif hist_type == "sehist1d":
-                hist = SingleEventHistogrammer1d(topic, num_bins, tof_range, source)
+                hist = SingleEventHistogram1d(topic, num_bins, tof_range, source)
             else:
                 # TODO: skip it, throw or what?
                 logging.warning(

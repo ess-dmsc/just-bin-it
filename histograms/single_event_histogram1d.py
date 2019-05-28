@@ -4,7 +4,7 @@ import math
 import logging
 
 
-class SingleEventHistogrammer1d:
+class SingleEventHistogram1d:
     """Histograms time-of-flight for the denex detector into a 1-D histogram."""
 
     def __init__(
@@ -30,7 +30,7 @@ class SingleEventHistogrammer1d:
         :param roi: The function for checking data is within the region of interest.
 
         """
-        self.histogram = None
+        self._histogram = None
         self.x_edges = None
         self.tof_range = tof_range
         self.num_bins = num_bins
@@ -47,6 +47,16 @@ class SingleEventHistogrammer1d:
             # In nanoseconds
             self.pulse_times.append(math.floor(i / pulse_freq * 10 ** 9))
         self.pulse_times.append(10 ** 9)
+
+        self._intialise_histogram()
+
+    def _intialise_histogram(self):
+        """
+        Create a zeroed histogram with the correct shape.
+        """
+        # Assumes that fast_histogram produces the same bins as numpy.
+        self.x_edges = np.histogram_bin_edges([], self.num_bins, self.tof_range)
+        self._histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)
 
     def add_data(self, pulse_time, tofs=None, det_ids=None, source=""):
         """
@@ -76,18 +86,9 @@ class SingleEventHistogrammer1d:
             if self._get_mask(pulse_time, tofs, det_ids)[0]:
                 return
 
-        if self.histogram is None:
-            # Assumes that fast_histogram produces the same bins as numpy.
-            self.x_edges = np.histogram_bin_edges(
-                [corrected_time], self.num_bins, self.tof_range
-            )
-            self.histogram = histogram1d(
-                [corrected_time], range=self.tof_range, bins=self.num_bins
-            )
-        else:
-            self.histogram += histogram1d(
-                [corrected_time], range=self.tof_range, bins=self.num_bins
-            )
+        self._histogram += histogram1d(
+            [corrected_time], range=self.tof_range, bins=self.num_bins
+        )
 
     def _preprocess_data(self, pulse_time, tof, det_id):
         """
@@ -123,3 +124,11 @@ class SingleEventHistogrammer1d:
             logging.warning("Exception while try to check ROI")
             mask = None
         return mask
+
+    @property
+    def data(self):
+        return self._histogram
+
+    @property
+    def shape(self):
+        return self._histogram.shape

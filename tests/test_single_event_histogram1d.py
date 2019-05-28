@@ -1,27 +1,28 @@
 import pytest
 import math
-from histograms.single_event_histogrammer1d import SingleEventHistogrammer1d
+from histograms.single_event_histogram1d import SingleEventHistogram1d
 
 
-class TestSingleEventHistogrammer1d:
+class TestSingleEventHistogram1d:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.num_bins = 5
         self.range = (0.0, 1 / 14 * 10 ** 9)
-        self.hist = SingleEventHistogrammer1d("topic1", self.num_bins, self.range)
+        self.hist = SingleEventHistogram1d("topic1", self.num_bins, self.range)
 
-    def test_on_construction_histogram_is_uninitialised(self):
-        assert self.hist.histogram is None
-        assert self.hist.x_edges is None
-
-    def test_adding_data_to_uninitialised_histogram_initialises_it(self):
-        self.hist.add_data(1000)
-        assert self.hist.histogram is not None
-        assert self.hist.histogram.shape == (self.num_bins,)
-        # Edges is 1 more than the number of bins
+    def test_on_construction_histogram_is_initialised_empty(self):
+        assert self.hist.x_edges is not None
+        assert self.hist.shape == (self.num_bins,)
         assert len(self.hist.x_edges) == self.num_bins + 1
         assert self.hist.x_edges[0] == self.range[0]
         assert self.hist.x_edges[-1] == self.range[-1]
+
+    def test_adding_data_to_histogram_adds_data(self):
+        self.hist.add_data(0.01)
+        self.hist.add_data(0.02)
+        self.hist.add_data(0.03)
+
+        assert sum(self.hist.data) == 3
 
     def test_pulse_times_are_correctly_initialised_in_nanoseconds(self):
         assert len(self.hist.pulse_times) == 15
@@ -44,11 +45,11 @@ class TestSingleEventHistogrammer1d:
             # Must be in nanoseconds
             self.hist.add_data(et * 10 ** 9)
 
-        assert self.hist.histogram[0] == 2
-        assert self.hist.histogram[1] == 2
-        assert self.hist.histogram[2] == 6
-        assert self.hist.histogram[3] == 1
-        assert self.hist.histogram[4] == 1
+        assert self.hist.data[0] == 2
+        assert self.hist.data[1] == 2
+        assert self.hist.data[2] == 6
+        assert self.hist.data[3] == 1
+        assert self.hist.data[4] == 1
 
     def test_if_roi_function_supplied_then_outside_data_ignored(self):
         # Ignore outside ROI
@@ -58,7 +59,7 @@ class TestSingleEventHistogrammer1d:
             else:
                 return [1]
 
-        hist = SingleEventHistogrammer1d(
+        hist = SingleEventHistogram1d(
             "topic1", self.num_bins, self.range, roi=_create_mask
         )
 
@@ -69,10 +70,10 @@ class TestSingleEventHistogrammer1d:
             # Must be in nanoseconds
             hist.add_data(et * 10 ** 9, det_ids=d)
 
-        assert sum(hist.histogram) == 4
+        assert sum(hist.data) == 4
 
     def test_only_data_with_correct_source_is_added(self):
-        hist = SingleEventHistogrammer1d(
+        hist = SingleEventHistogram1d(
             "topic1", self.num_bins, self.range, source="source1"
         )
 
@@ -80,4 +81,4 @@ class TestSingleEventHistogrammer1d:
         hist.add_data(0.02, 2, source="source1")
         hist.add_data(0.03, 3, source="OTHER")
 
-        assert sum(hist.histogram) == 2
+        assert sum(hist.data) == 2

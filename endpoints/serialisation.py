@@ -68,12 +68,12 @@ def deserialise_hs00(buf):
         else:
             raise TypeError("Type of the bin boundaries is incorrect")
 
-        info = {
+        hist_info = {
             "length": event_hist.DimMetadata(i).Length(),
             "edges": bins.tolist(),
             "type": bin_type,
         }
-        dims.append(info)
+        dims.append(hist_info)
 
     # Get the data
     if event_hist.DataType() != Array.ArrayDouble:
@@ -90,6 +90,7 @@ def deserialise_hs00(buf):
         "shape": shape,
         "dims": dims,
         "data": data.reshape(shape),
+        "info": event_hist.Info().decode("utf-8") if event_hist.Info() else "",
     }
     return hist
 
@@ -112,35 +113,40 @@ def _serialise_metadata(builder, edges, length):
     return DimensionMetaData.DimensionMetaDataEnd(builder)
 
 
-def serialise_hs00(histogrammer):
+def serialise_hs00(histogrammer, info_message: str = ""):
     """
     Serialise a histogram as an hs00 FlatBuffers message.
 
     :param histogrammer: The histogrammer containing the histogram to serialise.
+    :param info_message: Information to write to the 'info' field.
     :return: The raw buffer of the FlatBuffers message.
     """
+    # TODO: provide timestamp?
     file_identifier = b"hs00"
 
-    histogram = histogrammer.histogram
+    # histogram = histogrammer.data
     builder = flatbuffers.Builder(1024)
     source = builder.CreateString("just-bin-it")
+    info = builder.CreateString(info_message)
 
     # Build shape array
-    rank = len(histogram.shape)
+    rank = len(histogrammer.shape)
     EventHistogram.EventHistogramStartCurrentShapeVector(builder, rank)
     # FlatBuffers builds arrays backwards
-    for s in reversed(histogram.shape):
+    for s in reversed(histogrammer.shape):
         builder.PrependUint32(s)
     shape = builder.EndVector(rank)
 
     # Build dimensions metadata
     # Build the x bins vector
-    metadata = [_serialise_metadata(builder, histogrammer.x_edges, histogram.shape[0])]
+    metadata = [
+        _serialise_metadata(builder, histogrammer.x_edges, histogrammer.shape[0])
+    ]
 
     # Build the y bins vector, if present
     if hasattr(histogrammer, "y_edges"):
         metadata.append(
-            _serialise_metadata(builder, histogrammer.y_edges, histogram.shape[1])
+            _serialise_metadata(builder, histogrammer.y_edges, histogrammer.shape[1])
         )
 
     EventHistogram.EventHistogramStartDimMetadataVector(builder, rank)
@@ -150,14 +156,14 @@ def serialise_hs00(histogrammer):
     metadata_vector = builder.EndVector(rank)
 
     # Build the data
-    data_len = len(histogram)
-    if len(histogram.shape) == 2:
+    data_len = len(histogrammer.data)
+    if len(histogrammer.shape) == 2:
         # 2-D data will be flattened into one array
-        data_len = histogram.shape[0] * histogram.shape[1]
+        data_len = histogrammer.shape[0] * histogrammer.shape[1]
 
     ArrayDouble.ArrayDoubleStartValueVector(builder, data_len)
     # FlatBuffers builds arrays backwards
-    for x in reversed(histogram.flatten()):
+    for x in reversed(histogrammer.data.flatten()):
         builder.PrependFloat64(x)
     data = builder.EndVector(data_len)
     ArrayDouble.ArrayDoubleStart(builder)
@@ -167,6 +173,7 @@ def serialise_hs00(histogrammer):
     # Build the actual buffer
     EventHistogram.EventHistogramStart(builder)
     EventHistogram.EventHistogramAddSource(builder, source)
+    EventHistogram.EventHistogramAddInfo(builder, info)
     EventHistogram.EventHistogramAddCurrentShape(builder, shape)
     EventHistogram.EventHistogramAddDimMetadata(builder, metadata_vector)
     EventHistogram.EventHistogramAddData(builder, pos_data)

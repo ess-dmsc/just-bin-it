@@ -89,8 +89,9 @@ class EventSource(BaseSource):
             offset -= 1
 
             if offset < lowest_offset:
+                # We've gone back as far as we can.
                 raise Exception(
-                    "Cannot find start time in data - supplied start time is too old"
+                    "Cannot find start time in data as supplied start time is too old"
                 )
 
             self.consumer.seek_by_offset(offset)

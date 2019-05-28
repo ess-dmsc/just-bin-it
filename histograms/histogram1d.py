@@ -4,8 +4,8 @@ import logging
 from fast_histogram import histogram1d
 
 
-class Histogrammer1d:
-    """Histograms time-of-flight for a range of detectors into a 1-D histogram."""
+class Histogram1d:
+    """One dimensional histogram for time-of-flight."""
 
     def __init__(
         self, topic, num_bins, tof_range, source=None, preprocessor=None, roi=None
@@ -23,7 +23,7 @@ class Histogrammer1d:
         :param preprocessor: The function to apply to the data before adding.
         :param roi: The function for checking data is within the region of interest.
         """
-        self.histogram = None
+        self._histogram = None
         self.x_edges = None
         self.tof_range = tof_range
         self.num_bins = num_bins
@@ -39,7 +39,7 @@ class Histogrammer1d:
         Create a zeroed histogram with the correct shape.
         """
         self.x_edges = np.histogram_bin_edges([], self.num_bins, self.tof_range)
-        self.histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)
+        self._histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)
 
     def add_data(self, pulse_time, tofs, det_ids=None, source=""):
         """
@@ -62,7 +62,15 @@ class Histogrammer1d:
             if mask:
                 tofs = ma.array(tofs, mask=mask).compressed()
 
-        self.histogram += histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
+        self._histogram += histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
+
+    @property
+    def data(self):
+        return self._histogram
+
+    @property
+    def shape(self):
+        return self._histogram.shape
 
     def _preprocess_data(self, pulse_time, tofs, det_ids):
         """
@@ -103,4 +111,4 @@ class Histogrammer1d:
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self.histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)
+        self._histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)
