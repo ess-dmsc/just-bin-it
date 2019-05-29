@@ -90,7 +90,9 @@ def deserialise_hs00(buf):
         "shape": shape,
         "dims": dims,
         "data": data.reshape(shape),
-        "info": event_hist.Info().decode("utf-8") if event_hist.Info() else "",
+        "info": event_hist.Info().decode("utf-8")
+        if event_hist.Info()
+        else "",  # pragma: no mutate
     }
     return hist
 

@@ -91,26 +91,26 @@ class TestMain:
     def test_while_counting_published_histogram_is_labeled_to_indicate_counting(self):
         self.histogrammer = Histogrammer(self.mock_producer, START_CONFIG)
         self.histogrammer.add_data(EVENT_DATA)
+
         self.histogrammer.publish_histograms()
 
         data = deserialise_hs00(self.mock_producer.messages[0][1])
-
         assert data["info"] == HISTOGRAM_STATES["COUNTING"]
 
     def test_after_stop_published_histogram_is_labeled_to_indicate_finished(self):
         self.histogrammer = Histogrammer(self.mock_producer, STOP_CONFIG)
         self.histogrammer.add_data(EVENT_DATA)
+
         self.histogrammer.publish_histograms()
 
         data = deserialise_hs00(self.mock_producer.messages[0][1])
-
         assert data["info"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_after_stop_publishing_final_histograms_published_once_only(self):
         self.histogrammer = Histogrammer(self.mock_producer, STOP_CONFIG)
         self.histogrammer.add_data(EVENT_DATA)
-        self.histogrammer.publish_histograms()
 
+        self.histogrammer.publish_histograms()
         # After stop these additional requests to publish should be ignored.
         self.histogrammer.publish_histograms()
         self.histogrammer.publish_histograms()

@@ -63,5 +63,7 @@ class HistogramFactory:
             missing.append("number of bins")  # pragma: no mutate
 
         if missing:
-            error_msg = f"Data missing for 1d histogram: {', '.join(missing)}"
+            error_msg = (
+                f"Data missing for 1d histogram: {', '.join(missing)}"
+            )  # pragma: no mutate
             raise Exception(error_msg)

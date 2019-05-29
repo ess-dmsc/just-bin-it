@@ -92,7 +92,7 @@ class EventSource(BaseSource):
                 # We've gone back as far as we can.
                 raise Exception(
                     "Cannot find start time in data as supplied start time is too old"
-                )
+                )  # pragma: no mutate
 
             self.consumer.seek_by_offset(offset)
 
