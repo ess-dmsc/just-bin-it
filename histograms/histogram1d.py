@@ -31,6 +31,7 @@ class Histogram1d:
         self.topic = topic
         self.preprocessor = preprocessor
         self.roi = roi
+        self.last_pulse_time = 0
 
         self._intialise_histogram()
 
@@ -53,6 +54,8 @@ class Histogram1d:
         # Discard any messages not from the specified source.
         if self.source is not None and source != self.source:
             return
+
+        self.last_pulse_time = pulse_time
 
         if self.preprocessor is not None:
             pulse_time, tofs, det_ids = self._preprocess_data(pulse_time, tofs, det_ids)

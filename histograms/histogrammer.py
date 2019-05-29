@@ -62,3 +62,16 @@ class Histogrammer:
         """
         for hist in self.histograms:
             hist.clear_data()
+
+    def get_histogram_stats(self):
+        """
+        Get the stats for all the histograms.
+
+        :return: List of stats.
+        """
+        results = []
+
+        for h in self.histograms:
+            results.append({"last_pulse_time": h.last_pulse_time, "sum": sum(h.data)})
+
+        return results

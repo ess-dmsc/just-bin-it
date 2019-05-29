@@ -13,6 +13,10 @@ from histograms.single_event_histogram1d import SingleEventHistogram1d  # NOQA
 from endpoints.sources import ConfigSource, EventSource, SimulatedEventSource1D
 from histograms.histogrammer import Histogrammer
 
+import graphyte
+
+graphyte.init("127.0.0.1", prefix="just-bin-it")
+
 
 class ConfigListener:
     def __init__(self, brokers, config_topic):
@@ -169,6 +173,13 @@ class Main:
                     return
 
             self.histogrammer.publish_histograms()
+
+            hist_stats = self.histogrammer.get_histogram_stats()
+            for i, stat in enumerate(hist_stats):
+                graphyte.send(
+                    f"hist{i}", stat["sum"], timestamp=stat["last_pulse_time"] / 10 ** 9
+                )
+
             time.sleep(0.5)
 
     def configure_histograms(self, config):

@@ -116,3 +116,18 @@ class TestMain:
         self.histogrammer.publish_histograms()
 
         assert len(self.mock_producer.messages) == 1
+
+    def test_get_stats_returns_correct_stats(self):
+        self.histogrammer.add_data(EVENT_DATA)
+
+        stats = self.histogrammer.get_histogram_stats()
+
+        assert stats[0]["last_pulse_time"] == 1002
+        assert stats[0]["sum"] == 28
+
+    def test_get_stats_with_no_histogram_returns_empty(self):
+        self.histogrammer = Histogrammer(self.mock_producer, NO_HIST_CONFIG)
+
+        stats = self.histogrammer.get_histogram_stats()
+
+        assert len(stats) == 0

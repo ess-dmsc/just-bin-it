@@ -39,6 +39,8 @@ class SingleEventHistogram1d:
         self.preprocessor = preprocessor
         self.roi = roi
 
+        self.last_pulse_time = 0
+
         # Create a list of pulse times assuming the first pulse is at 0.00
         # i.e on the second.
         pulse_freq = 14
@@ -73,6 +75,8 @@ class SingleEventHistogram1d:
 
         # Throw away the seconds part
         nanosecs = pulse_time % 1_000_000_000
+
+        self.last_pulse_time = nanosecs
 
         bin_num = np.digitize([nanosecs], self.pulse_times)
 

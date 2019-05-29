@@ -114,3 +114,10 @@ class TestHistogram1d:
         self.hist.add_data(self.pulse_time, [])
 
         assert sum(self.hist.data) == 0
+
+    def test_histogram_keeps_track_of_last_pulse_time_processed(self):
+        self.hist.add_data(1234, self.data)
+        self.hist.add_data(1235, self.data)
+        self.hist.add_data(1236, self.data)
+
+        assert self.hist.last_pulse_time == 1236

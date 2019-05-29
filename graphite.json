@@ -1,0 +1,6 @@
+{
+  "address": "127.0.0.1",
+  "port": 2003,
+  "prefix": "just-bin-it",
+  "metric": "histogramm-"
+}

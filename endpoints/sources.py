@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+import math
 import numpy as np
 from endpoints.serialisation import deserialise_ev42, deserialise_hs00
 
@@ -136,7 +137,7 @@ class SimulatedEventSource1D:
         tofs = np.random.normal(self.centre, self.scale, 1000)
 
         data = {
-            "pulse_time": time.time_ns(),
+            "pulse_time": math.floor(time.time() * 10 ** 9),
             "tofs": tofs,
             "det_ids": None,
             "source": "simulator",

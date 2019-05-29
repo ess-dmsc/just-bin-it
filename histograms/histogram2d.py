@@ -18,6 +18,7 @@ class Histogram2d:
         self.det_range = det_range
         self.num_bins = num_bins
         self.topic = topic
+        self.last_pulse_time = 0
 
     def add_data(self, pulse_time, x, y):
         """
