@@ -118,15 +118,7 @@ class Main:
             logging.info("RUNNING IN SIMULATION MODE")
 
         # Blocks until can connect to the config topic.
-        logging.info("Creating configuration consumer")
-        while not are_kafka_settings_valid(self.config_brokers, [self.config_topic]):
-            logging.error(
-                f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
-            )
-            time.sleep(5)
-        self.config_listener = ConfigListener(
-            Consumer(self.config_brokers, [self.config_topic])
-        )
+        self.create_config_listener()
 
         while True:
             # Handle configuration messages
@@ -180,6 +172,22 @@ class Main:
                     logging.error(f"Could not publish statistics: {error}")
 
             time.sleep(0.5)
+
+    def create_config_listener(self):
+        """
+        Creates the configuration listener.
+
+        Note: Blocks until the Kafka connection is made.
+        """
+        logging.info("Creating configuration consumer")
+        while not are_kafka_settings_valid(self.config_brokers, [self.config_topic]):
+            logging.error(
+                f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
+            )
+            time.sleep(5)
+        self.config_listener = ConfigListener(
+            Consumer(self.config_brokers, [self.config_topic])
+        )
 
     def configure_histograms(self, config):
         """
@@ -278,7 +286,7 @@ if __name__ == "__main__":
         "-s",
         "--simulation-mode",
         action="store_true",
-        help="runs the program in simulation mode. 1-D histograms only.",
+        help="runs the program in simulation mode. 1-D histograms only",
     )
 
     args = parser.parse_args()
