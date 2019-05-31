@@ -4,6 +4,11 @@ from endpoints.sources import ConfigSource
 
 class ConfigListener:
     def __init__(self, consumer):
+        """
+        Constructor.
+
+        :param consumer: The underlying consumer to use
+        """
         self.config_source = ConfigSource(consumer)
         self.message = None
 

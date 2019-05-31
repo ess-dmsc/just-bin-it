@@ -18,6 +18,14 @@ from histograms.histogrammer import Histogrammer
 
 class StatisticsPublisher:
     def __init__(self, server, port, prefix, metric):
+        """
+        Constructor.
+
+        :param server: The Graphite server to send to.
+        :param port: The Graphite port to send to.
+        :param prefix: The data prefix in Graphite.
+        :param metric: The name to serve data in Graphite as.
+        """
         self.server = server
         self.port = port
         self.prefix = prefix

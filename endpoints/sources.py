@@ -133,7 +133,11 @@ class SimulatedEventSource1D:
             self.scale = self.centre // 5
 
     def get_new_data(self):
-        # Generate gaussian data centred around 3000
+        """
+        Generate gaussian data centred around the defined centre.
+
+        :return: The generated data.
+        """
         tofs = np.random.normal(self.centre, self.scale, 1000)
 
         data = {

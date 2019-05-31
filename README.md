@@ -14,14 +14,20 @@ Python 3.7+ only. Might work on older versions of Python 3 but not tested.
 ## Usage
 
 ```
-usage: main.py [-h] -b BROKERS [BROKERS ...] -t TOPIC [-o]
+usage: main.py [-h] -b BROKERS [BROKERS ...] -t TOPIC [-c CONFIG_FILE]
+               [-g GRAPHITE_CONFIG_FILE] [-o] [-s]
 
 optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG_FILE, --config-file CONFIG_FILE
-                        configure an inital histogram from a JSON file
-  -o, --one-shot-plot   runs the program until it gets some data then plots it
-                        then exits. Used for testing
+                        configure an initial histogram from a file
+  -g GRAPHITE_CONFIG_FILE, --graphite-config-file GRAPHITE_CONFIG_FILE
+                        configuration file for publishing to Graphite
+  -o, --one-shot-plot   runs the program until it gets some data, plot it and
+                        then exit. Used for testing
+  -s, --simulation-mode
+                        runs the program in simulation mode. 1-D histograms
+                        only.
 
 required arguments:
   -b BROKERS [BROKERS ...], --brokers BROKERS [BROKERS ...]
@@ -57,8 +63,6 @@ CONFIG_JSON = b"""
   "cmd": "config",
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
-  "start": 1558676657538999557,
-  "stop":  1558677657538999557,
   "histograms": [
     {
       "type": "hist1d",
@@ -134,6 +138,16 @@ For example:
 Note: sending a new configuration replace the existing configuration meaning that
 existing histograms will no longer be updated.
 
+### Restarting the count
+To restarting the histograms counting from zero, send the restart command:
+```json
+{
+  "cmd": "restart"
+}
+```
+This will start all the histograms counting from zero but will not change any other
+settings, such as bin edges etc.
+
 ### One-shot plot
 When the `one-shot-plot` option is specified then the program with collect a
 small amount of data, histogram it and then plot the histogram before stopping.
@@ -162,15 +176,41 @@ python main.py --brokers localhost:9092 --topic hist_commands --config_file ../e
 Note: this configuration will be replaced if a new configuration is sent the command
 topic.
 
-### Restarting the count
-To restarting the histograms counting from zero, send the restart command:
+An example configuration file (config.json) is included in the example_configs
+directory.
+
+### Sending statistics to Graphite
+To enable statistics about the histograms to be send to Graphite it is necessary
+to supply a configuration JSON file, for example
+
+```
+python main.py --brokers localhost:9092 --topic hist_commands --graphite-config-file graphite_config.json
+```
+
+The file must contain the following:
+
+* "address" (string): the server name or address of the Graphite server.
+* "port" (int): the port Graphite is listening on.
+* "prefix" (string): the overarching name to store all histogram data under.
+* "metric" (string): the base name to give individual histograms,
+the histogram index will be auto appended.
+
+For example:
 ```json
 {
-  "cmd": "restart"
+  "address": "127.0.0.1",
+  "port": 2003,
+  "prefix": "just-bin-it",
+  "metric": "histogram-"
 }
 ```
-This will start all the histograms counting from zero but will not change any other
-settings, such as bin edges etc.
+
+In this case, the histogram data would be stored in Graphite as
+`just-bin-it.histogram-0`, `just-bin-it.histogram-1` etc. depending on the number
+of histograms.
+
+An example configuration file (graphite.json) is included in the example_configs
+directory.
 
 ## Supported schemas
 

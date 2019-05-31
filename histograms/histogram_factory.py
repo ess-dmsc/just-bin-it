@@ -55,6 +55,12 @@ class HistogramFactory:
 
     @staticmethod
     def check_1d_info(num_bins, tof_range):
+        """
+        Checks that the required parameters are defined, if not throw.
+
+        :param num_bins: The number of histogram bins.
+        :param tof_range: The time-of-flight range.
+        """
         missing = []
 
         if tof_range is None:
