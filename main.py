@@ -4,63 +4,35 @@ import json
 import logging
 import numpy as np
 import time
+import graphyte
 from endpoints.kafka_consumer import Consumer
 from endpoints.kafka_producer import Producer
 from endpoints.kafka_tools import kafka_settings_valid
+from endpoints.config_listener import ConfigListener
 from histograms.histogram2d import Histogram2d
 from histograms.histogram1d import Histogram1d  # NOQA
 from histograms.single_event_histogram1d import SingleEventHistogram1d  # NOQA
-from endpoints.sources import ConfigSource, EventSource, SimulatedEventSource1D
+from endpoints.sources import EventSource, SimulatedEventSource1D
 from histograms.histogrammer import Histogrammer
 
-import graphyte
 
-graphyte.init("127.0.0.1", prefix="just-bin-it")
+class StatisticsPublisher:
+    def __init__(self, server, port, prefix, metric):
+        self.server = server
+        self.port = port
+        self.prefix = prefix
+        self.metric = metric
 
+        # Initialise the connection
+        graphyte.init(server, port=port, prefix=prefix)
 
-class ConfigListener:
-    def __init__(self, brokers, config_topic):
-        self.brokers = brokers
-        self.config_topic = config_topic
-        self.config_source = None
-        self.message = None
-
-    def connect(self):
-        logging.info("Creating configuration consumer")
-        while not kafka_settings_valid(self.brokers, [self.config_topic]):
-            logging.error(
-                f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
+    def send_histogram_stats(self, hist_stats):
+        for i, stat in enumerate(hist_stats):
+            graphyte.send(
+                f"{self.metric}{i}",
+                stat["sum"],
+                timestamp=stat["last_pulse_time"] / 10 ** 9,
             )
-            time.sleep(5)
-        config_consumer = Consumer(self.brokers, [self.config_topic])
-        self.config_source = ConfigSource(config_consumer)
-
-    def check_for_messages(self):
-        """
-        Checks for unconsumed messages.
-
-        :return: True if there is a message available.
-        """
-        messages = self.config_source.get_new_data()
-        if messages:
-            # Only interested in the "latest" message
-            self.message = messages[-1]
-            logging.info("New configuration message received")
-            return True
-        else:
-            # Return whether there is a message waiting
-            return self.message is not None
-
-    def consume_message(self):
-        """
-        :return: The waiting message.
-        """
-        if self.message:
-            msg = self.message
-            self.message = None
-            return msg
-        else:
-            raise Exception("No message available")
 
 
 def plot_histogram(hist):
@@ -87,9 +59,9 @@ def plot_histogram(hist):
         plt.show()
 
 
-def load_config_file(file):
+def load_json_config_file(file):
     """
-    Load the configuration file, if present.
+    Load the specified JSON configuration file.
 
     :param file: The file path.
     :return: The extracted data as JSON.
@@ -100,12 +72,18 @@ def load_config_file(file):
             data = f.read()
         return json.loads(data)
     except Exception as error:
-        raise Exception("Could not load configuration file") from error
+        raise Exception(f"Could not load configuration file {file}") from error
 
 
 class Main:
     def __init__(
-        self, brokers, config_topic, one_shot, simulation, initial_config=None
+        self,
+        brokers,
+        config_topic,
+        one_shot,
+        simulation,
+        initial_config=None,
+        stats_publisher=None,
     ):
         """
         The main execution function.
@@ -115,6 +93,7 @@ class Main:
         :param one_shot: Histogram some data then plot it. Does not publish results.
         :param simulation: Run in simulation mode.
         :param initial_config: A histogram configuration to start with.
+        :param stats_publisher: Publisher for the histograms statistics.
         """
         self.event_source = None
         self.histogrammer = None
@@ -122,6 +101,7 @@ class Main:
         self.simulation = simulation
         self.initial_config = initial_config
         self.config_listener = ConfigListener(brokers, config_topic)
+        self.stats_publisher = stats_publisher
 
     def run(self):
         if self.simulation:
@@ -174,11 +154,12 @@ class Main:
 
             self.histogrammer.publish_histograms()
 
-            hist_stats = self.histogrammer.get_histogram_stats()
-            for i, stat in enumerate(hist_stats):
-                graphyte.send(
-                    f"hist{i}", stat["sum"], timestamp=stat["last_pulse_time"] / 10 ** 9
-                )
+            if self.stats_publisher:
+                hist_stats = self.histogrammer.get_histogram_stats()
+                try:
+                    self.stats_publisher.send_histogram_stats(hist_stats)
+                except Exception as error:
+                    logging.error(f"Could not publish statistics: {error}")
 
             time.sleep(0.5)
 
@@ -261,6 +242,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-g",
+        "--graphite-config-file",
+        type=str,
+        help="configuration file for publishing to Graphite",
+    )
+
+    parser.add_argument(
         "-o",
         "--one-shot-plot",
         action="store_true",
@@ -272,15 +260,24 @@ if __name__ == "__main__":
         "-s",
         "--simulation-mode",
         action="store_true",
-        help="runs the program in simulation mode. 1-D histogram data is written"
-        " to jbi_sim_data. The configuration topic is ignored",
+        help="runs the program in simulation mode. 1-D histograms only.",
     )
 
     args = parser.parse_args()
 
     init_hist_json = None
     if args.config_file:
-        init_hist_json = load_config_file(args.config_file)
+        init_hist_json = load_json_config_file(args.config_file)
+
+    stats_publisher = None
+    if args.graphite_config_file:
+        graphite_config = load_json_config_file(args.graphite_config_file)
+        stats_publisher = StatisticsPublisher(
+            graphite_config["address"],
+            graphite_config["port"],
+            graphite_config["prefix"],
+            graphite_config["metric"],
+        )
 
     main = Main(
         args.brokers,
@@ -288,5 +285,6 @@ if __name__ == "__main__":
         args.one_shot_plot,
         args.simulation_mode,
         init_hist_json,
+        stats_publisher,
     )
     main.run()

@@ -61,6 +61,24 @@ EVENT_DATA = [
     },
 ]
 
+UNORDERED_EVENT_DATA = [
+    {"pulse_time": 1000, "tofs": [1, 2, 3, 4], "det_ids": None, "source": "simulator"},
+    {
+        "pulse_time": 1001,
+        "tofs": [1, 2, 3, 4, 5, 6, 7, 8],
+        "det_ids": None,
+        "source": "simulator",
+    },
+    {
+        "pulse_time": 1002,
+        "tofs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+        "det_ids": None,
+        "source": "simulator",
+    },
+    {"pulse_time": 998, "tofs": [1], "det_ids": None, "source": "simulator"},
+    {"pulse_time": 999, "tofs": [1, 2], "det_ids": None, "source": "simulator"},
+]
+
 
 class TestMain:
     @pytest.fixture(autouse=True)
@@ -84,9 +102,17 @@ class TestMain:
 
     def test_data_only_add_up_to_stop_time(self):
         self.histogrammer = Histogrammer(self.mock_producer, STOP_CONFIG)
+
         self.histogrammer.add_data(EVENT_DATA)
 
         assert sum(self.histogrammer.histograms[0].data) == 15
+
+    def test_data_out_of_order_does_not_add_data_before_start(self):
+        self.histogrammer = Histogrammer(self.mock_producer, START_CONFIG)
+
+        self.histogrammer.add_data(UNORDERED_EVENT_DATA)
+
+        assert sum(self.histogrammer.histograms[0].data) == 28
 
     def test_while_counting_published_histogram_is_labeled_to_indicate_counting(self):
         self.histogrammer = Histogrammer(self.mock_producer, START_CONFIG)
