@@ -3,7 +3,7 @@ from kafka import KafkaConsumer
 from kafka.errors import KafkaError
 
 
-def kafka_settings_valid(brokers, topics):
+def are_kafka_settings_valid(brokers, topics):
     """
     Check to see if the broker(s) and topics exist.
 

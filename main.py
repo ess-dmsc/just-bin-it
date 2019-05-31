@@ -7,7 +7,7 @@ import time
 import graphyte
 from endpoints.kafka_consumer import Consumer
 from endpoints.kafka_producer import Producer
-from endpoints.kafka_tools import kafka_settings_valid
+from endpoints.kafka_tools import are_kafka_settings_valid
 from endpoints.config_listener import ConfigListener
 from histograms.histogram2d import Histogram2d
 from histograms.histogram1d import Histogram1d  # NOQA
@@ -78,7 +78,7 @@ def load_json_config_file(file):
 class Main:
     def __init__(
         self,
-        brokers,
+        config_brokers,
         config_topic,
         one_shot,
         simulation,
@@ -88,7 +88,7 @@ class Main:
         """
         The main execution function.
 
-        :param brokers: The brokers to listen for the configuration commands on.
+        :param config_brokers: The brokers to listen for the configuration commands on.
         :param config_topic: The topic to listen for commands on.
         :param one_shot: Histogram some data then plot it. Does not publish results.
         :param simulation: Run in simulation mode.
@@ -100,15 +100,25 @@ class Main:
         self.one_shot = one_shot
         self.simulation = simulation
         self.initial_config = initial_config
-        self.config_listener = ConfigListener(brokers, config_topic)
+        self.config_brokers = config_brokers
+        self.config_topic = config_topic
+        self.config_listener = None
         self.stats_publisher = stats_publisher
 
     def run(self):
         if self.simulation:
             logging.info("RUNNING IN SIMULATION MODE")
 
-        # Blocks until it connects to the topic
-        self.config_listener.connect()
+        # Blocks until can connect to the config topic.
+        logging.info("Creating configuration consumer")
+        while not are_kafka_settings_valid(self.config_brokers, [self.config_topic]):
+            logging.error(
+                f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
+            )
+            time.sleep(5)
+        self.config_listener = ConfigListener(
+            Consumer(self.config_brokers, [self.config_topic])
+        )
 
         while True:
             # Handle configuration messages
@@ -180,7 +190,7 @@ class Main:
         :return: The new event source.
         """
         # Check brokers and data topics exist
-        if not kafka_settings_valid(config["data_brokers"], config["data_topics"]):
+        if not are_kafka_settings_valid(config["data_brokers"], config["data_topics"]):
             raise Exception(
                 "Could not configure histogramming as Kafka settings invalid"
             )

@@ -1,26 +1,11 @@
 import logging
-import time
-from endpoints.kafka_consumer import Consumer
-from endpoints.kafka_tools import kafka_settings_valid
 from endpoints.sources import ConfigSource
 
 
 class ConfigListener:
-    def __init__(self, brokers, config_topic):
-        self.brokers = brokers
-        self.config_topic = config_topic
-        self.config_source = None
+    def __init__(self, consumer):
+        self.config_source = ConfigSource(consumer)
         self.message = None
-
-    def connect(self):
-        logging.info("Creating configuration consumer")
-        while not kafka_settings_valid(self.brokers, [self.config_topic]):
-            logging.error(
-                f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
-            )
-            time.sleep(5)
-        config_consumer = Consumer(self.brokers, [self.config_topic])
-        self.config_source = ConfigSource(config_consumer)
 
     def check_for_messages(self):
         """
