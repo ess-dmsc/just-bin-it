@@ -5,10 +5,10 @@ import ecdcpipeline.PipelineBuilder
 project = "just-bin-it"
 
 container_build_nodes = [
-//  'centos7': new ContainerBuildNode('essdmscdm/centos7-build-node:3.2.0', '/usr/bin/scl enable rh-python36 devtoolset-6 -- /bin/bash -e'),
-  'centos7-release': new ContainerBuildNode('essdmscdm/centos7-build-node:4.2.0', 'bash -e'),
-//  'debian9': new ContainerBuildNode('essdmscdm/debian9-build-node:2.5.2', 'bash -e'),
-//  'ubuntu1804': new ContainerBuildNode('essdmscdm/ubuntu18.04-build-node:1.2.0', 'bash -e')
+//  'centos7': ContainerBuildNode.getDefaultContainerBuildNode('centos7'),
+  'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7'),
+//  'debian9': ContainerBuildNode.getDefaultContainerBuildNode('debian9'),
+//  'ubuntu1804': ContainerBuildNode.getDefaultContainerBuildNode('ubuntu1804')
 ]
 
 
