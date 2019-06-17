@@ -27,6 +27,7 @@ class HistogramFactory:
             tof_range = tuple(h["tof_range"]) if "tof_range" in h else None
             det_range = tuple(h["det_range"]) if "det_range" in h else None
             source = h["source"] if "source" in h else None
+            id = h["id"] if "id" in h else ""
 
             if hist_type == "hist1d":
                 HistogramFactory.check_1d_info(num_bins, tof_range)
@@ -49,6 +50,7 @@ class HistogramFactory:
                 pass
 
             if hist is not None:
+                hist.id = id
                 histograms.append(hist)
 
         return histograms

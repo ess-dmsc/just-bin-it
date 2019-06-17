@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Histogram2d:
-    def __init__(self, topic, num_bins, tof_range, det_range):
+    def __init__(self, topic, num_bins, tof_range, det_range, id=""):
         """
         Constructor.
 
@@ -10,6 +10,7 @@ class Histogram2d:
         :param num_bins: The number of bins to divide the data up into.
         :param tof_range: The range of time-of-flights to histogram over.
         :param det_range: The range of sequential detectors to histogram over.
+        :param id: An optional identifier for the histogram.
         """
         self._histogram = None
         self.x_edges = None
@@ -19,6 +20,7 @@ class Histogram2d:
         self.num_bins = num_bins
         self.topic = topic
         self.last_pulse_time = 0
+        self.id = id
 
     def add_data(self, pulse_time, x, y):
         """

@@ -9,8 +9,22 @@ CONFIG_BASIC_1 = """
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
   "histograms": [
-    {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "topic1", "source": "source1"},
-    {"type": "hist2d", "det_range": [10, 1234], "num_bins": 100, "topic": "topic2", "source": "source2"}
+    {
+        "type": "hist1d",
+        "tof_range": [0, 100000000],
+        "num_bins": 50,
+        "topic": "topic1",
+        "source": "source1",
+        "id": "my-hist-1"
+    },
+    {
+        "type": "hist2d",
+        "det_range": [10, 1234],
+        "num_bins": 100,
+        "topic": "topic2",
+        "source": "source2",
+        "id": "my-hist-2"
+    }
   ]
 }
 """
@@ -70,16 +84,20 @@ class TestConfigSource:
         assert len(config["data_topics"]) == 1
         assert config["data_topics"][0] == "TEST_events"
         assert len(config["histograms"]) == 2
+
         assert config["histograms"][0]["type"] == "hist1d"
         assert config["histograms"][0]["tof_range"] == [0, 100000000]
         assert config["histograms"][0]["num_bins"] == 50
+        assert config["histograms"][0]["topic"] == "topic1"
+        assert config["histograms"][0]["source"] == "source1"
+        assert config["histograms"][0]["id"] == "my-hist-1"
+
         assert config["histograms"][1]["type"] == "hist2d"
         assert config["histograms"][1]["det_range"] == [10, 1234]
         assert config["histograms"][1]["num_bins"] == 100
-        assert config["histograms"][0]["topic"] == "topic1"
         assert config["histograms"][1]["topic"] == "topic2"
-        assert config["histograms"][0]["source"] == "source1"
         assert config["histograms"][1]["source"] == "source2"
+        assert config["histograms"][1]["id"] == "my-hist-2"
 
     def test_received_restart_message_converted_correctly(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])

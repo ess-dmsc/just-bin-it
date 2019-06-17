@@ -54,3 +54,13 @@ class TestHistogram2d:
         # Edges should not change
         assert np.array_equal(self.hist.x_edges, x_edges)
         assert np.array_equal(self.hist.y_edges, y_edges)
+
+    def test_if_no_id_supplied_then_defaults_to_empty_string(self):
+        assert self.hist.id == ""
+
+    def test_id_supplied_then_is_set(self):
+        example_id = "abcdef"
+        hist = Histogram2d(
+            "topic1", self.num_bins, self.tof_range, self.det_range, id=example_id
+        )
+        assert hist.id == example_id

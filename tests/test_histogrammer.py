@@ -1,4 +1,5 @@
 import pytest
+import json
 from histograms.histogrammer import Histogrammer, HISTOGRAM_STATES
 from endpoints.serialisation import deserialise_hs00
 from tests.mock_producer import MockProducer
@@ -15,6 +16,7 @@ START_CONFIG = {
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "hist-topic2",
+            "id": "abcdef",
         }
     ],
 }
@@ -121,7 +123,8 @@ class TestMain:
         self.histogrammer.publish_histograms()
 
         data = deserialise_hs00(self.mock_producer.messages[0][1])
-        assert data["info"] == HISTOGRAM_STATES["COUNTING"]
+        info = json.loads(data["info"])
+        assert info["state"] == HISTOGRAM_STATES["COUNTING"]
 
     def test_after_stop_published_histogram_is_labeled_to_indicate_finished(self):
         self.histogrammer = Histogrammer(self.mock_producer, STOP_CONFIG)
@@ -130,7 +133,8 @@ class TestMain:
         self.histogrammer.publish_histograms()
 
         data = deserialise_hs00(self.mock_producer.messages[0][1])
-        assert data["info"] == HISTOGRAM_STATES["FINISHED"]
+        info = json.loads(data["info"])
+        assert info["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_after_stop_publishing_final_histograms_published_once_only(self):
         self.histogrammer = Histogrammer(self.mock_producer, STOP_CONFIG)
@@ -157,3 +161,13 @@ class TestMain:
         stats = self.histogrammer.get_histogram_stats()
 
         assert len(stats) == 0
+
+    def test_if_histogram_has_id_then_that_is_added_to_the_info_field(self):
+        self.histogrammer = Histogrammer(self.mock_producer, START_CONFIG)
+        self.histogrammer.add_data(EVENT_DATA)
+
+        self.histogrammer.publish_histograms()
+
+        data = deserialise_hs00(self.mock_producer.messages[0][1])
+        info = json.loads(data["info"])
+        assert info["id"] == "abcdef"

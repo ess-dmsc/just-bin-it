@@ -1,3 +1,4 @@
+import json
 from histograms.histogram_factory import HistogramFactory
 from endpoints.histogram_sink import HistogramSink
 
@@ -49,12 +50,17 @@ class Histogrammer:
             return
 
         for h in self.histograms:
-            if self._stop_time_exceeded:
-                state = HISTOGRAM_STATES["FINISHED"]
-                self._stop_publishing = True
-            else:
-                state = HISTOGRAM_STATES["COUNTING"]
-            self.hist_sink.send_histogram(h.topic, h, state)
+            info = self._generate_info(h)
+            self.hist_sink.send_histogram(h.topic, h, json.dumps(info))
+
+    def _generate_info(self, histogram):
+        info = {"id": histogram.id}
+        if self._stop_time_exceeded:
+            info["state"] = HISTOGRAM_STATES["FINISHED"]
+            self._stop_publishing = True
+        else:
+            info["state"] = HISTOGRAM_STATES["COUNTING"]
+        return info
 
     def clear_histograms(self):
         """

@@ -8,7 +8,14 @@ class Histogram1d:
     """One dimensional histogram for time-of-flight."""
 
     def __init__(
-        self, topic, num_bins, tof_range, source=None, preprocessor=None, roi=None
+        self,
+        topic,
+        num_bins,
+        tof_range,
+        source=None,
+        preprocessor=None,
+        roi=None,
+        id="",
     ):
         """
         Constructor.
@@ -22,6 +29,7 @@ class Histogram1d:
         :param source: The data source to histogram.
         :param preprocessor: The function to apply to the data before adding.
         :param roi: The function for checking data is within the region of interest.
+        :param id: An optional identifier for the histogram.
         """
         self._histogram = None
         self.x_edges = None
@@ -32,6 +40,7 @@ class Histogram1d:
         self.preprocessor = preprocessor
         self.roi = roi
         self.last_pulse_time = 0
+        self.id = id
 
         self._intialise_histogram()
 
