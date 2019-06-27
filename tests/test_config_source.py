@@ -53,6 +53,18 @@ CONFIG_START_AND_STOP = """
 }
 """
 
+CONFIG_INTERVAL = """
+{
+  "cmd": "config",
+  "data_brokers": ["differenthost:9092"],
+  "data_topics": ["TEST_events"],
+  "interval": 5000,
+  "histograms": [
+    {"type": "hist1d", "tof_range": [0, 100000000], "num_bins": 50, "topic": "topic1"}
+  ]
+}
+"""
+
 RESTART_CMD = """
 {
   "cmd": "restart"
@@ -149,3 +161,12 @@ class TestConfigSource:
 
         assert config["start"] == 1558596988319002000
         assert config["stop"] == 1558597215933670000
+
+    def test_interval_converted_correctly(self):
+        mock_consumer = MockConsumer(["broker1"], ["topic1"])
+        mock_consumer.add_messages([CONFIG_INTERVAL])
+        src = ConfigSource(mock_consumer)
+
+        config = src.get_new_data()[-1]
+
+        assert config["interval"] == 5000

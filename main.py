@@ -13,7 +13,7 @@ from histograms.histogram2d import Histogram2d
 from histograms.histogram1d import Histogram1d  # NOQA
 from histograms.single_event_histogram1d import SingleEventHistogram1d  # NOQA
 from endpoints.sources import EventSource, SimulatedEventSource1D
-from histograms.histogrammer import Histogrammer
+from histograms.histogrammer import create_histogrammer
 
 
 class StatisticsPublisher:
@@ -196,7 +196,7 @@ class Main:
         :param config: The configuration.
         """
         producer = Producer(config["data_brokers"])
-        self.histogrammer = Histogrammer(producer, config)
+        self.histogrammer = create_histogrammer(producer, config)
 
     def configure_event_source(self, config):
         """

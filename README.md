@@ -97,6 +97,7 @@ A JSON histogramming configuration has the following parameters:
 * "data_topics" (string array): the topics to listen for event data on
 * "start" (seconds since epoch in ns): only histogram data after this time [optional]
 * "stop" (seconds since epoch in ns): only histogram data up to this time [optional]
+* "interval" (seconds): only histogram for this interval [optional]
 * "histograms" (array of dicts): the histograms to create, contains the following:
     * "type" (string): the histogram type (hist1d or hist2d)
     * "tof_range" (array of ints): the time-of-flight range to histogram
@@ -106,8 +107,10 @@ A JSON histogramming configuration has the following parameters:
     * "source" (string): the name of the source to accept data from
     * "id" (string): an identifier for the histogram which will be contained in the published histogram data [optional]
 
-If start is not defined then counting with start with the next message.
-If stop is not defined then counting will not stop.
+If "start" is not defined then counting with start with the next message.
+If "stop" is not defined then counting will not stop.
+
+If "interval" is defined in combination with "start" and/or "stop" then the message will be treated as invalid and ignored.
 
 For example:
 ```json
