@@ -242,8 +242,6 @@ class Main:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
-
     parser = argparse.ArgumentParser()
 
     required_args = parser.add_argument_group("required arguments")
@@ -289,6 +287,14 @@ if __name__ == "__main__":
         help="runs the program in simulation mode. 1-D histograms only",
     )
 
+    parser.add_argument(
+        "-l",
+        "--log-level",
+        type=int,
+        default=2,
+        help="sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.",
+    )
+
     args = parser.parse_args()
 
     init_hist_json = None
@@ -304,6 +310,13 @@ if __name__ == "__main__":
             graphite_config["prefix"],
             graphite_config["metric"],
         )
+
+    if 1 <= args.log_level <= 5:
+        logging.basicConfig(
+            format="%(asctime)s - %(message)s", level=args.log_level * 10
+        )
+    else:
+        logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 
     main = Main(
         args.brokers,

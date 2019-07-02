@@ -29,6 +29,10 @@ optional arguments:
                         runs the program in simulation mode. 1-D histograms
                         only.
 
+  -l LOG_LEVEL, --log-level LOG_LEVEL
+                        sets the logging level: debug=1, info=2, warning=3,
+                        error=4, critical=5.
+
 required arguments:
   -b BROKERS [BROKERS ...], --brokers BROKERS [BROKERS ...]
                         the broker addresses

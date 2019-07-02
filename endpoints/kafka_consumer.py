@@ -44,7 +44,9 @@ class Consumer:
     def _get_new_messages(self):
         data = self.consumer.poll(5)
         for tp in self.topic_partitions:
-            logging.info(f"{tp.topic} - current position: {self.consumer.position(tp)}")
+            logging.debug(
+                f"{tp.topic} - current position: {self.consumer.position(tp)}"
+            )
         return data
 
     def get_new_messages(self):

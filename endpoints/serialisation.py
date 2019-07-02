@@ -25,8 +25,9 @@ def deserialise_ev42(buf):
     :return: A dictionary of the deserialised values.
     """
     # Check schema is correct
-    if get_schema(buf) != "ev42":
-        raise Exception(f"Incorrect schema: expected ev42 but got {get_schema(buf)}")
+    schema = get_schema(buf)
+    if schema != "ev42":
+        raise Exception(f"Incorrect schema: expected ev42 but got {schema}")
 
     event = EventMessage.GetRootAsEventMessage(buf, 0)
 
