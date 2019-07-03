@@ -88,6 +88,7 @@ def deserialise_hs00(buf):
 
     hist = {
         "source": event_hist.Source().decode("utf-8"),
+        "timestamp": event_hist.Timestamp(),
         "shape": shape,
         "dims": dims,
         "data": data.reshape(shape),
@@ -116,15 +117,15 @@ def _serialise_metadata(builder, edges, length):
     return DimensionMetaData.DimensionMetaDataEnd(builder)
 
 
-def serialise_hs00(histogrammer, info_message: str = ""):
+def serialise_hs00(histogrammer, timestamp: int = 0, info_message: str = ""):
     """
     Serialise a histogram as an hs00 FlatBuffers message.
 
     :param histogrammer: The histogrammer containing the histogram to serialise.
+    :param timestamp: The timestamp to assign to the histogram.
     :param info_message: Information to write to the 'info' field.
     :return: The raw buffer of the FlatBuffers message.
     """
-    # TODO: provide timestamp?
     file_identifier = b"hs00"
 
     # histogram = histogrammer.data
@@ -176,6 +177,7 @@ def serialise_hs00(histogrammer, info_message: str = ""):
     # Build the actual buffer
     EventHistogram.EventHistogramStart(builder)
     EventHistogram.EventHistogramAddSource(builder, source)
+    EventHistogram.EventHistogramAddTimestamp(builder, timestamp)
     EventHistogram.EventHistogramAddInfo(builder, info)
     EventHistogram.EventHistogramAddCurrentShape(builder, shape)
     EventHistogram.EventHistogramAddDimMetadata(builder, metadata_vector)

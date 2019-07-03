@@ -54,9 +54,11 @@ class TestDeserialisationHs00:
         data = deserialise_hs00(self.buf)
 
         assert data["source"] == "just-bin-it"
+        assert data["timestamp"] == 987_654_321
         assert data["shape"] == [50]
         assert len(data["data"]) == 50
         assert len(data["dims"]) == 1
+        assert data["info"] == "hello"
 
         assert data["dims"][0]["length"] == 50
         assert data["dims"][0]["type"] == np.float64

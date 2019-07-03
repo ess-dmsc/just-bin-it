@@ -35,10 +35,27 @@ class TestSerialisation:
         """
         Sanity check: checks the combination of libraries work as expected.
         """
+        timestamp = 1234567890
+        buf = serialise_hs00(self.hist_1d, timestamp)
+
+        hist = deserialise_hs00(buf)
+        assert hist["source"] == "just-bin-it"
+        assert hist["timestamp"] == timestamp
+        assert hist["shape"] == [self.hist_1d.num_bins]
+        assert hist["dims"][0]["edges"] == self.hist_1d.x_edges.tolist()
+        assert hist["dims"][0]["length"] == self.hist_1d.num_bins
+        assert hist["dims"][0]["type"] == np.float64
+        assert np.array_equal(hist["data"], self.hist_1d.data)
+
+    def test_if_timestamp_not_supplied_then_it_is_zero(self):
+        """
+        Sanity check: checks the combination of libraries work as expected.
+        """
         buf = serialise_hs00(self.hist_1d)
 
         hist = deserialise_hs00(buf)
         assert hist["source"] == "just-bin-it"
+        assert hist["timestamp"] == 0
         assert hist["shape"] == [self.hist_1d.num_bins]
         assert hist["dims"][0]["edges"] == self.hist_1d.x_edges.tolist()
         assert hist["dims"][0]["length"] == self.hist_1d.num_bins
@@ -67,7 +84,7 @@ class TestSerialisation:
         Sanity check: checks the combination of libraries work as expected.
         """
         info_message = "info_message"
-        buf = serialise_hs00(self.hist_1d, info_message)
+        buf = serialise_hs00(self.hist_1d, info_message=info_message)
 
         hist = deserialise_hs00(buf)
         assert hist["info"] == info_message
