@@ -97,16 +97,18 @@ class Histogrammer:
                 src = b["source"] if not simulation else hist.source
                 hist.add_data(pt, x, y, src)
 
-    def publish_histograms(self):
+    def publish_histograms(self, timestamp=0):
         """
         Publish histogram data to the histogram sink.
+
+        :param timestamp: The timestamp to put in the message (ns since epoch).
         """
         if self._stop_publishing:
             return
 
         for h in self.histograms:
             info = self._generate_info(h)
-            self.hist_sink.send_histogram(h.topic, h, json.dumps(info))
+            self.hist_sink.send_histogram(h.topic, h, timestamp, json.dumps(info))
 
     def _generate_info(self, histogram):
         info = {"id": histogram.id}

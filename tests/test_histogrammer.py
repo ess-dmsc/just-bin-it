@@ -205,6 +205,16 @@ class TestHistogrammer:
 
         assert len(self.mock_producer.messages) == 1
 
+    def test_published_histogram_has_non_default_timestamp_set(self):
+        histogrammer = create_histogrammer(self.mock_producer, STOP_CONFIG)
+        histogrammer.add_data(EVENT_DATA)
+        timestamp = 1234567890
+
+        histogrammer.publish_histograms(timestamp)
+
+        data = deserialise_hs00(self.mock_producer.messages[0][1])
+        assert data["timestamp"] == timestamp
+
     def test_get_stats_returns_correct_stats(self):
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)

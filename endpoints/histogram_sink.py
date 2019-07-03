@@ -14,14 +14,15 @@ class HistogramSink:
         self.producer = producer
         self.serialise_function = serialise_function
 
-    def send_histogram(self, topic, histogram, information=""):
+    def send_histogram(self, topic, histogram, timestamp=0, information=""):
         """
         Send a histogram.
 
         :param topic: The topic to post to.
         :param histogram: The histogram to send.
+        :param timestamp: The timestamp to set (ns since epoch).
         :param information: The message to write to the 'info' field.
         """
         self.producer.publish_message(
-            topic, self.serialise_function(histogram, information)
+            topic, self.serialise_function(histogram, timestamp, information)
         )
