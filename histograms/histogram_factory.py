@@ -33,13 +33,7 @@ class HistogramFactory:
                 HistogramFactory.check_1d_info(num_bins, tof_range)
                 hist = Histogram1d(topic, num_bins, tof_range, source)
             elif hist_type == "hist2d":
-                hist = Histogram2d(
-                    topic,
-                    num_bins,
-                    tof_range,
-                    det_range,
-                    # source,
-                )
+                hist = Histogram2d(topic, num_bins, tof_range, det_range, source)
             elif hist_type == "sehist1d":
                 hist = SingleEventHistogram1d(topic, num_bins, tof_range, source)
             else:

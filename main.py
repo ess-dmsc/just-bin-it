@@ -12,7 +12,7 @@ from endpoints.config_listener import ConfigListener
 from histograms.histogram2d import Histogram2d
 from histograms.histogram1d import Histogram1d  # NOQA
 from histograms.single_event_histogram1d import SingleEventHistogram1d  # NOQA
-from endpoints.sources import EventSource, SimulatedEventSource1D
+from endpoints.sources import EventSource, SimulatedEventSource
 from histograms.histogrammer import create_histogrammer
 
 
@@ -58,7 +58,9 @@ def plot_histogram(hist):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         x, y = np.meshgrid(hist.x_edges, hist.y_edges)
-        ax.pcolormesh(x, y, hist.data)
+        # Need to transpose the data
+        # TODO: why?
+        ax.pcolormesh(x, y, hist.data.T)
         plt.show()
     else:
         width = 0.7 * (hist.x_edges[1] - hist.x_edges[0])
@@ -231,7 +233,7 @@ class Main:
             try:
                 if self.simulation:
                     logging.info("RUNNING IN SIMULATION MODE")
-                    self.event_source = SimulatedEventSource1D(message)
+                    self.event_source = SimulatedEventSource(message)
                 else:
                     self.event_source = self.configure_event_source(message)
                 self.configure_histograms(message)

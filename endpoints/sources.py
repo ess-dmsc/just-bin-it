@@ -121,16 +121,23 @@ class HistogramSource(BaseSource):
             raise SourceException(error)
 
 
-class SimulatedEventSource1D:
+class SimulatedEventSource:
     def __init__(self, config):
-        self.centre = 3000
-        self.scale = 1000
+        self.tof_centre = 3000
+        self.tof_scale = 1000
+        self.det_centre = 50
+        self.det_scale = 10
 
         # Based on the config, guess gaussian settings.
         if "histograms" in config and len(config["histograms"]) > 0:
             low, high = config["histograms"][0]["tof_range"]
-            self.centre = (high - low) // 2
-            self.scale = self.centre // 5
+            self.tof_centre = (high - low) // 2
+            self.tof_scale = self.tof_centre // 5
+
+            if "det_range" in config["histograms"][0]:
+                low, high = config["histograms"][0]["det_range"]
+                self.det_centre = (high - low) // 2
+                self.det_scale = self.det_centre // 5
 
     def get_new_data(self):
         """
@@ -138,12 +145,13 @@ class SimulatedEventSource1D:
 
         :return: The generated data.
         """
-        tofs = np.random.normal(self.centre, self.scale, 1000)
+        tofs = np.random.normal(self.tof_centre, self.tof_scale, 1000)
+        dets = np.random.normal(self.det_centre, self.det_scale, 1000)
 
         data = {
             "pulse_time": math.floor(time.time() * 10 ** 9),
             "tofs": tofs,
-            "det_ids": None,
+            "det_ids": dets,
             "source": "simulator",
         }
         return [data]

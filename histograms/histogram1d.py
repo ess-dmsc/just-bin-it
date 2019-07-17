@@ -123,4 +123,4 @@ class Histogram1d:
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self._histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)
+        self._intialise_histogram()
