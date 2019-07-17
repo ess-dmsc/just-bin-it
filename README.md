@@ -127,7 +127,7 @@ For example:
       "type": "hist1d",
       "tof_range": [0, 100000000],
       "num_bins": 50,
-      "topic": "output_topic_for_1d"
+      "topic": "output_topic_for_1d",
       "source": "monitor1",
       "id": "histogram1"
     },
