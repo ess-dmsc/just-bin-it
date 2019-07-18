@@ -58,8 +58,7 @@ def plot_histogram(hist):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         x, y = np.meshgrid(hist.x_edges, hist.y_edges)
-        # Need to transpose the data
-        # TODO: why?
+        # Need to transpose the data for display
         ax.pcolormesh(x, y, hist.data.T)
         plt.show()
     else:

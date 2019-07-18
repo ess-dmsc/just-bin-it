@@ -26,7 +26,7 @@ def plot_histogram(hist):
     elif n_dims == 2:
         x_edges = hist["dims"][0]["edges"]
         y_edges = hist["dims"][1]["edges"]
-        data = hist["data"]
+        data = hist["data"].T
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
