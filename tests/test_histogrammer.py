@@ -29,6 +29,31 @@ START_CONFIG = {
     ],
 }
 
+START_2D_CONFIG = {
+    "cmd": "config",
+    "data_brokers": ["fakehost:9092"],
+    "data_topics": ["LOQ_events"],
+    "start": 1000 * 10 ** 9,
+    "histograms": [
+        {
+            "type": "hist2d",
+            "tof_range": [0, 100000000],
+            "det_range": [0, 100],
+            "num_bins": 50,
+            "topic": "hist-topic1",
+            "id": "abcdef",
+        },
+        {
+            "type": "hist2d",
+            "tof_range": [0, 100000000],
+            "det_range": [0, 100],
+            "num_bins": 50,
+            "topic": "hist-topic2",
+            "id": "ghijk",
+        },
+    ],
+}
+
 NO_HIST_CONFIG = {
     "cmd": "config",
     "data_brokers": ["fakehost:9092"],
@@ -74,25 +99,25 @@ EVENT_DATA = [
     {
         "pulse_time": 999 * 10 ** 9,
         "tofs": [1, 2],
-        "det_ids": None,
+        "det_ids": [1, 2],
         "source": "simulator",
     },
     {
         "pulse_time": 1000 * 10 ** 9,
         "tofs": [1, 2, 3, 4],
-        "det_ids": None,
+        "det_ids": [1, 2, 3, 4],
         "source": "simulator",
     },
     {
         "pulse_time": 1001 * 10 ** 9,
         "tofs": [1, 2, 3, 4, 5, 6, 7, 8],
-        "det_ids": None,
+        "det_ids": [1, 2, 3, 4, 5, 6, 7, 8],
         "source": "simulator",
     },
     {
         "pulse_time": 1002 * 10 ** 9,
         "tofs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        "det_ids": None,
+        "det_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
         "source": "simulator",
     },
 ]
@@ -215,9 +240,20 @@ class TestHistogrammer:
         data = deserialise_hs00(self.mock_producer.messages[0][1])
         assert data["timestamp"] == timestamp
 
-    def test_get_stats_returns_correct_stats(self):
+    def test_get_stats_returns_correct_stats_1d(self):
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)
+
+        stats = histogrammer.get_histogram_stats()
+
+        assert stats[0]["last_pulse_time"] == 1002 * 10 ** 9
+        assert stats[0]["sum"] == 28
+        assert stats[1]["last_pulse_time"] == 1002 * 10 ** 9
+        assert stats[1]["sum"] == 28
+
+    def test_get_stats_returns_correct_stats_2d(self):
+        histogrammer = create_histogrammer(self.mock_producer, START_2D_CONFIG)
+        histogrammer.add_data(EVENT_DATA, EVENT_DATA)
 
         stats = histogrammer.get_histogram_stats()
 
