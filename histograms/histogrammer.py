@@ -137,6 +137,6 @@ class Histogrammer:
         results = []
 
         for h in self.histograms:
-            results.append({"last_pulse_time": h.last_pulse_time, "sum": sum(h.data)})
+            results.append({"last_pulse_time": h.last_pulse_time, "sum": h.data.sum()})
 
         return results

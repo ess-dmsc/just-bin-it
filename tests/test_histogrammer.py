@@ -145,23 +145,23 @@ class TestHistogrammer:
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)
 
-        assert sum(histogrammer.histograms[0].data) == 28
-        assert sum(histogrammer.histograms[1].data) == 28
+        assert histogrammer.histograms[0].data.sum() == 28
+        assert histogrammer.histograms[1].data.sum() == 28
 
     def test_data_only_add_up_to_stop_time(self):
         histogrammer = create_histogrammer(self.mock_producer, STOP_CONFIG)
 
         histogrammer.add_data(EVENT_DATA)
 
-        assert sum(histogrammer.histograms[0].data) == 15
+        assert histogrammer.histograms[0].data.sum() == 15
 
     def test_data_out_of_order_does_not_add_data_before_start(self):
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
 
         histogrammer.add_data(UNORDERED_EVENT_DATA)
 
-        assert sum(histogrammer.histograms[0].data) == 28
-        assert sum(histogrammer.histograms[1].data) == 28
+        assert histogrammer.histograms[0].data.sum() == 28
+        assert histogrammer.histograms[1].data.sum() == 28
 
     def test_before_counting_published_histogram_is_labelled_to_indicate_not_started(
         self
@@ -291,5 +291,5 @@ class TestHistogrammer:
 
         histogrammer.clear_histograms()
 
-        assert sum(histogrammer.histograms[0].data) == 0
-        assert sum(histogrammer.histograms[1].data) == 0
+        assert histogrammer.histograms[0].data.sum() == 0
+        assert histogrammer.histograms[1].data.sum() == 0

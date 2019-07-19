@@ -177,7 +177,7 @@ The configuration file should contain the standard JSON for configuring histogra
 as described above.
 
 ```
-python main.py --brokers localhost:9092 --topic hist_commands --config_file ../example_config.json
+python main.py --brokers localhost:9092 --topic hist_commands --config_file example_configs/config1d.json
 ```
 
 Note: this configuration will be replaced if a new configuration is sent the command

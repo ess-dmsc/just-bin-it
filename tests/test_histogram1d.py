@@ -21,17 +21,17 @@ class TestHistogram1d:
 
     def test_adding_data_to_histogram_adds_data(self):
         self.hist.add_data(self.pulse_time, self.data)
-        first_sum = sum(self.hist.data)
+        first_sum = self.hist.data.sum()
 
         # Add the data again
         self.hist.add_data(self.pulse_time, self.data)
 
         # Sum should be double
-        assert sum(self.hist.data) == first_sum * 2
+        assert self.hist.data.sum() == first_sum * 2
 
     def test_adding_data_outside_initial_bins_is_ignored(self):
         self.hist.add_data(self.pulse_time, self.data)
-        first_sum = sum(self.hist.data)
+        first_sum = self.hist.data.sum()
         x_edges = self.hist.x_edges[:]
 
         # Add data that is outside the edges
@@ -39,7 +39,7 @@ class TestHistogram1d:
         self.hist.add_data(self.pulse_time, new_data)
 
         # Sum should not change
-        assert sum(self.hist.data) == first_sum
+        assert self.hist.data.sum() == first_sum
         # Edges should not change
         assert np.array_equal(self.hist.x_edges, x_edges)
 
@@ -57,7 +57,7 @@ class TestHistogram1d:
         self.hist.add_data(3, self.data)
 
         # As pulse time is odd no data should be added.
-        assert sum(self.hist.data) == 0
+        assert self.hist.data.sum() == 0
 
     def test_throwing_preprocessing_step_is_handled(self):
         def _preprocess(pulse_time, x):
@@ -73,7 +73,7 @@ class TestHistogram1d:
         hist.add_data(self.pulse_time, self.data, source="source1")
         hist.add_data(self.pulse_time, self.data, source="OTHER")
 
-        assert sum(hist.data) == 10
+        assert hist.data.sum() == 10
 
     def test_if_roi_function_supplied_then_outside_data_ignored(self):
         # Ignore outside ROI
@@ -92,14 +92,14 @@ class TestHistogram1d:
 
         hist.add_data(self.pulse_time, self.data, det_ids)
 
-        assert sum(hist.data) == 2
+        assert hist.data.sum() == 2
 
     def test_clearing_histogram_data_clears_histogram(self):
         self.hist.add_data(self.pulse_time, self.data)
 
         self.hist.clear_data()
 
-        assert sum(self.hist.data) == 0
+        assert self.hist.data.sum() == 0
 
     def test_after_clearing_histogram_can_add_data(self):
         self.hist.add_data(self.pulse_time, self.data)
@@ -108,12 +108,12 @@ class TestHistogram1d:
         self.hist.add_data(self.pulse_time, self.data)
 
         assert self.hist.shape == (self.num_bins,)
-        assert sum(self.hist.data) == 5
+        assert self.hist.data.sum() == 5
 
     def test_adding_empty_data_does_nothing(self):
         self.hist.add_data(self.pulse_time, [])
 
-        assert sum(self.hist.data) == 0
+        assert self.hist.data.sum() == 0
 
     def test_histogram_keeps_track_of_last_pulse_time_processed(self):
         self.hist.add_data(1234, self.data)

@@ -22,7 +22,7 @@ class TestSingleEventHistogram1d:
         self.hist.add_data(0.02)
         self.hist.add_data(0.03)
 
-        assert sum(self.hist.data) == 3
+        assert self.hist.data.sum() == 3
 
     def test_pulse_times_are_correctly_initialised_in_nanoseconds(self):
         assert len(self.hist.pulse_times) == 15
@@ -70,7 +70,7 @@ class TestSingleEventHistogram1d:
             # Must be in nanoseconds
             hist.add_data(et * 10 ** 9, det_ids=d)
 
-        assert sum(hist.data) == 4
+        assert hist.data.sum() == 4
 
     def test_only_data_with_correct_source_is_added(self):
         hist = SingleEventHistogram1d(
@@ -81,7 +81,7 @@ class TestSingleEventHistogram1d:
         hist.add_data(0.02, 2, source="source1")
         hist.add_data(0.03, 3, source="OTHER")
 
-        assert sum(hist.data) == 2
+        assert hist.data.sum() == 2
 
     def test_if_no_id_supplied_then_defaults_to_empty_string(self):
         assert self.hist.id == ""
