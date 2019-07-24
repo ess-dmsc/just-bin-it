@@ -137,11 +137,11 @@ class TestHistogramFactory:
     def test_if_no_id_specified_then_empty_string(self):
         histograms = HistogramFactory.generate(VALID_CONFIG)
 
-        assert histograms[0].id == ""
+        assert histograms[0].identifier == ""
 
     def test_config_with_id_specified_sets_id(self):
         histograms = HistogramFactory.generate(VALID_CONFIG_WITH_ID)
 
-        assert histograms[0].id == "123456"
+        assert histograms[0].identifier == "123456"
 
     # TODO: More tests for when data is missing

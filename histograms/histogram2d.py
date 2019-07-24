@@ -5,7 +5,9 @@ import logging
 class Histogram2d:
     """Two dimenstional histogram for time-of-flight."""
 
-    def __init__(self, topic, num_bins, tof_range, det_range, source=None, id=""):
+    def __init__(
+        self, topic, num_bins, tof_range, det_range, source=None, identifier=""
+    ):
         """
         Constructor.
 
@@ -14,7 +16,7 @@ class Histogram2d:
         :param tof_range: The range of time-of-flights to histogram over.
         :param source: The data source to histogram.
         :param det_range: The range of sequential detectors to histogram over.
-        :param id: An optional identifier for the histogram.
+        :param identifier: An optional identifier for the histogram.
         """
         self._histogram = None
         self.x_edges = None
@@ -24,7 +26,7 @@ class Histogram2d:
         self.num_bins = num_bins
         self.topic = topic
         self.last_pulse_time = 0
-        self.id = id
+        self.identifier = identifier
         self.source = source
 
         self._intialise_histogram()

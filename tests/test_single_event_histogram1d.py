@@ -84,11 +84,11 @@ class TestSingleEventHistogram1d:
         assert hist.data.sum() == 2
 
     def test_if_no_id_supplied_then_defaults_to_empty_string(self):
-        assert self.hist.id == ""
+        assert self.hist.identifier == ""
 
     def test_id_supplied_then_is_set(self):
         example_id = "abcdef"
         hist = SingleEventHistogram1d(
-            "topic1", self.num_bins, self.range, id=example_id
+            "topic1", self.num_bins, self.range, identifier=example_id
         )
-        assert hist.id == example_id
+        assert hist.identifier == example_id

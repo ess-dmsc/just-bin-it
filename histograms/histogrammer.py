@@ -111,7 +111,7 @@ class Histogrammer:
             self.hist_sink.send_histogram(h.topic, h, timestamp, json.dumps(info))
 
     def _generate_info(self, histogram):
-        info = {"id": histogram.id}
+        info = {"id": histogram.identifier}
         if not self._started:
             info["state"] = HISTOGRAM_STATES["NOT_STARTED"]
         elif self._stop_time_exceeded:
