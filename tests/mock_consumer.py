@@ -56,7 +56,7 @@ def get_fake_event_messages(num_messages):
     # The real gap would be 1/14 but we use 1/20 to make things easier.
     pulse_gap = 50_000_000  # 1/20 * 10**9
 
-    for i in range(num_messages):
+    for _ in range(num_messages):
         tofs = []
         for j in range(10):
             tofs.append(j * 1_000_000)

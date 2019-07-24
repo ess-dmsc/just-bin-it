@@ -85,7 +85,7 @@ class SingleEventHistogram1d:
         corrected_time = nanosecs - self.pulse_times[bin_num[0] - 1]
 
         if self.preprocessor is not None:
-            pulse_time, tofs, y = self._preprocess_data(pulse_time, tofs, det_ids)
+            pulse_time, tofs, det_ids = self._preprocess_data(pulse_time, tofs, det_ids)
 
         if self.roi is not None:
             # Mask will contain one value if that is 1 then the value is not added.

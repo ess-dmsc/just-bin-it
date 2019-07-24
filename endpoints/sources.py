@@ -30,7 +30,7 @@ class BaseSource:
         data = []
         msgs = self.consumer.get_new_messages()
 
-        for topic, records in msgs.items():
+        for _, records in msgs.items():
             for i in records:
                 try:
                     data.append(self._process_record(i.value))
@@ -79,7 +79,7 @@ class EventSource(BaseSource):
         # Kafka uses milliseconds, but we use nanoseconds
         offset = self.consumer.seek_by_time(start_time // 1_000_000)
 
-        lowest_offset, highest_offset = self.consumer.get_offset_range()
+        lowest_offset, _ = self.consumer.get_offset_range()
 
         data = []
         while not data:

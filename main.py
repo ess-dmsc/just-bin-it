@@ -10,8 +10,6 @@ from endpoints.kafka_producer import Producer
 from endpoints.kafka_tools import are_kafka_settings_valid
 from endpoints.config_listener import ConfigListener
 from histograms.histogram2d import Histogram2d
-from histograms.histogram1d import Histogram1d  # NOQA
-from histograms.single_event_histogram1d import SingleEventHistogram1d  # NOQA
 from endpoints.sources import EventSource, SimulatedEventSource
 from histograms.histogrammer import create_histogrammer
 

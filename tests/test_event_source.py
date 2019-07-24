@@ -24,8 +24,8 @@ class TestEventSource:
         data = self.event_source.get_new_data()
 
         assert len(data) == len(messages)
-        for i in range(len(messages)):
-            assert data[i] == messages[i]
+        for i, m in enumerate(messages):
+            assert data[i] == m
 
     def test_given_exact_time_finds_start_pulse(self):
         messages = get_fake_event_messages(100)
