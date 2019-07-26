@@ -176,12 +176,12 @@ def serialise_hs00(histogrammer, timestamp: int = 0, info_message: str = ""):
 
     # Build the actual buffer
     EventHistogram.EventHistogramStart(builder)
-    EventHistogram.EventHistogramAddSource(builder, source)
-    EventHistogram.EventHistogramAddTimestamp(builder, timestamp)
     EventHistogram.EventHistogramAddInfo(builder, info)
+    EventHistogram.EventHistogramAddData(builder, pos_data)
     EventHistogram.EventHistogramAddCurrentShape(builder, shape)
     EventHistogram.EventHistogramAddDimMetadata(builder, metadata_vector)
-    EventHistogram.EventHistogramAddData(builder, pos_data)
+    EventHistogram.EventHistogramAddTimestamp(builder, timestamp)
+    EventHistogram.EventHistogramAddSource(builder, source)
     EventHistogram.EventHistogramAddDataType(builder, Array.ArrayDouble)
     hist = EventHistogram.EventHistogramEnd(builder)
     builder.Finish(hist)
