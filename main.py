@@ -152,6 +152,13 @@ class Main:
                     if self.config_listener.check_for_messages():
                         break
 
+                # See if the stop time has been exceeded
+                if len(event_buffer) == 0:
+                    if self.histogrammer.check_stop_time_exceeded(
+                        int(time.time() * 1000)
+                    ):
+                        break
+
             if event_buffer:
                 self.histogrammer.add_data(event_buffer)
 
@@ -195,7 +202,11 @@ class Main:
         :param config: The configuration.
         """
         producer = Producer(config["data_brokers"])
-        self.histogrammer = create_histogrammer(producer, config)
+        self.histogrammer = create_histogrammer(
+            producer, config, int(time.time() * 1000)
+        )
+        if self.histogrammer.start:
+            self.event_source.seek_to_time(self.histogrammer.start)
 
     def configure_event_source(self, config):
         """
@@ -212,9 +223,6 @@ class Main:
 
         consumer = Consumer(config["data_brokers"], config["data_topics"])
         event_source = EventSource(consumer)
-
-        if "start" in config:
-            event_source.seek_to_pulse_time(config["start"])
 
         return event_source
 

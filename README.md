@@ -97,8 +97,8 @@ A JSON histogramming configuration has the following parameters:
 
 * "data_brokers" (string array): the addresses of the Kafka brokers
 * "data_topics" (string array): the topics to listen for event data on
-* "start" (seconds since epoch in ns): only histogram data after this time [optional]
-* "stop" (seconds since epoch in ns): only histogram data up to this time [optional]
+* "start" (seconds since epoch in ms): only histogram data after this UTC time [optional]
+* "stop" (seconds since epoch in ms): only histogram data up to this UTC time [optional]
 * "interval" (seconds): only histogram for this interval [optional]
 * "histograms" (array of dicts): the histograms to create, contains the following:
     * "type" (string): the histogram type (hist1d or hist2d)
@@ -120,8 +120,8 @@ For example:
   "cmd": "config",
   "data_brokers": ["localhost:9092"],
   "data_topics": ["TEST_events"],
-  "start": 1558676657538999557,
-  "stop":  1558677657538999557,
+  "start": 1564727596867,
+  "stop":  1564727668779,
   "histograms": [
     {
       "type": "hist1d",

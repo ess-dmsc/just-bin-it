@@ -10,6 +10,10 @@ class SourceException(Exception):
     pass
 
 
+class TooOldTimeRequestedException(Exception):
+    pass
+
+
 class BaseSource:
     def __init__(self, consumer):
         """
@@ -33,7 +37,7 @@ class BaseSource:
         for _, records in msgs.items():
             for i in records:
                 try:
-                    data.append(self._process_record(i.value))
+                    data.append((i.timestamp, i.offset, self._process_record(i.value)))
                 except SourceException as error:
                     logging.warning(f"SourceException: {error}")  # pragma: no mutate
 
@@ -62,55 +66,39 @@ class EventSource(BaseSource):
         except Exception as error:
             raise SourceException(error)
 
-    def seek_to_pulse_time(self, start_time: int):
+    def seek_to_time(self, requested_time: int):
         """
-        Repositions the consumer to the last message before the specified time.
+        Repositions the consumer to the first message >= the specified time.
 
-        Note: this is the pulse time not the Kafka message time.
+        Note: this is the Kafka message time.
 
-        :param start_time: Time in nanoseconds.
-        :return: The offset for the start
+        :param requested_time: Time in milliseconds.
+        :return: The corresponding offset.
         """
-        # Kafka gives us a rough position based on the Kafka message timestamp
-        # but we need to fine tune to get the real start
-
         # TODO: Check source?
+        lowest_offset, highest_offset = self.consumer.get_offset_range()
 
-        # Kafka uses milliseconds, but we use nanoseconds
-        offset = self.consumer.seek_by_time(start_time // 1_000_000)
+        # Kafka uses milliseconds
+        offset = self.consumer.offset_for_time(requested_time)
 
-        lowest_offset, _ = self.consumer.get_offset_range()
+        if offset is None:
+            logging.warning(
+                "Could not find corresponding offset for requested time, so set position to latest message"
+            )
+            offset = highest_offset
 
-        data = []
-        while not data:
-            data = self.get_new_data()
+        if offset == lowest_offset:
+            # We've gone back as far as we can.
+            raise TooOldTimeRequestedException(
+                "Cannot find message time in data as supplied time is too old"
+            )  # pragma: no mutate
 
-        while True:
-            # Seek back one value
-            offset -= 1
-
-            if offset < lowest_offset:
-                # We've gone back as far as we can.
-                raise Exception(
-                    "Cannot find start time in data as supplied start time is too old"
-                )  # pragma: no mutate
-
-            self.consumer.seek_by_offset(offset)
-
-            data = []
-            while not data:
-                data = self.get_new_data()
-
-            if int(data[0]["pulse_time"]) < start_time:
-                # Move to the first pulse after the start time.
-                offset += 1
-                break
-            elif int(data[0]["pulse_time"]) == start_time:
-                break
-
-        # Move to the offset
         self.consumer.seek_by_offset(offset)
+
         return offset
+
+    def offsets_for_time(self, message_time):
+        return self.consumer.offset_for_time(message_time)
 
 
 class HistogramSource(BaseSource):

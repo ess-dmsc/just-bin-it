@@ -3,7 +3,9 @@ from endpoints.kafka_consumer import Consumer
 
 
 class MockConsumerRecord:
-    def __init__(self, value):
+    def __init__(self, timestamp, offset, value):
+        self.timestamp = timestamp
+        self.offset = offset
         self.value = value
 
 
@@ -33,15 +35,10 @@ class MockConsumer(Consumer):
             records = []
             while self.offset < len(self.messages):
                 msg = self.messages[self.offset]
-                records.append(MockConsumerRecord(msg))
+                records.append(MockConsumerRecord(msg[0], msg[1], msg[2]))
                 self.offset += 1
             data[t] = records
         return data
-
-    def _seek_by_time(self, start_time):
-        # Stick it in the middle
-        self.offset = len(self.messages) // 2
-        return self.offset
 
     def _seek_by_offset(self, offset):
         self.offset = offset
@@ -49,18 +46,37 @@ class MockConsumer(Consumer):
     def _get_offset_range(self):
         return 0, len(self.messages) - 1
 
+    def _offset_for_time(self, start_time):
+        self.offset = None
+        for i, m in enumerate(self.messages):
+            if m[0] >= start_time:
+                self.offset = i
+                break
+
+        return self.offset
+
 
 def get_fake_event_messages(num_messages):
     messages = []
     pulse_time = 0
     # The real gap would be 1/14 but we use 1/20 to make things easier.
     pulse_gap = 50_000_000  # 1/20 * 10**9
+    offset = 0
 
     for _ in range(num_messages):
         tofs = []
+        dets = []
         for j in range(10):
             tofs.append(j * 1_000_000)
+            dets.append(j)
 
-        messages.append({"pulse_time": pulse_time, "tofs": tofs})
+        messages.append(
+            (
+                pulse_time,
+                offset,
+                {"pulse_time": pulse_time, "tofs": tofs, "det_ids": dets},
+            )
+        )
         pulse_time += pulse_gap
+        offset += 1
     return messages
