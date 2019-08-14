@@ -93,7 +93,7 @@ class Main:
         stats_publisher=None,
     ):
         """
-        The main execution function.
+        Constructor.
 
         :param config_brokers: The brokers to listen for the configuration commands on.
         :param config_topic: The topic to listen for commands on.
@@ -131,6 +131,7 @@ class Main:
 
                 try:
                     self.handle_command_message(msg)
+                    logging.warning("New command received")
                     if not self.one_shot:
                         # Publish initial empty histograms.
                         self.histogrammer.publish_histograms()
@@ -170,8 +171,10 @@ class Main:
 
             self.histogrammer.publish_histograms()
 
+            hist_stats = self.histogrammer.get_histogram_stats()
+            logging.info(json.dumps(hist_stats))
+
             if self.stats_publisher:
-                hist_stats = self.histogrammer.get_histogram_stats()
                 try:
                     self.stats_publisher.send_histogram_stats(hist_stats)
                 except Exception as error:
@@ -181,7 +184,7 @@ class Main:
 
     def create_config_listener(self):
         """
-        Creates the configuration listener.
+        Create the configuration listener.
 
         Note: Blocks until the Kafka connection is made.
         """
@@ -232,20 +235,23 @@ class Main:
 
         :param message: The message.
         """
-        if message["cmd"] == "restart":
+        # Don't need the timestamp or offset
+        _, _, msg = message
+
+        if msg["cmd"] == "restart":
             self.histogrammer.clear_histograms()
-        elif message["cmd"] == "config":
+        elif msg["cmd"] == "config":
             try:
                 if self.simulation:
                     logging.info("RUNNING IN SIMULATION MODE")
-                    self.event_source = SimulatedEventSource(message)
+                    self.event_source = SimulatedEventSource(msg)
                 else:
-                    self.event_source = self.configure_event_source(message)
-                self.configure_histograms(message)
+                    self.event_source = self.configure_event_source(msg)
+                self.configure_histograms(msg)
             except Exception as error:
                 logging.error(f"Could not use received configuration: {error}")
         else:
-            logging.warning(f'Unknown command received: {message["cmd"]}')
+            logging.warning(f'Unknown command received: {msg["cmd"]}')
 
 
 if __name__ == "__main__":
@@ -298,7 +304,7 @@ if __name__ == "__main__":
         "-l",
         "--log-level",
         type=int,
-        default=2,
+        default=3,
         help="sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.",
     )
 

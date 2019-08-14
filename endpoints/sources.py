@@ -142,4 +142,4 @@ class SimulatedEventSource:
             "det_ids": dets,
             "source": "simulator",
         }
-        return [data]
+        return [(int(time.time() * 1000), 0, data)]

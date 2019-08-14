@@ -6,7 +6,7 @@ from endpoints.histogram_sink import HistogramSink
 HISTOGRAM_STATES = {
     "COUNTING": "COUNTING",
     "FINISHED": "FINISHED",
-    "NOT_STARTED": "NOT_STARTED",
+    "INITIALISED": "INITIALISED",
 }
 
 
@@ -115,7 +115,7 @@ class Histogrammer:
         elif self._started:
             info["state"] = HISTOGRAM_STATES["COUNTING"]
         else:
-            info["state"] = HISTOGRAM_STATES["NOT_STARTED"]
+            info["state"] = HISTOGRAM_STATES["INITIALISED"]
 
         return info
 

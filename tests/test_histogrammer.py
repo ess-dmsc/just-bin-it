@@ -263,7 +263,7 @@ class TestHistogrammer:
 
         data = deserialise_hs00(self.mock_producer.messages[0][1])
         info = json.loads(data["info"])
-        assert info["state"] == HISTOGRAM_STATES["NOT_STARTED"]
+        assert info["state"] == HISTOGRAM_STATES["INITIALISED"]
 
     def test_while_counting_published_histogram_is_labelled_to_indicate_counting(self):
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
