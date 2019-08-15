@@ -73,10 +73,6 @@ class Consumer:
             # Either the topic is empty or the requested time is greater than
             # highest message time in the topic.
             return None
-        #     raise Exception(
-        #         "Unable to locate start time in topic - start time too high or the topic empty?"
-        #     )
-        # offset =
         return answer[self.topic_partitions[0]].offset
 
     def seek_by_offset(self, offset):
