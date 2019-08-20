@@ -39,7 +39,7 @@ class HistogramFactory:
             else:
                 # TODO: skip it, throw or what?
                 logging.warning(
-                    f"Unrecognised histogram type: {hist_type}"
+                    "Unrecognised histogram type: %s", hist_type
                 )  # pragma: no mutate
                 pass
 

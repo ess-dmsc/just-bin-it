@@ -39,7 +39,7 @@ class BaseSource:
                 try:
                     data.append((i.timestamp, i.offset, self._process_record(i.value)))
                 except SourceException as error:
-                    logging.warning(f"SourceException: {error}")  # pragma: no mutate
+                    logging.warning("SourceException: %s", error)  # pragma: no mutate
 
         return data
 

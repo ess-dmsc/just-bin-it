@@ -45,7 +45,7 @@ class Consumer:
         data = self.consumer.poll(5)
         for tp in self.topic_partitions:
             logging.debug(
-                f"{tp.topic} - current position: {self.consumer.position(tp)}"
+                "%s - current position: %s", tp.topic, self.consumer.position(tp)
             )
         return data
 

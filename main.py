@@ -136,7 +136,7 @@ class Main:
                         # Publish initial empty histograms.
                         self.histogrammer.publish_histograms()
                 except Exception as error:
-                    logging.error(f"Could not handle configuration: {error}")
+                    logging.error("Could not handle configuration: %s", error)
 
             if self.event_source is None:
                 # No event source means we are waiting for a configuration.
@@ -172,13 +172,13 @@ class Main:
             self.histogrammer.publish_histograms()
 
             hist_stats = self.histogrammer.get_histogram_stats()
-            logging.info(json.dumps(hist_stats))
+            logging.info("%s", json.dumps(hist_stats))
 
             if self.stats_publisher:
                 try:
                     self.stats_publisher.send_histogram_stats(hist_stats)
                 except Exception as error:
-                    logging.error(f"Could not publish statistics: {error}")
+                    logging.error("Could not publish statistics: %s", error)
 
             time.sleep(0.5)
 
@@ -191,7 +191,7 @@ class Main:
         logging.info("Creating configuration consumer")
         while not are_kafka_settings_valid(self.config_brokers, [self.config_topic]):
             logging.error(
-                f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
+                "Could not connect to Kafka brokers or topic for configuration - will retry shortly"
             )
             time.sleep(5)
         self.config_listener = ConfigListener(
@@ -249,9 +249,9 @@ class Main:
                     self.event_source = self.configure_event_source(msg)
                 self.configure_histograms(msg)
             except Exception as error:
-                logging.error(f"Could not use received configuration: {error}")
+                logging.error("Could not use received configuration: %s", error)
         else:
-            logging.warning(f'Unknown command received: {msg["cmd"]}')
+            logging.warning("Unknown command received: %s", msg["cmd"])
 
 
 if __name__ == "__main__":
