@@ -143,3 +143,15 @@ class SimulatedEventSource:
             "source": "simulator",
         }
         return [(int(time.time() * 1000), 0, data)]
+
+    def seek_to_time(self, requested_time: int):
+        """
+        Does nothing.
+
+        This command needs to be available so that the simulated source can be used as
+        a like for like replacement for a real source
+
+        :param requested_time: ignored
+        :return:
+        """
+        return 0
