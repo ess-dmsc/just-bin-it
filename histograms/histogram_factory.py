@@ -2,6 +2,7 @@ import logging
 from histograms.histogram1d import Histogram1d
 from histograms.histogram2d import Histogram2d
 from histograms.single_event_histogram1d import SingleEventHistogram1d
+from histograms.det_histogram import DetHistogram
 
 
 class HistogramFactory:
@@ -28,6 +29,7 @@ class HistogramFactory:
             det_range = tuple(h["det_range"]) if "det_range" in h else None
             source = h["source"] if "source" in h else None
             identifier = h["id"] if "id" in h else ""
+            width = h["width"] if "width" in h else 0
 
             if hist_type == "hist1d":
                 HistogramFactory.check_1d_info(num_bins, tof_range)
@@ -36,6 +38,8 @@ class HistogramFactory:
                 hist = Histogram2d(topic, num_bins, tof_range, det_range, source)
             elif hist_type == "sehist1d":
                 hist = SingleEventHistogram1d(topic, num_bins, tof_range, source)
+            elif hist_type == "dethist":
+                hist = DetHistogram(topic, tof_range, det_range, width, source)
             else:
                 # TODO: skip it, throw or what?
                 logging.warning(

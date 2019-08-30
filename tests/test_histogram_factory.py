@@ -3,6 +3,7 @@ from histograms.histogram_factory import HistogramFactory
 from histograms.histogram1d import Histogram1d
 from histograms.histogram2d import Histogram2d
 from histograms.single_event_histogram1d import SingleEventHistogram1d
+from histograms.det_histogram import DetHistogram
 
 
 VALID_CONFIG = {
@@ -29,6 +30,14 @@ VALID_CONFIG = {
             "num_bins": 200,
             "topic": "topic2",
             "source": "source2",
+        },
+        {
+            "type": "dethist",
+            "tof_range": [0, 4000],
+            "det_range": [0, 3999],
+            "width": 4000,
+            "topic": "topic3",
+            "source": "source3",
         },
     ],
 }
@@ -116,6 +125,12 @@ class TestHistogramFactory:
         assert histograms[2].num_bins == 200
         assert histograms[2].topic == "topic2"
         assert histograms[2].source == "source2"
+
+        assert isinstance(histograms[3], DetHistogram)
+        assert histograms[3].tof_range == (0, 4000)
+        assert histograms[3].num_bins == 4000
+        assert histograms[3].topic == "topic3"
+        assert histograms[3].source == "source3"
 
     def test_throws_if_tof_missing(self):
         with pytest.raises(Exception):
