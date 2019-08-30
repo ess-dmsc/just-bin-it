@@ -6,11 +6,10 @@ from histograms.det_histogram import DetHistogram
 class TestDetHistogram:
     @pytest.fixture(autouse=True)
     def prepare(self):
-        self.NOT_USED = -1
         self.pulse_time = 1234
         self.tof_range = (0, 10)
         self.det_range = (0, 19)
-        self.num_dets = 20
+        self.num_dets = self.det_range[1] - self.det_range[0] + 1
         self.width = 5
         self.data = np.array([x for x in range(self.det_range[1] + 1)])
         self.hist = DetHistogram("topic", self.tof_range, self.det_range, self.width)
@@ -32,10 +31,13 @@ class TestDetHistogram:
 
     def test_on_construction_histogram_is_uninitialised(self):
         assert self.hist.x_edges is not None
-        assert self.hist.shape == (20,)
-        assert len(self.hist.x_edges) == 21
+        assert self.hist.shape == (5, 4)
+        assert len(self.hist.x_edges) == 6
+        assert len(self.hist.y_edges) == 5
         assert self.hist.x_edges[0] == self.data[0]
-        assert self.hist.x_edges[-1] == 19
+        assert self.hist.x_edges[-1] == 5
+        assert self.hist.y_edges[0] == self.data[0]
+        assert self.hist.y_edges[-1] == 4
         assert self.hist.data.sum() == 0
 
     def test_adding_data_to_initialised_histogram_new_data_is_added(self):
@@ -63,13 +65,13 @@ class TestDetHistogram:
         assert np.array_equal(self.hist.x_edges, x_edges)
 
     def test_adding_data_of_specific_shape_is_captured(self):
-        data = [12, 12, 13, 13, 13, 14, 14]
+        data = [10, 10, 11, 11, 11, 12, 12]
         self.hist.add_data(self.pulse_time, [], data)
 
         assert self.hist.data.sum() == len(data)
-        assert self.hist.data[12] == 2
-        assert self.hist.data[13] == 3
-        assert self.hist.data[14] == 2
+        assert self.hist.data[2][2] == 2
+        assert self.hist.data[2][3] == 3
+        assert self.hist.data[3][0] == 2
 
     def test_if_no_id_supplied_then_defaults_to_empty_string(self):
         assert self.hist.identifier == ""
@@ -105,7 +107,7 @@ class TestDetHistogram:
 
         self.hist.add_data(self.pulse_time, [], self.data)
 
-        assert self.hist.shape == (self.num_dets,)
+        assert self.hist.shape == (5, 4)
         assert self.hist.data.sum() == 19
 
     def test_adding_empty_data_does_nothing(self):

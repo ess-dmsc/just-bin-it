@@ -11,7 +11,7 @@ class DetHistogram:
         Constructor.
 
         :param topic: The name of the Kafka topic to publish to.
-        :param tof_range: The range of time-of-flights to histogram over.
+        :param tof_range: The range of time-of-flights to histogram over [NOT USED].
         :param source: The data source to histogram.
         :param det_range: The range of sequential detectors to histogram over.
         :param width: How many detectors in a row.
@@ -24,6 +24,7 @@ class DetHistogram:
         # The number of bins is the number of detectors.
         self.num_bins = det_range[1] - det_range[0] + 1
         self.width = width
+        self.height = self.num_bins // self.width
         self.topic = topic
         self.last_pulse_time = 0
         self.identifier = identifier
@@ -40,8 +41,14 @@ class DetHistogram:
         if self.num_bins % self.width != 0:
             raise Exception("Detector range and width are incompatible")
 
-        self.x_edges = np.histogram_bin_edges([], self.num_bins, self.det_range)
-        self._histogram = histogram1d([], range=self.det_range, bins=self.num_bins)
+        # self.x_edges = np.histogram_bin_edges([], self.num_bins, self.det_range)
+        # self._histogram = histogram1d([], range=self.det_range, bins=self.num_bins)
+        self._histogram, self.x_edges, self.y_edges = np.histogram2d(
+            [],
+            [],
+            range=((0, self.width), (0, self.height)),
+            bins=(self.width, self.height),
+        )
 
     @property
     def data(self):
@@ -66,8 +73,10 @@ class DetHistogram:
 
         self.last_pulse_time = pulse_time
 
-        self._histogram += histogram1d(
-            det_ids, range=self.det_range, bins=self.num_bins
+        hist_1 = histogram1d(det_ids, range=self.det_range, bins=self.num_bins)
+
+        self._histogram += hist_1.view().reshape(
+            (self.width, self.num_bins // self.width)
         )
 
     def clear_data(self):
