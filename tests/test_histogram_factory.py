@@ -99,6 +99,22 @@ MISSING_HISTOGRAMS_CONFIG = {
     "data_topics": ["my_topic"],
 }
 
+# This throws because the width is not a divisor of the number of detectors.
+INVALID_WIDTH_CONFIG = {
+    "data_brokers": ["localhost:9092", "someserver:9092"],
+    "data_topics": ["my_topic"],
+    "histograms": [
+        {
+            "type": "dethist",
+            "tof_range": [0, 4000],
+            "det_range": [0, 3999],
+            "width": 4005,
+            "topic": "topic3",
+            "source": "source3",
+        }
+    ],
+}
+
 
 class TestHistogramFactory:
     @pytest.fixture(autouse=True)
@@ -132,17 +148,20 @@ class TestHistogramFactory:
         assert histograms[3].topic == "topic3"
         assert histograms[3].source == "source3"
 
-    def test_throws_if_tof_missing(self):
-        with pytest.raises(Exception):
-            _ = HistogramFactory.generate(MISSING_TOF_CONFIG)
+    def test_if_tof_missing_then_histogram_not_created(self):
+        histograms = HistogramFactory.generate(MISSING_TOF_CONFIG)
 
-    def test_throws_if_bins_missing(self):
-        with pytest.raises(Exception):
-            _ = HistogramFactory.generate(MISSING_BINS_CONFIG)
+        assert len(histograms) == 0
 
-    def test_throws_if_bins_and_tof_missing(self):
-        with pytest.raises(Exception):
-            _ = HistogramFactory.generate(MISSING_TOF_AND_BINS_CONFIG)
+    def test_if_bins_missing_then_histogram_not_created(self):
+        histograms = HistogramFactory.generate(MISSING_BINS_CONFIG)
+
+        assert len(histograms) == 0
+
+    def test_if_bins_and_tof_missing_then_histogram_not_created(self):
+        histograms = HistogramFactory.generate(MISSING_TOF_AND_BINS_CONFIG)
+
+        assert len(histograms) == 0
 
     def test_when_no_histograms_defined_nothing_happens(self):
         histograms = HistogramFactory.generate(MISSING_HISTOGRAMS_CONFIG)
@@ -159,4 +178,9 @@ class TestHistogramFactory:
 
         assert histograms[0].identifier == "123456"
 
-    # TODO: More tests for when data is missing
+    def test_if_width_invalid_for_det_histogram_then_histogram_is_not_created(self):
+        histograms = HistogramFactory.generate(INVALID_WIDTH_CONFIG)
+
+        assert len(histograms) == 0
+
+    # TODO: More tests for when data is missing/invalid for 2d plots
