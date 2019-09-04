@@ -3,41 +3,42 @@ import numpy as np
 from histograms.det_histogram import DetHistogram
 
 
+def generate_pixel_id(x, y, width):
+    return y * width + x + 1
+
+
 class TestDetHistogram:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.pulse_time = 1234
         self.tof_range = (0, 10)
-        self.det_range = (0, 19)
-        self.num_dets = self.det_range[1] - self.det_range[0] + 1
+        self.det_range = (1, 25)
         self.width = 5
-        self.data = np.array([x for x in range(self.det_range[1] + 1)])
-        self.hist = DetHistogram("topic", self.tof_range, self.det_range, self.width)
+        self.height = 5
+        self.data = []
+        for x in range(self.width):
+            for y in range(self.height):
+                self.data.append(generate_pixel_id(x, y, self.width))
+        self.hist = DetHistogram(
+            "topic", self.tof_range, self.det_range, self.width, self.height
+        )
 
-    def test_if_width_is_not_multiple_of_detector_range_then_throws(self):
-        width = 5
-        det_range = (0, 23)
+    def test_adding_data_to_offset_detector_range_is_okay(self):
+        hist = DetHistogram("topic", self.tof_range, (3, 27), self.width, self.height)
 
-        with pytest.raises(Exception):
-            DetHistogram("topic", self.tof_range, det_range, width)
+        hist.add_data(self.pulse_time, [], self.data)
 
-    def test_starting_from_non_zero_detector_okay_if_width_is_multiple_of_detector_range(
-        self
-    ):
-        width = 5
-        det_range = (2, 21)
-
-        DetHistogram("topic", self.tof_range, det_range, width)
+        assert hist.data.sum() == 23
 
     def test_on_construction_histogram_is_uninitialised(self):
         assert self.hist.x_edges is not None
-        assert self.hist.shape == (5, 4)
+        assert self.hist.shape == (5, 5)
         assert len(self.hist.x_edges) == 6
-        assert len(self.hist.y_edges) == 5
-        assert self.hist.x_edges[0] == self.data[0]
+        assert len(self.hist.y_edges) == 6
+        assert self.hist.x_edges[0] == 0
         assert self.hist.x_edges[-1] == 5
-        assert self.hist.y_edges[0] == self.data[0]
-        assert self.hist.y_edges[-1] == 4
+        assert self.hist.y_edges[0] == 0
+        assert self.hist.y_edges[-1] == 5
         assert self.hist.data.sum() == 0
 
     def test_adding_data_to_initialised_histogram_new_data_is_added(self):
@@ -50,13 +51,13 @@ class TestDetHistogram:
         # Sum should be double
         assert self.hist.data.sum() == first_sum * 2
 
-    def test_adding_data_outside_initial_bins_is_ignored(self):
+    def test_adding_data_outside_bins_is_ignored(self):
         self.hist.add_data(self.pulse_time, [], self.data)
         first_sum = self.hist.data.sum()
         x_edges = self.hist.x_edges[:]
 
         # Add data that is outside the edges
-        new_data = np.array([x + self.num_dets + 1 for x in range(self.num_dets)])
+        new_data = np.array([0, 26, 27, 100])
         self.hist.add_data(self.pulse_time, [], new_data)
 
         # Sum should not change
@@ -65,13 +66,17 @@ class TestDetHistogram:
         assert np.array_equal(self.hist.x_edges, x_edges)
 
     def test_adding_data_of_specific_shape_is_captured(self):
-        data = [10, 10, 11, 11, 11, 12, 12]
+        p2_2 = generate_pixel_id(2, 2, self.width)
+        p3_2 = generate_pixel_id(3, 2, self.width)
+        p0_3 = generate_pixel_id(0, 3, self.width)
+
+        data = [p2_2, p2_2, p3_2, p3_2, p3_2, p0_3, p0_3]
         self.hist.add_data(self.pulse_time, [], data)
 
         assert self.hist.data.sum() == len(data)
         assert self.hist.data[2][2] == 2
-        assert self.hist.data[2][3] == 3
-        assert self.hist.data[3][0] == 2
+        assert self.hist.data[3][2] == 3
+        assert self.hist.data[0][3] == 2
 
     def test_if_no_id_supplied_then_defaults_to_empty_string(self):
         assert self.hist.identifier == ""
@@ -79,20 +84,30 @@ class TestDetHistogram:
     def test_id_supplied_then_is_set(self):
         example_id = "abcdef"
         hist = DetHistogram(
-            "topic1", self.tof_range, self.det_range, self.width, identifier=example_id
+            "topic1",
+            self.tof_range,
+            self.det_range,
+            self.width,
+            self.height,
+            identifier=example_id,
         )
         assert hist.identifier == example_id
 
     def test_only_data_with_correct_source_is_added(self):
         hist = DetHistogram(
-            "topic", self.tof_range, self.det_range, self.width, source="source1"
+            "topic",
+            self.tof_range,
+            self.det_range,
+            self.width,
+            self.height,
+            source="source1",
         )
 
         hist.add_data(self.pulse_time, [], self.data, source="source1")
         hist.add_data(self.pulse_time, [], self.data, source="source1")
         hist.add_data(self.pulse_time, [], self.data, source="OTHER")
 
-        assert hist.data.sum() == 38
+        assert hist.data.sum() == len(self.data) * 2
 
     def test_clearing_histogram_data_clears_histogram(self):
         self.hist.add_data(self.pulse_time, [], self.data)
@@ -107,8 +122,8 @@ class TestDetHistogram:
 
         self.hist.add_data(self.pulse_time, [], self.data)
 
-        assert self.hist.shape == (5, 4)
-        assert self.hist.data.sum() == 19
+        assert self.hist.shape == (5, 5)
+        assert self.hist.data.sum() == len(self.data)
 
     def test_adding_empty_data_does_nothing(self):
         self.hist.add_data(self.pulse_time, [], [])

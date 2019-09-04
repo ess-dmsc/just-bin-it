@@ -34,8 +34,9 @@ VALID_CONFIG = {
         {
             "type": "dethist",
             "tof_range": [0, 4000],
-            "det_range": [0, 3999],
-            "width": 4000,
+            "det_range": [0, 99],
+            "width": 10,
+            "height": 10,
             "topic": "topic3",
             "source": "source3",
         },
@@ -144,7 +145,9 @@ class TestHistogramFactory:
 
         assert isinstance(histograms[3], DetHistogram)
         assert histograms[3].tof_range == (0, 4000)
-        assert histograms[3].num_bins == 4000
+        assert histograms[3].num_bins == 100
+        assert histograms[3].height == 10
+        assert histograms[3].width == 10
         assert histograms[3].topic == "topic3"
         assert histograms[3].source == "source3"
 

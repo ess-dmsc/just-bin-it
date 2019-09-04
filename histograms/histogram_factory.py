@@ -29,7 +29,8 @@ class HistogramFactory:
             det_range = tuple(h["det_range"]) if "det_range" in h else None
             source = h["source"] if "source" in h else None
             identifier = h["id"] if "id" in h else ""
-            width = h["width"] if "width" in h else 0
+            width = h["width"] if "width" in h else 512
+            height = h["height"] if "height" in h else 512
 
             try:
                 if hist_type == "hist1d":
@@ -42,7 +43,9 @@ class HistogramFactory:
                     hist = SingleEventHistogram1d(topic, num_bins, tof_range, source)
                 elif hist_type == "dethist":
                     # TODO: check 2d info
-                    hist = DetHistogram(topic, tof_range, det_range, width, source)
+                    hist = DetHistogram(
+                        topic, tof_range, det_range, width, height, source
+                    )
                 else:
                     # Log but do nothing
                     logging.warning(
