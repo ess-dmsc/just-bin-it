@@ -63,7 +63,9 @@ class TestHistogram1d:
         def _preprocess(pulse_time, x):
             raise Exception("Preprocessing failed.")
 
-        self.hist = Histogram1d("topic1", self.num_bins, self.range, _preprocess)
+        self.hist = Histogram1d(
+            "topic1", self.num_bins, self.range, preprocessor=_preprocess
+        )
         self.hist.add_data(self.pulse_time, self.data)
 
     def test_only_data_with_correct_source_is_added(self):
@@ -129,3 +131,12 @@ class TestHistogram1d:
         example_id = "abcdef"
         hist = Histogram1d("topic1", self.num_bins, self.range, identifier=example_id)
         assert hist.identifier == example_id
+
+    def test_if_det_id_is_out_of_range_then_it_is_ignored(self):
+        hist = Histogram1d("topic1", self.num_bins, self.range, (10, 20))
+        tof_data = [0, 1, 2, 3, 4]
+        det_data = [0, 10, 20, 30, 40]
+
+        hist.add_data(12345, tof_data, det_data)
+
+        assert hist.data.sum() == 2

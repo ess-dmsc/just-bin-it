@@ -2,28 +2,31 @@ import numpy as np
 import logging
 
 
-class Histogram2d:
-    """Two dimensional histogram for time-of-flight."""
+class DetHistogram:
+    """Two dimensional histogram for detectors."""
 
     def __init__(
-        self, topic, num_bins, tof_range, det_range, source=None, identifier=""
+        self, topic, tof_range, det_range, width, height, source=None, identifier=""
     ):
         """
         Constructor.
 
         :param topic: The name of the Kafka topic to publish to.
-        :param num_bins: The number of bins to divide the data up into.
-        :param tof_range: The range of time-of-flights to histogram over.
-        :param det_range: The range of sequential detectors to histogram over.
+        :param tof_range: The range of time-of-flights to histogram over [NOT USED].
         :param source: The data source to histogram.
+        :param det_range: The range of sequential detectors to histogram over.
+        :param width: How many detectors in a row.
+        :param height:
         :param identifier: An optional identifier for the histogram.
         """
         self._histogram = None
         self.x_edges = None
-        self.y_edges = None
         self.tof_range = tof_range
         self.det_range = det_range
-        self.num_bins = num_bins
+        # The number of bins is the number of detectors.
+        self.num_bins = det_range[1] - det_range[0] + 1
+        self.width = width
+        self.height = height
         self.topic = topic
         self.last_pulse_time = 0
         self.identifier = identifier
@@ -36,8 +39,19 @@ class Histogram2d:
         Create a zeroed histogram with the correct shape.
         """
         self._histogram, self.x_edges, self.y_edges = np.histogram2d(
-            [], [], range=(self.tof_range, self.det_range), bins=self.num_bins
+            [],
+            [],
+            range=((0, self.width), (0, self.height)),
+            bins=(self.width, self.height),
         )
+
+    @property
+    def data(self):
+        return self._histogram
+
+    @property
+    def shape(self):
+        return self._histogram.shape
 
     def add_data(self, pulse_time, tof, det_ids, source=""):
         """
@@ -54,17 +68,23 @@ class Histogram2d:
 
         self.last_pulse_time = pulse_time
 
+        dets_x = []
+        dets_y = []
+
+        for d in det_ids:
+            if d == 0 or d < self.det_range[0] or d > self.det_range[1]:
+                continue
+            x = (d - 1) % self.width
+            y = ((d - 1) // self.width) % self.height
+            dets_x.append(x)
+            dets_y.append(y)
+
         self._histogram += np.histogram2d(
-            tof, det_ids, range=(self.tof_range, self.det_range), bins=self.num_bins
+            dets_x,
+            dets_y,
+            range=((0, self.width), (0, self.height)),
+            bins=(self.width, self.height),
         )[0]
-
-    @property
-    def data(self):
-        return self._histogram
-
-    @property
-    def shape(self):
-        return self._histogram.shape
 
     def clear_data(self):
         """

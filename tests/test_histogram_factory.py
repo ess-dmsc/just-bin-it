@@ -3,6 +3,7 @@ from histograms.histogram_factory import HistogramFactory
 from histograms.histogram1d import Histogram1d
 from histograms.histogram2d import Histogram2d
 from histograms.single_event_histogram1d import SingleEventHistogram1d
+from histograms.det_histogram import DetHistogram
 
 
 VALID_CONFIG = {
@@ -29,6 +30,15 @@ VALID_CONFIG = {
             "num_bins": 200,
             "topic": "topic2",
             "source": "source2",
+        },
+        {
+            "type": "dethist",
+            "tof_range": [0, 4000],
+            "det_range": [0, 99],
+            "width": 10,
+            "height": 10,
+            "topic": "topic3",
+            "source": "source3",
         },
     ],
 }
@@ -117,17 +127,28 @@ class TestHistogramFactory:
         assert histograms[2].topic == "topic2"
         assert histograms[2].source == "source2"
 
-    def test_throws_if_tof_missing(self):
-        with pytest.raises(Exception):
-            _ = HistogramFactory.generate(MISSING_TOF_CONFIG)
+        assert isinstance(histograms[3], DetHistogram)
+        assert histograms[3].tof_range == (0, 4000)
+        assert histograms[3].num_bins == 100
+        assert histograms[3].height == 10
+        assert histograms[3].width == 10
+        assert histograms[3].topic == "topic3"
+        assert histograms[3].source == "source3"
 
-    def test_throws_if_bins_missing(self):
-        with pytest.raises(Exception):
-            _ = HistogramFactory.generate(MISSING_BINS_CONFIG)
+    def test_if_tof_missing_then_histogram_not_created(self):
+        histograms = HistogramFactory.generate(MISSING_TOF_CONFIG)
 
-    def test_throws_if_bins_and_tof_missing(self):
-        with pytest.raises(Exception):
-            _ = HistogramFactory.generate(MISSING_TOF_AND_BINS_CONFIG)
+        assert len(histograms) == 0
+
+    def test_if_bins_missing_then_histogram_not_created(self):
+        histograms = HistogramFactory.generate(MISSING_BINS_CONFIG)
+
+        assert len(histograms) == 0
+
+    def test_if_bins_and_tof_missing_then_histogram_not_created(self):
+        histograms = HistogramFactory.generate(MISSING_TOF_AND_BINS_CONFIG)
+
+        assert len(histograms) == 0
 
     def test_when_no_histograms_defined_nothing_happens(self):
         histograms = HistogramFactory.generate(MISSING_HISTOGRAMS_CONFIG)
@@ -144,4 +165,4 @@ class TestHistogramFactory:
 
         assert histograms[0].identifier == "123456"
 
-    # TODO: More tests for when data is missing
+    # TODO: More tests for when data is missing/invalid for 2d plots

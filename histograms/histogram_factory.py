@@ -2,6 +2,7 @@ import logging
 from histograms.histogram1d import Histogram1d
 from histograms.histogram2d import Histogram2d
 from histograms.single_event_histogram1d import SingleEventHistogram1d
+from histograms.det_histogram import DetHistogram
 
 
 class HistogramFactory:
@@ -28,20 +29,32 @@ class HistogramFactory:
             det_range = tuple(h["det_range"]) if "det_range" in h else None
             source = h["source"] if "source" in h else None
             identifier = h["id"] if "id" in h else ""
+            width = h["width"] if "width" in h else 512
+            height = h["height"] if "height" in h else 512
 
-            if hist_type == "hist1d":
-                HistogramFactory.check_1d_info(num_bins, tof_range)
-                hist = Histogram1d(topic, num_bins, tof_range, source)
-            elif hist_type == "hist2d":
-                hist = Histogram2d(topic, num_bins, tof_range, det_range, source)
-            elif hist_type == "sehist1d":
-                hist = SingleEventHistogram1d(topic, num_bins, tof_range, source)
-            else:
-                # TODO: skip it, throw or what?
+            try:
+                if hist_type == "hist1d":
+                    HistogramFactory.check_1d_info(num_bins, tof_range)
+                    hist = Histogram1d(topic, num_bins, tof_range, det_range, source)
+                elif hist_type == "hist2d":
+                    # TODO: check 2d info
+                    hist = Histogram2d(topic, num_bins, tof_range, det_range, source)
+                elif hist_type == "sehist1d":
+                    hist = SingleEventHistogram1d(topic, num_bins, tof_range, source)
+                elif hist_type == "dethist":
+                    # TODO: check 2d info
+                    hist = DetHistogram(
+                        topic, tof_range, det_range, width, height, source
+                    )
+                else:
+                    # Log but do nothing
+                    logging.warning(
+                        "Unrecognised histogram type: %s", hist_type
+                    )  # pragma: no mutate
+            except Exception as error:
                 logging.warning(
-                    f"Unrecognised histogram type: {hist_type}"
+                    "Could not create histogram: %s", error
                 )  # pragma: no mutate
-                pass
 
             if hist is not None:
                 hist.identifier = identifier

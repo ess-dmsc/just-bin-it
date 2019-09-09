@@ -10,7 +10,7 @@ START_CONFIG = {
     "cmd": "config",
     "data_brokers": ["fakehost:9092"],
     "data_topics": ["LOQ_events"],
-    "start": 1000 * 10 ** 9,
+    "start": 1000 * 10 ** 3,
     "histograms": [
         {
             "type": "hist1d",
@@ -33,7 +33,7 @@ START_2D_CONFIG = {
     "cmd": "config",
     "data_brokers": ["fakehost:9092"],
     "data_topics": ["LOQ_events"],
-    "start": 1000 * 10 ** 9,
+    "start": 1000 * 10 ** 3,
     "histograms": [
         {
             "type": "hist2d",
@@ -58,14 +58,14 @@ NO_HIST_CONFIG = {
     "cmd": "config",
     "data_brokers": ["fakehost:9092"],
     "data_topics": ["LOQ_events"],
-    "start": 1000 * 10 ** 9,
+    "start": 1000 * 10 ** 3,
 }
 
 STOP_CONFIG = {
     "cmd": "config",
     "data_brokers": ["fakehost:9092"],
     "data_topics": ["LOQ_events"],
-    "stop": 1001 * 10 ** 9,
+    "stop": 1001 * 10 ** 3,
     "histograms": [
         {
             "type": "hist1d",
@@ -95,59 +95,109 @@ INTERVAL_CONFIG = {
 # Data in each "pulse" increases by factor of 2, that way we can know which
 # messages were consumed by looking at the histogram sum.
 EVENT_DATA = [
-    {"pulse_time": 998 * 10 ** 9, "tofs": [1], "det_ids": None, "source": "simulator"},
-    {
-        "pulse_time": 999 * 10 ** 9,
-        "tofs": [1, 2],
-        "det_ids": [1, 2],
-        "source": "simulator",
-    },
-    {
-        "pulse_time": 1000 * 10 ** 9,
-        "tofs": [1, 2, 3, 4],
-        "det_ids": [1, 2, 3, 4],
-        "source": "simulator",
-    },
-    {
-        "pulse_time": 1001 * 10 ** 9,
-        "tofs": [1, 2, 3, 4, 5, 6, 7, 8],
-        "det_ids": [1, 2, 3, 4, 5, 6, 7, 8],
-        "source": "simulator",
-    },
-    {
-        "pulse_time": 1002 * 10 ** 9,
-        "tofs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        "det_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        "source": "simulator",
-    },
+    (
+        998 * 10 ** 3,
+        0,
+        {
+            "pulse_time": 998 * 10 ** 9,
+            "tofs": [1],
+            "det_ids": None,
+            "source": "simulator",
+        },
+    ),
+    (
+        999 * 10 ** 3,
+        1,
+        {
+            "pulse_time": 999 * 10 ** 9,
+            "tofs": [1, 2],
+            "det_ids": [1, 2],
+            "source": "simulator",
+        },
+    ),
+    (
+        1000 * 10 ** 3,
+        2,
+        {
+            "pulse_time": 1000 * 10 ** 9,
+            "tofs": [1, 2, 3, 4],
+            "det_ids": [1, 2, 3, 4],
+            "source": "simulator",
+        },
+    ),
+    (
+        1001 * 10 ** 3,
+        3,
+        {
+            "pulse_time": 1001 * 10 ** 9,
+            "tofs": [1, 2, 3, 4, 5, 6, 7, 8],
+            "det_ids": [1, 2, 3, 4, 5, 6, 7, 8],
+            "source": "simulator",
+        },
+    ),
+    (
+        1002 * 10 ** 3,
+        4,
+        {
+            "pulse_time": 1002 * 10 ** 9,
+            "tofs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            "det_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            "source": "simulator",
+        },
+    ),
 ]
 
 UNORDERED_EVENT_DATA = [
-    {
-        "pulse_time": 1000 * 10 ** 9,
-        "tofs": [1, 2, 3, 4],
-        "det_ids": None,
-        "source": "simulator",
-    },
-    {
-        "pulse_time": 1001 * 10 ** 9,
-        "tofs": [1, 2, 3, 4, 5, 6, 7, 8],
-        "det_ids": None,
-        "source": "simulator",
-    },
-    {
-        "pulse_time": 1002 * 10 ** 9,
-        "tofs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        "det_ids": None,
-        "source": "simulator",
-    },
-    {"pulse_time": 998 * 10 ** 9, "tofs": [1], "det_ids": None, "source": "simulator"},
-    {
-        "pulse_time": 999 * 10 ** 9,
-        "tofs": [1, 2],
-        "det_ids": None,
-        "source": "simulator",
-    },
+    (
+        1000 * 10 ** 3,
+        0,
+        {
+            "pulse_time": 1000 * 10 ** 9,
+            "tofs": [1, 2, 3, 4],
+            "det_ids": None,
+            "source": "simulator",
+        },
+    ),
+    (
+        1001 * 10 ** 3,
+        1,
+        {
+            "pulse_time": 1001 * 10 ** 9,
+            "tofs": [1, 2, 3, 4, 5, 6, 7, 8],
+            "det_ids": None,
+            "source": "simulator",
+        },
+    ),
+    (
+        1002 * 10 ** 3,
+        2,
+        {
+            "pulse_time": 1002 * 10 ** 9,
+            "tofs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            "det_ids": None,
+            "source": "simulator",
+        },
+    ),
+    (
+        998 * 10 ** 3,
+        3,
+        {
+            "pulse_time": 998 * 10 ** 9,
+            "tofs": [1],
+            "det_ids": None,
+            "source": "simulator",
+        },
+    ),
+    (
+        999 * 10 ** 3,
+        4,
+        {
+            "pulse_time": 999 * 10 ** 9,
+            "tofs": [1, 2],
+            "det_ids": None,
+            "source": "simulator",
+        },
+    ),
 ]
 
 
@@ -173,12 +223,28 @@ class TestHistogrammer:
         assert histogrammer.histograms[0].data.sum() == 28
         assert histogrammer.histograms[1].data.sum() == 28
 
+    def test_histograms_are_zero_if_all_data_before_start(self):
+        config = copy.deepcopy(START_CONFIG)
+        config["start"] = 1100 * 10 ** 3
+        histogrammer = create_histogrammer(self.mock_producer, config)
+        histogrammer.add_data(EVENT_DATA)
+
+        assert histogrammer.histograms[0].data.sum() == 0
+
     def test_data_only_add_up_to_stop_time(self):
         histogrammer = create_histogrammer(self.mock_producer, STOP_CONFIG)
 
         histogrammer.add_data(EVENT_DATA)
 
         assert histogrammer.histograms[0].data.sum() == 15
+
+    def test_histograms_are_zero_if_all_data_later_than_stop(self):
+        config = copy.deepcopy(STOP_CONFIG)
+        config["stop"] = 900 * 10 ** 3
+        histogrammer = create_histogrammer(self.mock_producer, config)
+        histogrammer.add_data(EVENT_DATA)
+
+        assert histogrammer.histograms[0].data.sum() == 0
 
     def test_data_out_of_order_does_not_add_data_before_start(self):
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
@@ -197,7 +263,7 @@ class TestHistogrammer:
 
         data = deserialise_hs00(self.mock_producer.messages[0][1])
         info = json.loads(data["info"])
-        assert info["state"] == HISTOGRAM_STATES["NOT_STARTED"]
+        assert info["state"] == HISTOGRAM_STATES["INITIALISED"]
 
     def test_while_counting_published_histogram_is_labelled_to_indicate_counting(self):
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
@@ -293,21 +359,15 @@ class TestHistogrammer:
         with pytest.raises(Exception):
             create_histogrammer(self.mock_producer, config)
 
-    def test_if_interval_defined_then_start_and_stop_are_not_initialised(self):
-        histogrammer = create_histogrammer(self.mock_producer, INTERVAL_CONFIG)
+    def test_if_interval_defined_then_start_and_stop_are_initialised(self):
+        current_time = 1000
+        interval = INTERVAL_CONFIG["interval"] * 10 ** 3
+        histogrammer = create_histogrammer(
+            self.mock_producer, INTERVAL_CONFIG, current_time
+        )
 
-        assert histogrammer.start is None
-        assert histogrammer.stop is None
-
-    def test_if_interval_defined_then_start_and_stop_are_initialised_after_first_data(
-        self
-    ):
-        histogrammer = create_histogrammer(self.mock_producer, INTERVAL_CONFIG)
-
-        histogrammer.add_data(EVENT_DATA)
-
-        assert histogrammer.start == 998 * 10 ** 9
-        assert histogrammer.stop == 1003 * 10 ** 9
+        assert histogrammer.start == current_time
+        assert histogrammer.stop == current_time + interval
 
     def test_if_interval_negative_then_throws(self):
         config = copy.deepcopy(INTERVAL_CONFIG)
@@ -315,11 +375,6 @@ class TestHistogrammer:
 
         with pytest.raises(Exception):
             create_histogrammer(self.mock_producer, config)
-
-    def test_interval_is_converted_to_nanoseconds(self):
-        histogrammer = create_histogrammer(self.mock_producer, INTERVAL_CONFIG)
-
-        assert histogrammer.interval == 5 * 10 ** 9
 
     def test_clear_histograms_empties_all_histograms(self):
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
@@ -329,3 +384,33 @@ class TestHistogrammer:
 
         assert histogrammer.histograms[0].data.sum() == 0
         assert histogrammer.histograms[1].data.sum() == 0
+
+    def test_if_no_data_after_start_time_and_stop_time_exceeded_histogram_is_finished(
+        self
+    ):
+        config = copy.deepcopy(START_CONFIG)
+        config["start"] = 1003 * 10 ** 3
+        config["stop"] = 1005 * 10 ** 3
+
+        histogrammer = create_histogrammer(self.mock_producer, config)
+        # Supply a time significantly after the original stop time because of
+        # leeway
+        finished = histogrammer.check_stop_time_exceeded(config["stop"] * 1.1)
+
+        info = histogrammer._generate_info(histogrammer.histograms[0])
+        assert finished
+        assert info["state"] == HISTOGRAM_STATES["FINISHED"]
+
+    def test_if_no_data_after_start_time_and_stop_time_not_exceeded_histogram_is_not_finished(
+        self
+    ):
+        config = copy.deepcopy(START_CONFIG)
+        config["start"] = 1003 * 10 ** 3
+        config["stop"] = 1005 * 10 ** 3
+
+        histogrammer = create_histogrammer(self.mock_producer, config)
+        finished = histogrammer.check_stop_time_exceeded(config["stop"] * 0.9)
+
+        info = histogrammer._generate_info(histogrammer.histograms[0])
+        assert not finished
+        assert info["state"] != HISTOGRAM_STATES["FINISHED"]

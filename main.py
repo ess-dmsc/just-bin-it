@@ -93,7 +93,7 @@ class Main:
         stats_publisher=None,
     ):
         """
-        The main execution function.
+        Constructor.
 
         :param config_brokers: The brokers to listen for the configuration commands on.
         :param config_topic: The topic to listen for commands on.
@@ -131,11 +131,12 @@ class Main:
 
                 try:
                     self.handle_command_message(msg)
+                    logging.warning("New command received")
                     if not self.one_shot:
                         # Publish initial empty histograms.
                         self.histogrammer.publish_histograms()
                 except Exception as error:
-                    logging.error(f"Could not handle configuration: {error}")
+                    logging.error("Could not handle configuration: %s", error)
 
             if self.event_source is None:
                 # No event source means we are waiting for a configuration.
@@ -152,6 +153,13 @@ class Main:
                     if self.config_listener.check_for_messages():
                         break
 
+                # See if the stop time has been exceeded
+                if len(event_buffer) == 0:
+                    if self.histogrammer.check_stop_time_exceeded(
+                        int(time.time() * 1000)
+                    ):
+                        break
+
             if event_buffer:
                 self.histogrammer.add_data(event_buffer)
 
@@ -163,25 +171,27 @@ class Main:
 
             self.histogrammer.publish_histograms()
 
+            hist_stats = self.histogrammer.get_histogram_stats()
+            logging.info("%s", json.dumps(hist_stats))
+
             if self.stats_publisher:
-                hist_stats = self.histogrammer.get_histogram_stats()
                 try:
                     self.stats_publisher.send_histogram_stats(hist_stats)
                 except Exception as error:
-                    logging.error(f"Could not publish statistics: {error}")
+                    logging.error("Could not publish statistics: %s", error)
 
             time.sleep(0.5)
 
     def create_config_listener(self):
         """
-        Creates the configuration listener.
+        Create the configuration listener.
 
         Note: Blocks until the Kafka connection is made.
         """
         logging.info("Creating configuration consumer")
         while not are_kafka_settings_valid(self.config_brokers, [self.config_topic]):
             logging.error(
-                f"Could not connect to Kafka brokers or topic for configuration - will retry shortly"
+                "Could not connect to Kafka brokers or topic for configuration - will retry shortly"
             )
             time.sleep(5)
         self.config_listener = ConfigListener(
@@ -195,7 +205,11 @@ class Main:
         :param config: The configuration.
         """
         producer = Producer(config["data_brokers"])
-        self.histogrammer = create_histogrammer(producer, config)
+        self.histogrammer = create_histogrammer(
+            producer, config, int(time.time() * 1000)
+        )
+        if self.histogrammer.start:
+            self.event_source.seek_to_time(self.histogrammer.start)
 
     def configure_event_source(self, config):
         """
@@ -213,9 +227,6 @@ class Main:
         consumer = Consumer(config["data_brokers"], config["data_topics"])
         event_source = EventSource(consumer)
 
-        if "start" in config:
-            event_source.seek_to_pulse_time(config["start"])
-
         return event_source
 
     def handle_command_message(self, message):
@@ -224,20 +235,23 @@ class Main:
 
         :param message: The message.
         """
-        if message["cmd"] == "restart":
+        # Don't need the timestamp or offset
+        _, _, msg = message
+
+        if msg["cmd"] == "restart":
             self.histogrammer.clear_histograms()
-        elif message["cmd"] == "config":
+        elif msg["cmd"] == "config":
             try:
                 if self.simulation:
                     logging.info("RUNNING IN SIMULATION MODE")
-                    self.event_source = SimulatedEventSource(message)
+                    self.event_source = SimulatedEventSource(msg)
                 else:
-                    self.event_source = self.configure_event_source(message)
-                self.configure_histograms(message)
+                    self.event_source = self.configure_event_source(msg)
+                self.configure_histograms(msg)
             except Exception as error:
-                logging.error(f"Could not use received configuration: {error}")
+                logging.error("Could not use received configuration: %s", error)
         else:
-            logging.warning(f'Unknown command received: {message["cmd"]}')
+            logging.warning("Unknown command received: %s", msg["cmd"])
 
 
 if __name__ == "__main__":
@@ -290,7 +304,7 @@ if __name__ == "__main__":
         "-l",
         "--log-level",
         type=int,
-        default=2,
+        default=3,
         help="sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.",
     )
 

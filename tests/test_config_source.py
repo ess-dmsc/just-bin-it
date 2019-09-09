@@ -85,10 +85,10 @@ class TestConfigSource:
 
     def test_received_configuration_converted_correctly(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
-        mock_consumer.add_messages([CONFIG_BASIC_1])
+        mock_consumer.add_messages([(0, 0, CONFIG_BASIC_1)])
         src = ConfigSource(mock_consumer)
 
-        config = src.get_new_data()[-1]
+        _, _, config = src.get_new_data()[-1]
 
         assert config["cmd"] == "config"
         assert len(config["data_brokers"]) == 1
@@ -113,10 +113,10 @@ class TestConfigSource:
 
     def test_received_restart_message_converted_correctly(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
-        mock_consumer.add_messages([RESTART_CMD])
+        mock_consumer.add_messages([(0, 0, RESTART_CMD)])
         src = ConfigSource(mock_consumer)
 
-        message = src.get_new_data()[-1]
+        _, _, message = src.get_new_data()[-1]
 
         assert message["cmd"] == "restart"
 
@@ -129,44 +129,48 @@ class TestConfigSource:
 
     def test_if_multiple_new_messages_gets_the_most_recent_one(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
-        mock_consumer.add_messages([CONFIG_BASIC_1, CONFIG_BASIC_1, CONFIG_BASIC_2])
+        mock_consumer.add_messages(
+            [(0, 0, CONFIG_BASIC_1), (1, 1, CONFIG_BASIC_1), (2, 2, CONFIG_BASIC_2)]
+        )
         src = ConfigSource(mock_consumer)
 
-        config = src.get_new_data()[-1]
+        _, _, config = src.get_new_data()[-1]
 
         assert config["data_brokers"][0] == "differenthost:9092"
 
     def test_malformed_message_is_ignored(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
-        mock_consumer.add_messages([INVALID_JSON])
+        mock_consumer.add_messages([(0, 0, INVALID_JSON)])
         src = ConfigSource(mock_consumer)
 
         assert len(src.get_new_data()) == 0
 
     def test_if_multiple_new_messages_gets_the_most_recent_valid_one(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
-        mock_consumer.add_messages([CONFIG_BASIC_1, CONFIG_BASIC_2, INVALID_JSON])
+        mock_consumer.add_messages(
+            [(0, 0, CONFIG_BASIC_1), (1, 1, CONFIG_BASIC_2), (2, 2, INVALID_JSON)]
+        )
         src = ConfigSource(mock_consumer)
 
-        config = src.get_new_data()[-1]
+        _, _, config = src.get_new_data()[-1]
 
         assert config["data_brokers"][0] == "differenthost:9092"
 
     def test_start_and_stop_time_converted_correctly(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
-        mock_consumer.add_messages([CONFIG_START_AND_STOP])
+        mock_consumer.add_messages([(0, 0, CONFIG_START_AND_STOP)])
         src = ConfigSource(mock_consumer)
 
-        config = src.get_new_data()[-1]
+        _, _, config = src.get_new_data()[-1]
 
         assert config["start"] == 1558596988319002000
         assert config["stop"] == 1558597215933670000
 
     def test_interval_converted_correctly(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
-        mock_consumer.add_messages([CONFIG_INTERVAL])
+        mock_consumer.add_messages([(0, 0, CONFIG_INTERVAL)])
         src = ConfigSource(mock_consumer)
 
-        config = src.get_new_data()[-1]
+        _, _, config = src.get_new_data()[-1]
 
         assert config["interval"] == 5000

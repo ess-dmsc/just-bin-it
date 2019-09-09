@@ -31,9 +31,12 @@ class TestHistogramSource:
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
         mock_consumer.add_messages([TEST_MESSAGE] * 5)
         hs = HistogramSource(mock_consumer)
+
         data = hs.get_new_data()
+        _, _, message = data[0]
+
         assert len(data) == 5
-        assert data[0] == TEST_MESSAGE
+        assert message == TEST_MESSAGE
 
     def test_deserialising_invalid_fb_does_not_throw(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])

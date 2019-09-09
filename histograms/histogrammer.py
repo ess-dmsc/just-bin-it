@@ -1,36 +1,50 @@
 import json
+import time
 from histograms.histogram_factory import HistogramFactory
 from endpoints.histogram_sink import HistogramSink
 
 HISTOGRAM_STATES = {
     "COUNTING": "COUNTING",
     "FINISHED": "FINISHED",
-    "NOT_STARTED": "NOT_STARTED",
+    "INITIALISED": "INITIALISED",
 }
 
 
-def create_histogrammer(producer, configuration):
+def create_histogrammer(producer, configuration, current_time=None):
     """
     Creates a fully configured histogrammer.
 
     :param producer: The
     :param configuration: The configuration message.
+    :param current_time: Used to set start time if interval is supplied (ms).
     :return: The created histogrammer.
     """
     histograms = HistogramFactory.generate(configuration)
     start = configuration["start"] if "start" in configuration else None
     stop = configuration["stop"] if "stop" in configuration else None
 
-    # Interval is configured in seconds but needs to be converted to nanoseconds
-    interval = None
-    if "interval" in configuration:
-        interval = configuration["interval"] * 10 ** 9
+    # Interval is configured in seconds but needs to be converted to milliseconds
+    interval = (
+        configuration["interval"] * 10 ** 3 if "interval" in configuration else None
+    )
 
-    return Histogrammer(producer, histograms, start, stop, interval)
+    if interval and (start or stop):
+        raise Exception(
+            "Cannot define 'interval' in combination with start and/or stop"
+        )
+
+    if interval and interval < 0:
+        raise Exception("Interval cannot be negative")
+
+    if interval:
+        start = int(current_time) if current_time else int(time.time() * 1000)
+        stop = start + interval
+
+    return Histogrammer(producer, histograms, start, stop)
 
 
 class Histogrammer:
-    def __init__(self, producer, histograms, start=None, stop=None, interval=None):
+    def __init__(self, producer, histograms, start=None, stop=None):
         """
         Constructor.
 
@@ -44,27 +58,15 @@ class Histogrammer:
         :param histograms: The histograms.
         :param start: When to start histogramming from.
         :param stop: When to histogram until.
-        :param interval: How long to histogram for from "now".
         """
         self.histograms = histograms
         self.hist_sink = HistogramSink(producer)
         self.start = start
         self.stop = stop
-        self.interval = interval
         self._stop_time_exceeded = False
         self._stop_publishing = False
         self._started = False
-
-        self._check_inputs()
-
-    def _check_inputs(self):
-        if self.interval and (self.start or self.stop):
-            raise Exception(
-                "Cannot define 'interval' in combination with start and/or stop"
-            )
-
-        if self.interval and self.interval < 0:
-            raise Exception("Interval cannot be negative")
+        self._stop_leeway = 2000
 
     def add_data(self, event_buffer, simulation=False):
         """
@@ -73,28 +75,23 @@ class Histogrammer:
         :param event_buffer: The new data received.
         :param simulation: Indicates whether in simulation.
         """
-        self._started = True
-
         for hist in self.histograms:
-            for b in event_buffer:
-                if self.interval and not self.start:
-                    # First time determine the start and stop times from the
-                    # interval and the pulse read.
-                    self.start = b["pulse_time"]
-                    self.stop = self.start + self.interval
+            for msg_time, msg_offset, msg in event_buffer:
 
                 if self.start:
-                    if b["pulse_time"] < self.start:
+                    if msg_time < self.start:
                         continue
                 if self.stop:
-                    if b["pulse_time"] > self.stop:
+                    if msg_time > self.stop:
                         self._stop_time_exceeded = True
                         continue
 
-                pt = b["pulse_time"]
-                x = b["tofs"]
-                y = b["det_ids"]
-                src = b["source"] if not simulation else hist.source
+                self._started = True
+
+                pt = msg["pulse_time"]
+                x = msg["tofs"]
+                y = msg["det_ids"]
+                src = msg["source"] if not simulation else hist.source
                 hist.add_data(pt, x, y, src)
 
     def publish_histograms(self, timestamp=0):
@@ -112,13 +109,14 @@ class Histogrammer:
 
     def _generate_info(self, histogram):
         info = {"id": histogram.identifier}
-        if not self._started:
-            info["state"] = HISTOGRAM_STATES["NOT_STARTED"]
-        elif self._stop_time_exceeded:
+        if self._stop_time_exceeded:
             info["state"] = HISTOGRAM_STATES["FINISHED"]
             self._stop_publishing = True
-        else:
+        elif self._started:
             info["state"] = HISTOGRAM_STATES["COUNTING"]
+        else:
+            info["state"] = HISTOGRAM_STATES["INITIALISED"]
+
         return info
 
     def clear_histograms(self):
@@ -140,3 +138,24 @@ class Histogrammer:
             results.append({"last_pulse_time": h.last_pulse_time, "sum": h.data.sum()})
 
         return results
+
+    def check_stop_time_exceeded(self, timestamp: int):
+        """
+        Checks whether the stop time has been exceeded, if so it stops the histogramming.
+
+        :param timestamp: The timestamp to check against
+        :return: True if exceeded
+        """
+        # Do nothing if there is no stop time
+        if self.stop is None:
+            return False
+
+        # Already stopped
+        if self._stop_time_exceeded:
+            return True
+
+        # Give it some leeway
+        if timestamp > self.stop + self._stop_leeway:
+            self._stop_time_exceeded = True
+
+        return self._stop_time_exceeded

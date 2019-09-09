@@ -45,7 +45,7 @@ class Consumer:
         data = self.consumer.poll(5)
         for tp in self.topic_partitions:
             logging.debug(
-                f"{tp.topic} - current position: {self.consumer.position(tp)}"
+                "%s - current position: %s", tp.topic, self.consumer.position(tp)
             )
         return data
 
@@ -57,27 +57,23 @@ class Consumer:
         """
         return self._get_new_messages()
 
-    def seek_by_time(self, start_time: int):
+    def offset_for_time(self, start_time: int):
         """
-        Move the offset to the position corresponding to the supplied time.
+        Find the offset to the position corresponding to the supplied time.
 
         :param start_time: Time to seek in microseconds.
         :return: The offset number.
         """
-        return self._seek_by_time(start_time)
+        return self._offset_for_time(start_time)
 
-    def _seek_by_time(self, start_time):
+    def _offset_for_time(self, start_time):
         # TODO: what about more than one topic?
         answer = self.consumer.offsets_for_times({self.topic_partitions[0]: start_time})
         if answer[self.topic_partitions[0]] is None:
             # Either the topic is empty or the requested time is greater than
             # highest message time in the topic.
-            raise Exception(
-                "Unable to locate start time in topic - start time too high or the topic empty?"
-            )
-        offset = answer[self.topic_partitions[0]].offset
-        self.consumer.seek(self.topic_partitions[0], offset)
-        return offset
+            return None
+        return answer[self.topic_partitions[0]].offset
 
     def seek_by_offset(self, offset):
         """

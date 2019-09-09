@@ -17,7 +17,9 @@ class Producer:
         :param brokers: The brokers to connect to.
         """
         try:
-            self.producer = KafkaProducer(bootstrap_servers=brokers)
+            self.producer = KafkaProducer(
+                bootstrap_servers=brokers, max_request_size=100_000_000
+            )
         except KafkaError as error:
             raise Exception(error)
 

@@ -50,8 +50,8 @@ def main(brokers, topic):
     while len(buffs) == 0:
         buffs = hist_source.get_new_data()
 
-    # Only care about the most recent histogram.
-    hist = buffs[-1]
+    # Only care about the most recent histogram and don't care about kafka timestamps
+    _, _, hist = buffs[-1]
 
     plot_histogram(hist)
 

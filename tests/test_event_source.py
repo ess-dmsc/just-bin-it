@@ -1,5 +1,5 @@
 import pytest
-from endpoints.sources import EventSource
+from endpoints.sources import EventSource, TooOldTimeRequestedException
 from tests.mock_consumer import MockConsumer, get_fake_event_messages
 
 
@@ -27,32 +27,69 @@ class TestEventSource:
         for i, m in enumerate(messages):
             assert data[i] == m
 
-    def test_given_exact_time_finds_start_pulse(self):
+    def test_given_exact_time_finds_start_message(self):
         messages = get_fake_event_messages(100)
         self.consumer.add_messages(messages)
-        msg = messages[45]
-        start_time = msg["pulse_time"]
+        expected_timestamp, expected_offset, expected_message = messages[45]
+        start_time = expected_message["pulse_time"]
 
-        self.event_source.seek_to_pulse_time(start_time)
-        data = self.event_source.get_new_data()
+        self.event_source.seek_to_time(start_time)
+        new_data = self.event_source.get_new_data()
+        timestamp, offset, message = new_data[0]
 
-        assert data[0]["pulse_time"] == msg["pulse_time"]
+        assert timestamp == expected_timestamp
+        assert offset == expected_offset
+        assert message == expected_message
 
     def test_given_approximate_time_finds_start_pulse(self):
         messages = get_fake_event_messages(100)
         self.consumer.add_messages(messages)
-        msg = messages[45]
-        start_time = msg["pulse_time"] - 5
+        expected_timestamp, expected_offset, expected_message = messages[45]
+        start_time = expected_message["pulse_time"] - 5
 
-        self.event_source.seek_to_pulse_time(start_time)
-        data = self.event_source.get_new_data()
+        self.event_source.seek_to_time(start_time)
+        new_data = self.event_source.get_new_data()
+        timestamp, offset, message = new_data[0]
 
-        assert data[0]["pulse_time"] == msg["pulse_time"]
+        assert timestamp == expected_timestamp
+        assert offset == expected_offset
+        assert message == expected_message
 
     def test_given_too_old_time_then_throws(self):
         messages = get_fake_event_messages(100)
         self.consumer.add_messages(messages)
         start_time = -1
 
-        with pytest.raises(Exception):
-            self.event_source.seek_to_pulse_time(start_time)
+        with pytest.raises(TooOldTimeRequestedException):
+            self.event_source.seek_to_time(start_time)
+
+    def test_given_time_more_recent_than_last_message_then_seeks_to_last_message(self):
+        messages = get_fake_event_messages(100)
+        self.consumer.add_messages(messages)
+        last_timestamp, last_offset, _ = messages[99]
+        msg_time = last_timestamp + 1000
+
+        offset = self.event_source.seek_to_time(msg_time)
+
+        assert offset == last_offset
+
+    def test_query_for_exact_end_time_finds_correct_offset(self):
+        messages = get_fake_event_messages(100)
+        self.consumer.add_messages(messages)
+        expected_timestamp, expected_offset, expected_message = messages[95]
+        stop_time = expected_timestamp
+
+        offset = self.event_source.offsets_for_time(stop_time)
+
+        assert offset == expected_offset
+
+    def test_query_for_inaccurate_end_time_finds_next_offset(self):
+        messages = get_fake_event_messages(100)
+        self.consumer.add_messages(messages)
+        expected_timestamp, expected_offset, expected_message = messages[95]
+        # Go back a little, so it should find the expected message
+        request_time = expected_timestamp - 5
+
+        offset = self.event_source.offsets_for_time(request_time)
+
+        assert offset == expected_offset
