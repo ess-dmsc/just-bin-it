@@ -24,8 +24,7 @@ optional arguments:
   -o, --one-shot-plot   runs the program until it gets some data, plot it and
                         then exit. Used for testing
   -s, --simulation-mode
-                        runs the program in simulation mode. 1-D histograms
-                        only.
+                        runs the program in simulation mode.
 
   -l LOG_LEVEL, --log-level LOG_LEVEL
                         sets the logging level: debug=1, info=2, warning=3,
@@ -154,6 +153,11 @@ To restarting the histograms counting from zero, send the restart command:
 ```
 This will start all the histograms counting from zero but will not change any other
 settings, such as bin edges etc.
+
+### Simulation mode
+When in simulation mode just-bin-it will try to provide simulated data matching
+the requested configuration. For example: if the config specifies a 2-D
+histogram then the simulated data will be 2-D.
 
 ### One-shot plot
 When the `one-shot-plot` option is specified then the program with collect a
