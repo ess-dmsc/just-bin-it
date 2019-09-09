@@ -12,6 +12,7 @@ class Histogram1d:
         topic,
         num_bins,
         tof_range,
+        det_range=None,
         source=None,
         preprocessor=None,
         roi=None,
@@ -26,6 +27,7 @@ class Histogram1d:
         :param topic: The name of the Kafka topic to publish to.
         :param num_bins: The number of bins to divide the time-of-flight up into.
         :param tof_range: The time-of-flight range to histogram over.
+        :param det_range: The detector range to include data from.
         :param source: The data source to histogram.
         :param preprocessor: The function to apply to the data before adding.
         :param roi: The function for checking data is within the region of interest.
@@ -34,6 +36,7 @@ class Histogram1d:
         self._histogram = None
         self.x_edges = None
         self.tof_range = tof_range
+        self.det_range = det_range
         self.num_bins = num_bins
         self.source = source
         self.topic = topic
@@ -73,6 +76,13 @@ class Histogram1d:
             mask = self._get_mask(pulse_time, tofs, det_ids)
             if mask:
                 tofs = ma.array(tofs, mask=mask).compressed()
+
+        if self.det_range:
+            tofs = [
+                t
+                for t, d in zip(tofs, det_ids)
+                if self.det_range[0] <= d <= self.det_range[1]
+            ]
 
         self._histogram += histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
 

@@ -14,8 +14,8 @@ class Histogram2d:
         :param topic: The name of the Kafka topic to publish to.
         :param num_bins: The number of bins to divide the data up into.
         :param tof_range: The range of time-of-flights to histogram over.
-        :param source: The data source to histogram.
         :param det_range: The range of sequential detectors to histogram over.
+        :param source: The data source to histogram.
         :param identifier: An optional identifier for the histogram.
         """
         self._histogram = None

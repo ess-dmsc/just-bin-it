@@ -35,7 +35,7 @@ class HistogramFactory:
             try:
                 if hist_type == "hist1d":
                     HistogramFactory.check_1d_info(num_bins, tof_range)
-                    hist = Histogram1d(topic, num_bins, tof_range, source)
+                    hist = Histogram1d(topic, num_bins, tof_range, det_range, source)
                 elif hist_type == "hist2d":
                     # TODO: check 2d info
                     hist = Histogram2d(topic, num_bins, tof_range, det_range, source)
