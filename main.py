@@ -336,7 +336,7 @@ if __name__ == "__main__":
         args.topic,
         args.one_shot_plot,
         args.simulation_mode,
-        init_hist_json,
+        (None, None, init_hist_json),
         stats_publisher,
     )
     main.run()
