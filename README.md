@@ -262,7 +262,7 @@ This command can also be used to run the hooks manually.
 ### Running unit tests
 From the top directory:
 ```
-py.test --cov .
+pytest --cov .
 ```
 
 For HTML output:
