@@ -235,23 +235,21 @@ class Main:
 
         :param message: The message.
         """
-        # Don't need the timestamp or offset
-        _, _, msg = message
 
-        if msg["cmd"] == "restart":
+        if message["cmd"] == "restart":
             self.histogrammer.clear_histograms()
-        elif msg["cmd"] == "config":
+        elif message["cmd"] == "config":
             try:
                 if self.simulation:
                     logging.info("RUNNING IN SIMULATION MODE")
-                    self.event_source = SimulatedEventSource(msg)
+                    self.event_source = SimulatedEventSource(message)
                 else:
-                    self.event_source = self.configure_event_source(msg)
-                self.configure_histograms(msg)
+                    self.event_source = self.configure_event_source(message)
+                self.configure_histograms(message)
             except Exception as error:
                 logging.error("Could not use received configuration: %s", error)
         else:
-            logging.warning("Unknown command received: %s", msg["cmd"])
+            logging.warning("Unknown command received: %s", message["cmd"])
 
 
 if __name__ == "__main__":
@@ -336,7 +334,7 @@ if __name__ == "__main__":
         args.topic,
         args.one_shot_plot,
         args.simulation_mode,
-        (None, None, init_hist_json),
+        init_hist_json,
         stats_publisher,
     )
     main.run()
