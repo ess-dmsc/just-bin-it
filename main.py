@@ -130,8 +130,8 @@ class Main:
                     msg = self.config_listener.consume_message()
 
                 try:
+                    logging.warning("New configuration command received")
                     self.handle_command_message(msg)
-                    logging.warning("New command received")
                     if not self.one_shot:
                         # Publish initial empty histograms.
                         self.histogrammer.publish_histograms()
@@ -220,9 +220,7 @@ class Main:
         """
         # Check brokers and data topics exist
         if not are_kafka_settings_valid(config["data_brokers"], config["data_topics"]):
-            raise Exception(
-                "Could not configure histogramming as Kafka settings invalid"
-            )
+            raise Exception("Event source settings are invalid")
 
         consumer = Consumer(config["data_brokers"], config["data_topics"])
         event_source = EventSource(consumer)
@@ -239,15 +237,12 @@ class Main:
         if message["cmd"] == "restart":
             self.histogrammer.clear_histograms()
         elif message["cmd"] == "config":
-            try:
-                if self.simulation:
-                    logging.info("RUNNING IN SIMULATION MODE")
-                    self.event_source = SimulatedEventSource(message)
-                else:
-                    self.event_source = self.configure_event_source(message)
-                self.configure_histograms(message)
-            except Exception as error:
-                logging.error("Could not use received configuration: %s", error)
+            if self.simulation:
+                logging.info("RUNNING IN SIMULATION MODE")
+                self.event_source = SimulatedEventSource(message)
+            else:
+                self.event_source = self.configure_event_source(message)
+            self.configure_histograms(message)
         else:
             logging.warning("Unknown command received: %s", message["cmd"])
 
