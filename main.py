@@ -220,7 +220,7 @@ class Main:
         """
         # Check brokers and data topics exist
         if not are_kafka_settings_valid(config["data_brokers"], config["data_topics"]):
-            raise Exception("Event source settings are invalid")
+            raise Exception("Invalid event source settings")
 
         consumer = Consumer(config["data_brokers"], config["data_topics"])
         event_source = EventSource(consumer)
@@ -244,7 +244,7 @@ class Main:
                 self.event_source = self.configure_event_source(message)
             self.configure_histograms(message)
         else:
-            logging.warning("Unknown command received: %s", message["cmd"])
+            raise Exception(f"Unknown command type '{message['cmd']}'")
 
 
 if __name__ == "__main__":
