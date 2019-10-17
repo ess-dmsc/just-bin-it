@@ -133,8 +133,9 @@ class SimulatedEventSource:
 
         :return: The generated data.
         """
-        tofs = np.random.normal(self.tof_centre, self.tof_scale, 1000)
-        dets = np.random.normal(self.det_centre, self.det_scale, 1000)
+        num_points = 1000
+        tofs = np.random.normal(self.tof_centre, self.tof_scale, num_points)
+        dets = np.random.normal(self.det_centre, self.det_scale, num_points)
 
         data = {
             "pulse_time": math.floor(time.time() * 10 ** 9),
@@ -142,7 +143,7 @@ class SimulatedEventSource:
             "det_ids": dets,
             "source": "simulator",
         }
-        return [(int(time.time() * 1000), 0, data)]
+        return [(int(time.time() * num_points), 0, data)]
 
     def seek_to_time(self, requested_time: int):
         """
