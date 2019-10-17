@@ -53,7 +53,7 @@ class HistogramFactory:
                     )  # pragma: no mutate
             except Exception as error:
                 logging.warning(
-                    "Could not create histogram: %s", error
+                    "Could not create histogram. %s", error
                 )  # pragma: no mutate
 
             if hist is not None:
@@ -77,8 +77,10 @@ class HistogramFactory:
         if num_bins is None:
             missing.append("number of bins")  # pragma: no mutate
 
+        # TODO: if det_range supplied check is valid
+
         if missing:
             error_msg = (
-                f"Data missing for 1d histogram: {', '.join(missing)}"
+                f"Invalid/missing information for 1d histogram: {', '.join(missing)}"
             )  # pragma: no mutate
             raise Exception(error_msg)

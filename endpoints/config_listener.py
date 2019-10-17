@@ -35,6 +35,7 @@ class ConfigListener:
         if self.message:
             msg = self.message
             self.message = None
-            return msg
+            # Don't need the timestamp or offset
+            return msg[2]
         else:
             raise Exception("No message available")

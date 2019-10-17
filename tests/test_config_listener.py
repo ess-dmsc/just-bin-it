@@ -29,7 +29,7 @@ class TestConfigListener:
         self.mock_consumer.add_messages([(0, 0, '"message1"')])
         self.config_listener.check_for_messages()
 
-        _, _, msg = self.config_listener.consume_message()
+        msg = self.config_listener.consume_message()
         assert msg == "message1"
 
     def test_consuming_waiting_message_clears_message_waiting(self):
@@ -46,7 +46,7 @@ class TestConfigListener:
         )
         self.config_listener.check_for_messages()
 
-        _, _, msg = self.config_listener.consume_message()
+        msg = self.config_listener.consume_message()
         assert msg == "message3"
 
     def test_when_no_messages_trying_to_consume_throws(self):
