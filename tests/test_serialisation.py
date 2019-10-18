@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
-from histograms.histogram1d import Histogram1d
-from histograms.histogram2d import Histogram2d
-from endpoints.serialisation import serialise_hs00, deserialise_hs00
+from just_bin_it.histograms.histogram1d import Histogram1d
+from just_bin_it.histograms.histogram2d import Histogram2d
+from just_bin_it.endpoints.serialisation import serialise_hs00, deserialise_hs00
 
 
 NUM_BINS = 5
