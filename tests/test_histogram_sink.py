@@ -1,5 +1,5 @@
 import pytest
-from endpoints.histogram_sink import HistogramSink
+from just_bin_it.endpoints.histogram_sink import HistogramSink
 from tests.mock_producer import MockProducer, MockThrowsProducer
 
 

@@ -3,7 +3,7 @@ import logging
 import time
 import math
 import numpy as np
-from endpoints.serialisation import deserialise_ev42, deserialise_hs00
+from just_bin_it.endpoints.serialisation import deserialise_ev42, deserialise_hs00
 
 
 class SourceException(Exception):

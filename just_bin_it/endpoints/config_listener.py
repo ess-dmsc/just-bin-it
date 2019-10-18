@@ -1,5 +1,5 @@
 import logging
-from endpoints.sources import ConfigSource
+from just_bin_it.endpoints.sources import ConfigSource
 
 
 class ConfigListener:

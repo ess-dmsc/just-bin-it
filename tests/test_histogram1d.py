@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from histograms.histogram1d import Histogram1d
+from just_bin_it.histograms.histogram1d import Histogram1d
 
 
 class TestHistogram1d:

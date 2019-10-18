@@ -2,7 +2,11 @@ import pytest
 import os
 import tests
 import numpy as np
-from endpoints.serialisation import deserialise_ev42, deserialise_hs00, get_schema
+from just_bin_it.endpoints.serialisation import (
+    deserialise_ev42,
+    deserialise_hs00,
+    get_schema,
+)
 
 
 class TestDeserialisationEv42:

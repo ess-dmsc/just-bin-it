@@ -1,6 +1,6 @@
 import pytest
 import math
-from histograms.single_event_histogram1d import SingleEventHistogram1d
+from just_bin_it.histograms.single_event_histogram1d import SingleEventHistogram1d
 
 
 class TestSingleEventHistogram1d:

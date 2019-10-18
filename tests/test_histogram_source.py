@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from endpoints.sources import HistogramSource
+from just_bin_it.endpoints.sources import HistogramSource
 from tests.mock_consumer import MockConsumer
 
 
@@ -24,7 +24,7 @@ class TestHistogramSource:
         data = hs.get_new_data()
         assert len(data) == 0
 
-    @patch("endpoints.sources.deserialise_hs00", return_value=TEST_MESSAGE)
+    @patch("just_bin_it.endpoints.sources.deserialise_hs00", return_value=TEST_MESSAGE)
     def test_if_five_new_messages_on_one_topic_then_data_has_five_items(
         self, mock_method
     ):

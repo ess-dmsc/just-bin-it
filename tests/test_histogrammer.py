@@ -1,8 +1,8 @@
 import pytest
 import json
 import copy
-from histograms.histogrammer import HISTOGRAM_STATES, create_histogrammer
-from endpoints.serialisation import deserialise_hs00
+from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, create_histogrammer
+from just_bin_it.endpoints.serialisation import deserialise_hs00
 from tests.mock_producer import MockProducer
 
 
