@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 from just_bin_it.histograms.det_histogram import DetHistogram
 
 

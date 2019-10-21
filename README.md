@@ -1,6 +1,6 @@
-# Just Bin It
+# just-bin-it
 
-A lightweight program for histogramming neutron event data for diagnostic purposes.
+A lightweight program for histogramming neutron event data.
 
 ## Setup
 Python 3.6+ only.

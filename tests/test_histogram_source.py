@@ -1,5 +1,5 @@
-import pytest
 from unittest.mock import patch
+import pytest
 from just_bin_it.endpoints.sources import HistogramSource
 from tests.mock_consumer import MockConsumer
 

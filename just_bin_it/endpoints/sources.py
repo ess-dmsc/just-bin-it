@@ -1,7 +1,7 @@
 import json
 import logging
-import time
 import math
+import time
 import numpy as np
 from just_bin_it.endpoints.serialisation import deserialise_ev42, deserialise_hs00
 

@@ -1,7 +1,7 @@
 import logging
+from typing import List
 from kafka import KafkaConsumer, TopicPartition
 from kafka.errors import KafkaError
-from typing import List
 
 
 class Consumer:

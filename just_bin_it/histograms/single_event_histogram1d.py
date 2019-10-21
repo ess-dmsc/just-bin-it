@@ -1,7 +1,7 @@
+import logging
+import math
 import numpy as np
 from fast_histogram import histogram1d
-import math
-import logging
 
 
 class SingleEventHistogram1d:

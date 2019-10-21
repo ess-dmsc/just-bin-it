@@ -1,5 +1,5 @@
-import pytest
 import math
+import pytest
 from just_bin_it.histograms.single_event_histogram1d import SingleEventHistogram1d
 
 

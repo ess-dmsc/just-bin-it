@@ -1,9 +1,9 @@
-import sys
+import argparse
 import os
+import sys
+from kafka import KafkaConsumer, TopicPartition
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-import argparse
-from kafka import KafkaConsumer, TopicPartition
 from just_bin_it.endpoints.serialisation import deserialise_hs00
 
 

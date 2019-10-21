@@ -1,19 +1,19 @@
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 import argparse
 import json
 import logging
-import numpy as np
+import os
+import sys
 import time
+import numpy as np
 import graphyte
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from just_bin_it.endpoints.config_listener import ConfigListener
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
-from just_bin_it.endpoints.config_listener import ConfigListener
-from just_bin_it.histograms.histogram2d import Histogram2d
 from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
+from just_bin_it.histograms.histogram2d import Histogram2d
 from just_bin_it.histograms.histogrammer import create_histogrammer
 
 
