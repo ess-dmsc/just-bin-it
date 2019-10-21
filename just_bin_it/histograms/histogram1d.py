@@ -1,6 +1,5 @@
 import logging
 import numpy as np
-import numpy.ma as ma
 from fast_histogram import histogram1d
 
 
@@ -14,8 +13,6 @@ class Histogram1d:
         tof_range,
         det_range=None,
         source=None,
-        preprocessor=None,
-        roi=None,
         identifier="",
     ):
         """
@@ -29,8 +26,6 @@ class Histogram1d:
         :param tof_range: The time-of-flight range to histogram over.
         :param det_range: The detector range to include data from.
         :param source: The data source to histogram.
-        :param preprocessor: The function to apply to the data before adding.
-        :param roi: The function for checking data is within the region of interest.
         :param identifier: An optional identifier for the histogram.
         """
         self._histogram = None
@@ -40,8 +35,6 @@ class Histogram1d:
         self.num_bins = num_bins
         self.source = source
         self.topic = topic
-        self.preprocessor = preprocessor
-        self.roi = roi
         self.last_pulse_time = 0
         self.identifier = identifier
 
@@ -69,14 +62,6 @@ class Histogram1d:
 
         self.last_pulse_time = pulse_time
 
-        if self.preprocessor is not None:
-            pulse_time, tofs, det_ids = self._preprocess_data(pulse_time, tofs, det_ids)
-
-        if self.roi is not None:
-            mask = self._get_mask(pulse_time, tofs, det_ids)
-            if mask:
-                tofs = ma.array(tofs, mask=mask).compressed()
-
         if self.det_range:
             tofs = [
                 t
@@ -93,40 +78,6 @@ class Histogram1d:
     @property
     def shape(self):
         return self._histogram.shape
-
-    def _preprocess_data(self, pulse_time, tofs, det_ids):
-        """
-        Apply the defined processing function to the data.
-
-        :param pulse_time: The pulse time.
-        :param tofs: The time-of-flight data.
-        :param det_ids: The detector ids.
-        :return: The newly processed data.
-        """
-        try:
-            pulse_time, tofs, det_ids = self.preprocessor(pulse_time, tofs, det_ids)
-        except Exception:
-            logging.warning("Exception while preprocessing data")
-        return pulse_time, tofs, det_ids
-
-    def _get_mask(self, pulse_time, tofs, det_ids):
-        """
-        Apply the defined processing function to the data to generate a mask.
-
-        1 is used to indicate a masked value.
-        0 is used to indicate an unmasked value.
-
-        :param pulse_time: The pulse time.
-        :param tofs: The time-of-flight data.
-        :param det_ids: The detector ids.
-        :return: The newly processed data.
-        """
-        try:
-            mask = self.roi(pulse_time, tofs, det_ids)
-        except Exception:
-            logging.warning("Exception while try to check ROI")
-            mask = None
-        return mask
 
     def clear_data(self):
         """

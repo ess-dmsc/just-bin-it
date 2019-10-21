@@ -43,31 +43,6 @@ class TestHistogram1d:
         # Edges should not change
         assert np.array_equal(self.hist.x_edges, x_edges)
 
-    def test_adding_preprocessing_step_affects_data_histogrammed(self):
-        # Only add data if pulse time is even.
-        def _preprocess_step(pulse_time, tofs, det_ids):
-            if pulse_time % 2 == 0:
-                return pulse_time, tofs, det_ids
-            else:
-                return pulse_time, np.zeros(0), det_ids
-
-        self.hist = Histogram1d(
-            "topic1", self.num_bins, self.range, preprocessor=_preprocess_step
-        )
-        self.hist.add_data(3, self.data)
-
-        # As pulse time is odd no data should be added.
-        assert self.hist.data.sum() == 0
-
-    def test_throwing_preprocessing_step_is_handled(self):
-        def _preprocess(pulse_time, x):
-            raise Exception("Preprocessing failed.")
-
-        self.hist = Histogram1d(
-            "topic1", self.num_bins, self.range, preprocessor=_preprocess
-        )
-        self.hist.add_data(self.pulse_time, self.data)
-
     def test_only_data_with_correct_source_is_added(self):
         hist = Histogram1d("topic1", self.num_bins, self.range, source="source1")
 
@@ -76,25 +51,6 @@ class TestHistogram1d:
         hist.add_data(self.pulse_time, self.data, source="OTHER")
 
         assert hist.data.sum() == 10
-
-    def test_if_roi_function_supplied_then_outside_data_ignored(self):
-        # Ignore outside ROI
-        def _create_mask(pulse_time, tofs, det_ids):
-            mask = []
-            for det in det_ids:
-                if det in [3, 4]:
-                    mask.append(0)
-                else:
-                    mask.append(1)
-            return mask
-
-        hist = Histogram1d("topic1", self.num_bins, self.range, roi=_create_mask)
-
-        det_ids = np.array([x for x in range(self.num_bins)])
-
-        hist.add_data(self.pulse_time, self.data, det_ids)
-
-        assert hist.data.sum() == 2
 
     def test_clearing_histogram_data_clears_histogram(self):
         self.hist.add_data(self.pulse_time, self.data)
