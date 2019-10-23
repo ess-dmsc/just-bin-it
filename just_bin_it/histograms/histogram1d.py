@@ -1,6 +1,6 @@
+import logging
 import numpy as np
 import numpy.ma as ma
-import logging
 from fast_histogram import histogram1d
 
 

@@ -1,6 +1,6 @@
-# Just Bin It
+# just-bin-it
 
-A lightweight program for histogramming neutron event data for diagnostic purposes.
+A lightweight program for histogramming neutron event data.
 
 ## Setup
 Python 3.6+ only.
@@ -12,7 +12,7 @@ Python 3.6+ only.
 ## Usage
 
 ```
-usage: main.py [-h] -b BROKERS [BROKERS ...] -t TOPIC [-c CONFIG_FILE]
+usage: python bin/just-bin-it.py [-h] -b BROKERS [BROKERS ...] -t TOPIC [-c CONFIG_FILE]
                [-g GRAPHITE_CONFIG_FILE] [-o] [-s]
 
 optional arguments:
@@ -48,7 +48,7 @@ dataset.
 
 Start the histogrammer from the command-line:
 ```
-python main.py --brokers localhost:9092 --topic hist_commands
+python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands
 ```
 
 Next send a JSON configuration via Kafka (the format of the message is described
@@ -83,10 +83,10 @@ producer.flush()
 This will start histogramming data from the `TEST_events` topic and publish the
 histogrammed data to `output_topic` using the hs00 schema.
 
-To see what the data looks like run the example client:
+To see what the data looks like run the viewer:
 
 ```
-python client/client.py --brokers localhost:9092 --topic output_topic
+python bin/viewer.py --brokers localhost:9092 --topic output_topic
 ```
 This will plot a graph of the most recent histogram.
 
@@ -167,7 +167,7 @@ This can be useful for checking that the data and program are behaving correctly
 Note: no histogram data is written to the output topic in Kafka with this mode.
 
 ```
-python main.py --brokers localhost:9092 --topic hist_commands --one-shot-plot
+python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands --one-shot-plot
 ```
 
 ### Supplying a configuration file
@@ -181,7 +181,7 @@ The configuration file should contain the standard JSON for configuring histogra
 as described above.
 
 ```
-python main.py --brokers localhost:9092 --topic hist_commands --config_file example_configs/config1d.json
+python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands --config_file example_configs/config1d.json
 ```
 
 Note: this configuration will be replaced if a new configuration is sent the command
@@ -208,7 +208,7 @@ To enable statistics about the histograms to be send to Graphite it is necessary
 to supply a configuration JSON file, for example
 
 ```
-python main.py --brokers localhost:9092 --topic hist_commands --graphite-config-file graphite_config.json
+python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands --graphite-config-file graphite_config.json
 ```
 
 The file must contain the following:

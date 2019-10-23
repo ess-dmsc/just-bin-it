@@ -1,6 +1,7 @@
 [flake8]
-ignore = E501, E203
+ignore = E501, E203, E402
 # E501 & E203: Formatting handled by Black
+# E402 complains about imports not being at the top
 exclude =
     fbschemas
     README.md

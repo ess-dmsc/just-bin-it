@@ -1,7 +1,8 @@
 import json
 import time
-from histograms.histogram_factory import HistogramFactory
-from endpoints.histogram_sink import HistogramSink
+from just_bin_it.endpoints.histogram_sink import HistogramSink
+from just_bin_it.histograms.histogram_factory import HistogramFactory
+
 
 HISTOGRAM_STATES = {
     "COUNTING": "COUNTING",

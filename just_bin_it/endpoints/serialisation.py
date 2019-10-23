@@ -1,10 +1,10 @@
-import flatbuffers
 import numpy as np
-from fbschemas.ev42.EventMessage import EventMessage
-import fbschemas.hs00.EventHistogram as EventHistogram
-import fbschemas.hs00.DimensionMetaData as DimensionMetaData
-import fbschemas.hs00.ArrayDouble as ArrayDouble
-from fbschemas.hs00.Array import Array
+import flatbuffers
+import just_bin_it.fbschemas.hs00.ArrayDouble as ArrayDouble
+import just_bin_it.fbschemas.hs00.DimensionMetaData as DimensionMetaData
+import just_bin_it.fbschemas.hs00.EventHistogram as EventHistogram
+from just_bin_it.fbschemas.ev42.EventMessage import EventMessage
+from just_bin_it.fbschemas.hs00.Array import Array
 
 
 def get_schema(buf):

@@ -1,8 +1,8 @@
 import logging
-from histograms.histogram1d import Histogram1d
-from histograms.histogram2d import Histogram2d
-from histograms.single_event_histogram1d import SingleEventHistogram1d
-from histograms.det_histogram import DetHistogram
+from just_bin_it.histograms.det_histogram import DetHistogram
+from just_bin_it.histograms.histogram1d import Histogram1d
+from just_bin_it.histograms.histogram2d import Histogram2d
+from just_bin_it.histograms.single_event_histogram1d import SingleEventHistogram1d
 
 
 class HistogramFactory:

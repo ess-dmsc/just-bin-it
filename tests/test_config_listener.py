@@ -1,6 +1,6 @@
 import pytest
-from tests.mock_consumer import MockConsumer
-from endpoints.config_listener import ConfigListener
+from just_bin_it.endpoints.config_listener import ConfigListener
+from .mock_consumer import MockConsumer
 
 
 class TestConfigListener:

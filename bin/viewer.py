@@ -1,7 +1,11 @@
 import argparse
+import os
+import sys
 import numpy as np
-from endpoints.kafka_consumer import Consumer
-from endpoints.sources import HistogramSource
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from just_bin_it.endpoints.kafka_consumer import Consumer
+from just_bin_it.endpoints.sources import HistogramSource
 
 
 def plot_histogram(hist):

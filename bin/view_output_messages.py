@@ -1,6 +1,10 @@
 import argparse
+import os
+import sys
 from kafka import KafkaConsumer, TopicPartition
-from endpoints.serialisation import deserialise_hs00
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from just_bin_it.endpoints.serialisation import deserialise_hs00
 
 
 def main(brokers, topic):

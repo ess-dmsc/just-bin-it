@@ -1,6 +1,6 @@
-import pytest
 import numpy as np
-from histograms.det_histogram import DetHistogram
+import pytest
+from just_bin_it.histograms.det_histogram import DetHistogram
 
 
 def generate_pixel_id(x, y, width):

@@ -1,5 +1,5 @@
 from typing import List
-from endpoints.kafka_consumer import Consumer
+from just_bin_it.endpoints.kafka_consumer import Consumer
 
 
 class MockConsumerRecord:
