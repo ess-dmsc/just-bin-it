@@ -152,9 +152,9 @@ class Main:
 
                 # If no event data then check to see if there is a new
                 # configuration message
-                if len(event_buffer) == 0:
-                    if self.config_listener.check_for_messages():
-                        break
+                # if len(event_buffer) == 0:
+                if self.config_listener.check_for_messages():
+                    break
 
                 # See if the stop time has been exceeded
                 if len(event_buffer) == 0:

@@ -4,14 +4,7 @@ import math
 import time
 import numpy as np
 from just_bin_it.endpoints.serialisation import deserialise_ev42, deserialise_hs00
-
-
-class SourceException(Exception):
-    pass
-
-
-class TooOldTimeRequestedException(Exception):
-    pass
+from just_bin_it.exceptions import SourceException, TooOldTimeRequestedException
 
 
 class BaseSource:
@@ -73,32 +66,29 @@ class EventSource(BaseSource):
         Note: this is the Kafka message time.
 
         :param requested_time: Time in milliseconds.
-        :return: The corresponding offset.
+        :return: The corresponding offsets.
         """
-        # TODO: Check source?
-        lowest_offset, highest_offset = self.consumer.get_offset_range()
+        offset_ranges = self.consumer.get_offset_range()
 
         # Kafka uses milliseconds
-        offset = self.consumer.offset_for_time(requested_time)
+        offsets = self.consumer.offset_for_time(requested_time)
 
-        if offset is None:
-            logging.warning(
-                "Could not find corresponding offset for requested time, so set position to latest message"
-            )
-            offset = highest_offset
+        for i, (lowest, highest) in enumerate(offset_ranges):
+            if offsets[i] is None:
+                logging.warning(
+                    "Could not find corresponding offset for requested time, so set position to latest message"
+                )
+                offsets[i] = highest
 
-        if offset == lowest_offset:
-            # We've gone back as far as we can.
-            raise TooOldTimeRequestedException(
-                "Cannot find message time in data as supplied time is too old"
-            )  # pragma: no mutate
+            if offsets[i] == lowest:
+                # We've gone back as far as we can.
+                raise TooOldTimeRequestedException(
+                    "Cannot find message time in data as supplied time is too old"
+                )  # pragma: no mutate
 
-        self.consumer.seek_by_offset(offset)
+        self.consumer.seek_by_offsets(offsets)
 
-        return offset
-
-    def offsets_for_time(self, message_time):
-        return self.consumer.offset_for_time(message_time)
+        return offsets
 
 
 class HistogramSource(BaseSource):

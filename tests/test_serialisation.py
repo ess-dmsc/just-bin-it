@@ -1,6 +1,11 @@
 import numpy as np
 import pytest
-from just_bin_it.endpoints.serialisation import deserialise_hs00, serialise_hs00
+from just_bin_it.endpoints.serialisation import (
+    deserialise_hs00,
+    serialise_hs00,
+    deserialise_ev42,
+    serialise_ev42,
+)
 from just_bin_it.histograms.histogram1d import Histogram1d
 from just_bin_it.histograms.histogram2d import Histogram2d
 
@@ -25,7 +30,7 @@ def _create_2d_histogrammer():
     return histogrammer
 
 
-class TestSerialisation:
+class TestSerialisationHs00:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.hist_1d = _create_1d_histogrammer()
@@ -88,3 +93,24 @@ class TestSerialisation:
 
         hist = deserialise_hs00(buf)
         assert hist["info"] == info_message
+
+    class TestSerialisationEv42:
+        def test_serialises_ev42_message_correctly(self):
+            """
+            Sanity check: checks the combination of libraries work as expected.
+            """
+            source = "just-bin-it"
+            message_id = 123456
+            pulse_time = 1234567890000000000
+            tofs = [1, 2, 3, 4, 5]
+            dets = [10, 20, 30, 40, 50]
+            buf = serialise_ev42(source, message_id, pulse_time, tofs, dets)
+
+            info = deserialise_ev42(buf)
+            assert info["source"] == source
+            assert info["message_id"] == message_id
+            assert info["pulse_time"] == pulse_time
+            assert len(info["tofs"]) == len(tofs)
+            assert len(info["det_ids"]) == len(dets)
+            assert np.array_equal(info["tofs"], tofs)
+            assert np.array_equal(info["det_ids"], dets)
