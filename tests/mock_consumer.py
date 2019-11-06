@@ -1,4 +1,3 @@
-from typing import List
 from just_bin_it.endpoints.kafka_consumer import Consumer
 
 
@@ -14,10 +13,7 @@ class MockConsumer(Consumer):
         super().__init__(brokers, topics)
         self.topic_partitions = {}
         for i in range(num_partitions):
-            self.topic_partitions[i] = {
-                "messages": [],
-                "offset": 0,
-            }
+            self.topic_partitions[i] = {"messages": [], "offset": 0}
 
     def add_messages(self, messages, partition=0):
         self.topic_partitions[partition]["messages"].extend(messages)

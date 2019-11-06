@@ -2,28 +2,22 @@ import argparse
 import os
 import sys
 import time
-import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import serialise_ev42
 from just_bin_it.endpoints.kafka_producer import Producer
+from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
-LOW_TOF = 0
-HIGH_TOF = 100_000_000
-LOW_DET = 1
-HIGH_DET = 512
+TOF_RANGE = (0, 100_000_000)
+DET_RANGE = (1, 512)
 
 
 def generate_data(source, message_id, num_points):
-    tof_centre = (HIGH_TOF - LOW_TOF) // 2
-    tof_scale = tof_centre // 5
-    det_centre = (HIGH_DET - LOW_DET) // 2
-    det_scale = det_centre // 5
+    tofs, dets = generate_fake_data(TOF_RANGE, DET_RANGE, num_points)
+
     time_stamp = time.time_ns()
 
-    tofs = [int(x) for x in np.random.normal(tof_centre, tof_scale, num_points)]
-    dets = [int(x) for x in np.random.normal(det_centre, det_scale, num_points)]
     data = serialise_ev42(source, message_id, time_stamp, tofs, dets)
     return time_stamp, data
 
@@ -47,7 +41,6 @@ def main(brokers, topic, num_msgs, num_points):
 
         time.sleep(1)
 
-
     print(f"Num messages = {num_msgs}, total events = {num_msgs * num_points}")
     print(f"Start timestamp = {start_time}, end_timestamp = {end_time}")
 
@@ -70,7 +63,11 @@ if __name__ == "__main__":
     )
 
     required_args.add_argument(
-        "-n", "--num_messages", type=int, help="the number of messages to write", required=True
+        "-n",
+        "--num_messages",
+        type=int,
+        help="the number of messages to write",
+        required=True,
     )
 
     parser.add_argument(

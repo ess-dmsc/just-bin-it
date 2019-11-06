@@ -270,6 +270,12 @@ For HTML output:
 pytest --cov --cov-report html .
 ```
 
+### System tests
+There are system tests that tests the whole system with a real instance of Kafka.
+See the system-tests folder for more information on how to run them.
+
+They should be run before modified code is pushed to the code repository.
+
 ### Formatting
 Formatting is handled by [Black](https://black.readthedocs.io/en/stable/).
 

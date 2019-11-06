@@ -7,13 +7,7 @@ class Histogram1d:
     """One dimensional histogram for time-of-flight."""
 
     def __init__(
-        self,
-        topic,
-        num_bins,
-        tof_range,
-        det_range=None,
-        source=None,
-        identifier="",
+        self, topic, num_bins, tof_range, det_range=None, source=None, identifier=""
     ):
         """
         Constructor.

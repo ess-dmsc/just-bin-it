@@ -67,7 +67,7 @@ class Histogrammer:
         self._stop_time_exceeded = False
         self._stop_publishing = False
         self._started = False
-        self._stop_leeway = 2000
+        self._stop_leeway = 5000
 
     def add_data(self, event_buffer, simulation=False):
         """
@@ -110,6 +110,12 @@ class Histogrammer:
 
     def _generate_info(self, histogram):
         info = {"id": histogram.identifier}
+        if self.start:
+            info["start"] = self.start
+
+        if self.stop:
+            info["stop"] = self.stop
+
         if self._stop_time_exceeded:
             info["state"] = HISTOGRAM_STATES["FINISHED"]
             self._stop_publishing = True

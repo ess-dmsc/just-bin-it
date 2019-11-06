@@ -159,7 +159,7 @@ class Main:
                 # See if the stop time has been exceeded
                 if len(event_buffer) == 0:
                     if self.histogrammer.check_stop_time_exceeded(
-                        int(time.time() * 1000)
+                        time.time_ns() // 1_000_000
                     ):
                         break
 
@@ -172,7 +172,7 @@ class Main:
                     # Exit the program when the graph is closed
                     return
 
-            self.histogrammer.publish_histograms()
+            self.histogrammer.publish_histograms(time.time_ns())
 
             hist_stats = self.histogrammer.get_histogram_stats()
             logging.info("%s", json.dumps(hist_stats))

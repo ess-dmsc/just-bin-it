@@ -158,7 +158,9 @@ class TestEventSourceMultiplePartitions:
         assert offset == expected_offset
         assert message == expected_message
 
-    def test_given_time_more_recent_than_last_message_then_seeks_to_last_message_on_all_partitions(self):
+    def test_given_time_more_recent_than_last_message_then_seeks_to_last_message_on_all_partitions(
+        self
+    ):
         last_timestamp, _, _ = self.messages[149]
         msg_time = last_timestamp + 1000
 

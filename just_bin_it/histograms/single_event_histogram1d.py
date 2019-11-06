@@ -1,4 +1,3 @@
-import logging
 import math
 import numpy as np
 from fast_histogram import histogram1d
@@ -7,14 +6,7 @@ from fast_histogram import histogram1d
 class SingleEventHistogram1d:
     """Histograms time-of-flight for the denex detector into a 1-D histogram."""
 
-    def __init__(
-        self,
-        topic,
-        num_bins=50,
-        tof_range=None,
-        source=None,
-        identifier="",
-    ):
+    def __init__(self, topic, num_bins=50, tof_range=None, source=None, identifier=""):
         """
         Constructor.
 
