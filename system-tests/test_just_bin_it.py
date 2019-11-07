@@ -142,7 +142,8 @@ class TestJustBinIt:
 
         time.sleep(2)
 
-        # Check that end offset has changed otherwise we could be looking at old test data.
+        # Check that end offset has changed otherwise we could be looking at old test
+        # data.
         self.check_offsets()
 
         # Get histogram data
@@ -167,7 +168,8 @@ class TestJustBinIt:
 
         time.sleep(2)
 
-        # Check that end offset has changed otherwise we could be looking at old test data.
+        # Check that end offset has changed otherwise we could be looking at old test
+        # data.
         self.check_offsets()
 
         # Get histogram data
@@ -190,7 +192,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Send no data, but wait for the interval to pass
-        time.sleep(interval_length * 2)
+        time.sleep(interval_length * 3)
 
         # Check that end offset has changed otherwise we could be looking at old test
         # data.
@@ -218,7 +220,8 @@ class TestJustBinIt:
         # Send no data, but wait for interval to pass
         time.sleep(interval_length * 2)
 
-        # Check that end offset has changed otherwise we could be looking at old test data.
+        # Check that end offset has changed otherwise we could be looking at old test
+        # data.
         self.check_offsets()
 
         # Get histogram data
@@ -251,7 +254,8 @@ class TestJustBinIt:
 
         time.sleep(1)
 
-        # Check that end offset has changed otherwise we could be looking at old test data.
+        # Check that end offset has changed otherwise we could be looking at old test
+        # data.
         self.check_offsets()
 
         # Get histogram data
