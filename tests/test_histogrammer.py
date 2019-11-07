@@ -415,9 +415,7 @@ class TestHistogrammer:
         assert not finished
         assert info["state"] != HISTOGRAM_STATES["FINISHED"]
 
-    def test_if_start_time_and_stop_time_defined_then_they_are_in_the_info(
-        self
-    ):
+    def test_if_start_time_and_stop_time_defined_then_they_are_in_the_info(self):
         config = copy.deepcopy(START_CONFIG)
         config["start"] = 1003 * 10 ** 3
         config["stop"] = 1005 * 10 ** 3
@@ -440,9 +438,7 @@ class TestHistogrammer:
         assert "start" not in info
         assert "stop" not in info
 
-    def test_if_interval_defined_then_start_and_stop_are_in_the_info(
-        self
-    ):
+    def test_if_interval_defined_then_start_and_stop_are_in_the_info(self):
         config = copy.deepcopy(START_CONFIG)
         del config["start"]
         config["interval"] = 5

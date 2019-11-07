@@ -2,7 +2,6 @@ import copy
 import json
 import os
 import random
-import subprocess
 import sys
 import time
 from kafka import KafkaProducer, KafkaConsumer, TopicPartition
@@ -95,7 +94,9 @@ class TestJustBinIt:
         msg = data[self.topic_part][-1]
         return deserialise_hs00(msg.value)
 
-    def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(self):
+    def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(
+        self
+    ):
         # Configure just-bin-it
         self.send_message(CMD_TOPIC, bytes(json.dumps(CONFIG_JSON), "utf-8"))
 
@@ -264,5 +265,3 @@ class TestJustBinIt:
 
         assert hist_data["data"].sum() == 0
         assert info["state"] == "FINISHED"
-
-
