@@ -150,9 +150,7 @@ class Main:
             while len(event_buffer) == 0:
                 event_buffer = self.event_source.get_new_data()
 
-                # If no event data then check to see if there is a new
-                # configuration message
-                # if len(event_buffer) == 0:
+                # Check to see if there is a new configuration message
                 if self.config_listener.check_for_messages():
                     break
 
