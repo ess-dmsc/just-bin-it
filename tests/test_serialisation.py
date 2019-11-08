@@ -94,23 +94,24 @@ class TestSerialisationHs00:
         hist = deserialise_hs00(buf)
         assert hist["info"] == info_message
 
-    class TestSerialisationEv42:
-        def test_serialises_ev42_message_correctly(self):
-            """
-            Sanity check: checks the combination of libraries work as expected.
-            """
-            source = "just-bin-it"
-            message_id = 123456
-            pulse_time = 1234567890000000000
-            tofs = [1, 2, 3, 4, 5]
-            dets = [10, 20, 30, 40, 50]
-            buf = serialise_ev42(source, message_id, pulse_time, tofs, dets)
 
-            info = deserialise_ev42(buf)
-            assert info["source"] == source
-            assert info["message_id"] == message_id
-            assert info["pulse_time"] == pulse_time
-            assert len(info["tofs"]) == len(tofs)
-            assert len(info["det_ids"]) == len(dets)
-            assert np.array_equal(info["tofs"], tofs)
-            assert np.array_equal(info["det_ids"], dets)
+class TestSerialisationEv42:
+    def test_serialises_ev42_message_correctly(self):
+        """
+        Sanity check: checks the combination of libraries work as expected.
+        """
+        source = "just-bin-it"
+        message_id = 123456
+        pulse_time = 1234567890000000000
+        tofs = [1, 2, 3, 4, 5]
+        dets = [10, 20, 30, 40, 50]
+        buf = serialise_ev42(source, message_id, pulse_time, tofs, dets)
+
+        info = deserialise_ev42(buf)
+        assert info["source"] == source
+        assert info["message_id"] == message_id
+        assert info["pulse_time"] == pulse_time
+        assert len(info["tofs"]) == len(tofs)
+        assert len(info["det_ids"]) == len(dets)
+        assert np.array_equal(info["tofs"], tofs)
+        assert np.array_equal(info["det_ids"], dets)
