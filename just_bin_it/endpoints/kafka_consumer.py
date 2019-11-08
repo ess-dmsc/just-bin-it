@@ -89,7 +89,7 @@ class Consumer:
 
     def seek_by_offsets(self, offsets):
         """
-        Move to the specified offsets
+        Move to the specified offsets.
 
         :param offsets: The requested offsets.
         """
