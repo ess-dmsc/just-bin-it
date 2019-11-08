@@ -58,7 +58,7 @@ class Histogram1d:
 
         if self.det_range:
             # Create 2D histogram so we can filter on det-id then reduce to 1D.
-            # This is the quickest way to filter on det-id
+            # This is the quickest way to filter on det-id.
             histogram, _, _ = np.histogram2d(
                 tofs,
                 det_ids,
