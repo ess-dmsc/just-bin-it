@@ -96,3 +96,4 @@ class TestHistogram1d:
         hist.add_data(12345, tof_data, det_data)
 
         assert hist.data.sum() == 2
+        assert np.array_equal(hist.data, [0, 1, 1, 0, 0])
