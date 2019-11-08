@@ -57,13 +57,19 @@ class Histogram1d:
         self.last_pulse_time = pulse_time
 
         if self.det_range:
-            tofs = [
-                t
-                for t, d in zip(tofs, det_ids)
-                if self.det_range[0] <= d <= self.det_range[1]
-            ]
-
-        self._histogram += histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
+            # Create 2D histogram so we can filter on det-id then reduce to 1D.
+            # This is the quickest way to filter on det-id
+            histogram, _, _ = np.histogram2d(
+                tofs,
+                det_ids,
+                range=(self.tof_range, self.det_range),
+                bins=self.num_bins,
+            )
+            self._histogram += histogram.sum(1)
+        else:
+            self._histogram += histogram1d(
+                tofs, range=self.tof_range, bins=self.num_bins
+            )
 
     @property
     def data(self):
