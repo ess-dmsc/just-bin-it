@@ -3,6 +3,7 @@ fast-histogram
 flake8
 flatbuffers
 kafka-python
+confluent-kafka
 matplotlib
 numpy
 pre-commit

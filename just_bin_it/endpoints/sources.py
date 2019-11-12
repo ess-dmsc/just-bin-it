@@ -2,16 +2,9 @@ import json
 import logging
 import math
 import time
-import numpy as np
 from just_bin_it.endpoints.serialisation import deserialise_ev42, deserialise_hs00
-
-
-class SourceException(Exception):
-    pass
-
-
-class TooOldTimeRequestedException(Exception):
-    pass
+from just_bin_it.exceptions import SourceException, TooOldTimeRequestedException
+from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
 class BaseSource:
@@ -73,32 +66,29 @@ class EventSource(BaseSource):
         Note: this is the Kafka message time.
 
         :param requested_time: Time in milliseconds.
-        :return: The corresponding offset.
+        :return: The corresponding offsets.
         """
-        # TODO: Check source?
-        lowest_offset, highest_offset = self.consumer.get_offset_range()
+        offset_ranges = self.consumer.get_offset_range()
 
         # Kafka uses milliseconds
-        offset = self.consumer.offset_for_time(requested_time)
+        offsets = self.consumer.offset_for_time(requested_time)
 
-        if offset is None:
-            logging.warning(
-                "Could not find corresponding offset for requested time, so set position to latest message"
-            )
-            offset = highest_offset
+        for i, (lowest, highest) in enumerate(offset_ranges):
+            if offsets[i] is None:
+                logging.warning(
+                    "Could not find corresponding offset for requested time, so set position to latest message"
+                )
+                offsets[i] = highest
 
-        if offset == lowest_offset:
-            # We've gone back as far as we can.
-            raise TooOldTimeRequestedException(
-                "Cannot find message time in data as supplied time is too old"
-            )  # pragma: no mutate
+            if offsets[i] == lowest:
+                # We've gone back as far as we can.
+                raise TooOldTimeRequestedException(
+                    "Cannot find message time in data as supplied time is too old"
+                )  # pragma: no mutate
 
-        self.consumer.seek_by_offset(offset)
+        self.consumer.seek_by_offsets(offsets)
 
-        return offset
-
-    def offsets_for_time(self, message_time):
-        return self.consumer.offset_for_time(message_time)
+        return offsets
 
 
 class HistogramSource(BaseSource):
@@ -111,21 +101,16 @@ class HistogramSource(BaseSource):
 
 class SimulatedEventSource:
     def __init__(self, config):
-        self.tof_centre = 3000
-        self.tof_scale = 1000
-        self.det_centre = 50
-        self.det_scale = 10
+        self.tof_range = (0, 100_000_000)
+        self.det_id = (1, 512)
+        self.num_events = 1000
 
         # Based on the config, guess gaussian settings.
         if "histograms" in config and len(config["histograms"]) > 0:
-            low, high = config["histograms"][0]["tof_range"]
-            self.tof_centre = (high - low) // 2
-            self.tof_scale = self.tof_centre // 5
+            self.tof_range = config["histograms"][0]["tof_range"]
 
             if "det_range" in config["histograms"][0]:
-                low, high = config["histograms"][0]["det_range"]
-                self.det_centre = (high - low) // 2
-                self.det_scale = self.det_centre // 5
+                self.det_range = config["histograms"][0]["det_range"]
 
     def get_new_data(self):
         """
@@ -133,9 +118,7 @@ class SimulatedEventSource:
 
         :return: The generated data.
         """
-        num_points = 1000
-        tofs = np.random.normal(self.tof_centre, self.tof_scale, num_points)
-        dets = np.random.normal(self.det_centre, self.det_scale, num_points)
+        tofs, dets = generate_fake_data(self.tof_range, self.det_range, self.num_events)
 
         data = {
             "pulse_time": math.floor(time.time() * 10 ** 9),
@@ -143,7 +126,7 @@ class SimulatedEventSource:
             "det_ids": dets,
             "source": "simulator",
         }
-        return [(int(time.time() * num_points), 0, data)]
+        return [(int(time.time() * self.num_events), 0, data)]
 
     def seek_to_time(self, requested_time: int):
         """

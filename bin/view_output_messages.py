@@ -38,7 +38,8 @@ def main(brokers, topic):
                 )
             )
             ans = deserialise_hs00(message.value)
-            print(ans)
+            print(f"\nHistogram data:\n{ans}")
+            print(f"Total events: {ans['data'].sum()}")
 
 
 if __name__ == "__main__":

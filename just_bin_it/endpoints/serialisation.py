@@ -1,9 +1,9 @@
 import numpy as np
 import flatbuffers
+import just_bin_it.fbschemas.ev42.EventMessage as EventMessage
 import just_bin_it.fbschemas.hs00.ArrayDouble as ArrayDouble
 import just_bin_it.fbschemas.hs00.DimensionMetaData as DimensionMetaData
 import just_bin_it.fbschemas.hs00.EventHistogram as EventHistogram
-from just_bin_it.fbschemas.ev42.EventMessage import EventMessage
 from just_bin_it.fbschemas.hs00.Array import Array
 
 
@@ -29,7 +29,7 @@ def deserialise_ev42(buf):
     if schema != "ev42":
         raise Exception(f"Incorrect schema: expected ev42 but got {schema}")
 
-    event = EventMessage.GetRootAsEventMessage(buf, 0)
+    event = EventMessage.EventMessage.GetRootAsEventMessage(buf, 0)
 
     data = {
         "message_id": event.MessageId(),
@@ -128,7 +128,6 @@ def serialise_hs00(histogrammer, timestamp: int = 0, info_message: str = ""):
     """
     file_identifier = b"hs00"
 
-    # histogram = histogrammer.data
     builder = flatbuffers.Builder(1024)
     source = builder.CreateString("just-bin-it")
     info = builder.CreateString(info_message)
@@ -185,6 +184,40 @@ def serialise_hs00(histogrammer, timestamp: int = 0, info_message: str = ""):
     EventHistogram.EventHistogramAddDataType(builder, Array.ArrayDouble)
     hist = EventHistogram.EventHistogramEnd(builder)
     builder.Finish(hist)
+
+    # Generate the output and replace the file_identifier
+    buff = builder.Output()
+    buff[4:8] = file_identifier
+    return buff
+
+
+def serialise_ev42(source_name, message_id, pulse_time, tofs, det_ids):
+    file_identifier = b"ev42"
+
+    builder = flatbuffers.Builder(1024)
+    source = builder.CreateString(source_name)
+
+    EventMessage.EventMessageStartTimeOfFlightVector(builder, len(tofs))
+    # FlatBuffers builds arrays backwards
+    for x in reversed(tofs):
+        builder.PrependInt32(x)
+    tof_data = builder.EndVector(len(tofs))
+
+    EventMessage.EventMessageStartDetectorIdVector(builder, len(det_ids))
+    # FlatBuffers builds arrays backwards
+    for x in reversed(det_ids):
+        builder.PrependInt32(x)
+    det_data = builder.EndVector(len(det_ids))
+
+    # Build the actual buffer
+    EventMessage.EventMessageStart(builder)
+    EventMessage.EventMessageAddDetectorId(builder, det_data)
+    EventMessage.EventMessageAddTimeOfFlight(builder, tof_data)
+    EventMessage.EventMessageAddPulseTime(builder, pulse_time)
+    EventMessage.EventMessageAddMessageId(builder, message_id)
+    EventMessage.EventMessageAddSourceName(builder, source)
+    data = EventMessage.EventMessageEnd(builder)
+    builder.Finish(data)
 
     # Generate the output and replace the file_identifier
     buff = builder.Output()

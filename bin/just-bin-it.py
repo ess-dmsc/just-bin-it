@@ -13,7 +13,7 @@ from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
-from just_bin_it.histograms.histogram2d import Histogram2d
+from just_bin_it.histograms.histogram1d import Histogram1d
 from just_bin_it.histograms.histogrammer import create_histogrammer
 
 
@@ -55,17 +55,17 @@ def plot_histogram(hist):
     matplotlib.use("TkAgg")
     from matplotlib import pyplot as plt
 
-    if isinstance(hist, Histogram2d):
+    if isinstance(hist, Histogram1d):
+        width = 0.8 * (hist.x_edges[1] - hist.x_edges[0])
+        center = (hist.x_edges[:-1] + hist.x_edges[1:]) / 2
+        plt.bar(center, hist.data, align="center", width=width)
+        plt.show()
+    else:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         x, y = np.meshgrid(hist.x_edges, hist.y_edges)
         # Need to transpose the data for display
         ax.pcolormesh(x, y, hist.data.T)
-        plt.show()
-    else:
-        width = 0.7 * (hist.x_edges[1] - hist.x_edges[0])
-        center = (hist.x_edges[:-1] + hist.x_edges[1:]) / 2
-        plt.bar(center, hist.data, align="center", width=width)
         plt.show()
 
 
@@ -117,7 +117,7 @@ class Main:
 
     def run(self):
         if self.simulation:
-            logging.info("RUNNING IN SIMULATION MODE")
+            logging.warning("RUNNING IN SIMULATION MODE")
 
         # Blocks until can connect to the config topic.
         self.create_config_listener()
@@ -150,16 +150,14 @@ class Main:
             while len(event_buffer) == 0:
                 event_buffer = self.event_source.get_new_data()
 
-                # If no event data then check to see if there is a new
-                # configuration message
-                if len(event_buffer) == 0:
-                    if self.config_listener.check_for_messages():
-                        break
+                # Check to see if there is a new configuration message
+                if self.config_listener.check_for_messages():
+                    break
 
                 # See if the stop time has been exceeded
                 if len(event_buffer) == 0:
                     if self.histogrammer.check_stop_time_exceeded(
-                        int(time.time() * 1000)
+                        time.time_ns() // 1_000_000
                     ):
                         break
 
@@ -172,7 +170,7 @@ class Main:
                     # Exit the program when the graph is closed
                     return
 
-            self.histogrammer.publish_histograms()
+            self.histogrammer.publish_histograms(time.time_ns())
 
             hist_stats = self.histogrammer.get_histogram_stats()
             logging.info("%s", json.dumps(hist_stats))
@@ -183,7 +181,7 @@ class Main:
                 except Exception as error:
                     logging.error("Could not publish statistics: %s", error)
 
-            time.sleep(0.5)
+            time.sleep(0.01)
 
     def create_config_listener(self):
         """
@@ -241,7 +239,7 @@ class Main:
             self.histogrammer.clear_histograms()
         elif message["cmd"] == "config":
             if self.simulation:
-                logging.info("RUNNING IN SIMULATION MODE")
+                logging.warning("RUNNING IN SIMULATION MODE")
                 self.event_source = SimulatedEventSource(message)
             else:
                 self.event_source = self.configure_event_source(message)

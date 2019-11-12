@@ -1,8 +1,9 @@
 {
     "cmd": "config",
     "data_brokers": ["localhost:9092"],
-    "data_topics": ["LOQ_events"],
-    "interval": 50,
+    "data_topics": ["junk_data_2"],
+    "start": 1571831082207,
+    "stop":  1571831125940,
     "histograms": [
         {
             "type": "hist1d",

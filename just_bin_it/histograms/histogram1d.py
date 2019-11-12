@@ -1,6 +1,5 @@
 import logging
 import numpy as np
-import numpy.ma as ma
 from fast_histogram import histogram1d
 
 
@@ -8,15 +7,7 @@ class Histogram1d:
     """One dimensional histogram for time-of-flight."""
 
     def __init__(
-        self,
-        topic,
-        num_bins,
-        tof_range,
-        det_range=None,
-        source=None,
-        preprocessor=None,
-        roi=None,
-        identifier="",
+        self, topic, num_bins, tof_range, det_range=None, source=None, identifier=""
     ):
         """
         Constructor.
@@ -29,8 +20,6 @@ class Histogram1d:
         :param tof_range: The time-of-flight range to histogram over.
         :param det_range: The detector range to include data from.
         :param source: The data source to histogram.
-        :param preprocessor: The function to apply to the data before adding.
-        :param roi: The function for checking data is within the region of interest.
         :param identifier: An optional identifier for the histogram.
         """
         self._histogram = None
@@ -40,8 +29,6 @@ class Histogram1d:
         self.num_bins = num_bins
         self.source = source
         self.topic = topic
-        self.preprocessor = preprocessor
-        self.roi = roi
         self.last_pulse_time = 0
         self.identifier = identifier
 
@@ -69,22 +56,20 @@ class Histogram1d:
 
         self.last_pulse_time = pulse_time
 
-        if self.preprocessor is not None:
-            pulse_time, tofs, det_ids = self._preprocess_data(pulse_time, tofs, det_ids)
-
-        if self.roi is not None:
-            mask = self._get_mask(pulse_time, tofs, det_ids)
-            if mask:
-                tofs = ma.array(tofs, mask=mask).compressed()
-
         if self.det_range:
-            tofs = [
-                t
-                for t, d in zip(tofs, det_ids)
-                if self.det_range[0] <= d <= self.det_range[1]
-            ]
-
-        self._histogram += histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
+            # Create 2D histogram so we can filter on det-id then reduce to 1D.
+            # This is the quickest way to filter on det-id.
+            histogram, _, _ = np.histogram2d(
+                tofs,
+                det_ids,
+                range=(self.tof_range, self.det_range),
+                bins=self.num_bins,
+            )
+            self._histogram += histogram.sum(1)
+        else:
+            self._histogram += histogram1d(
+                tofs, range=self.tof_range, bins=self.num_bins
+            )
 
     @property
     def data(self):
@@ -93,40 +78,6 @@ class Histogram1d:
     @property
     def shape(self):
         return self._histogram.shape
-
-    def _preprocess_data(self, pulse_time, tofs, det_ids):
-        """
-        Apply the defined processing function to the data.
-
-        :param pulse_time: The pulse time.
-        :param tofs: The time-of-flight data.
-        :param det_ids: The detector ids.
-        :return: The newly processed data.
-        """
-        try:
-            pulse_time, tofs, det_ids = self.preprocessor(pulse_time, tofs, det_ids)
-        except Exception:
-            logging.warning("Exception while preprocessing data")
-        return pulse_time, tofs, det_ids
-
-    def _get_mask(self, pulse_time, tofs, det_ids):
-        """
-        Apply the defined processing function to the data to generate a mask.
-
-        1 is used to indicate a masked value.
-        0 is used to indicate an unmasked value.
-
-        :param pulse_time: The pulse time.
-        :param tofs: The time-of-flight data.
-        :param det_ids: The detector ids.
-        :return: The newly processed data.
-        """
-        try:
-            mask = self.roi(pulse_time, tofs, det_ids)
-        except Exception:
-            logging.warning("Exception while try to check ROI")
-            mask = None
-        return mask
 
     def clear_data(self):
         """

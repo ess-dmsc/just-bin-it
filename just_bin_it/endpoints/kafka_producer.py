@@ -1,5 +1,6 @@
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
+from just_bin_it.exceptions import KafkaException
 
 
 class Producer:
@@ -21,7 +22,7 @@ class Producer:
                 bootstrap_servers=brokers, max_request_size=100_000_000
             )
         except KafkaError as error:
-            raise Exception(error)
+            raise KafkaException(error)
 
     def publish_message(self, topic, message):
         """
@@ -32,5 +33,6 @@ class Producer:
         """
         try:
             self.producer.send(topic, message)
+            self.producer.flush()
         except KafkaError as error:
-            raise Exception(error)
+            raise KafkaException(error)

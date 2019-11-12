@@ -2,7 +2,7 @@ from kafka.errors import KafkaError
 
 
 class MockProducer:
-    def __init__(self):
+    def __init__(self, brokers=None):
         self.messages = []
 
     def publish_message(self, topic, message):

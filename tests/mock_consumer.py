@@ -1,4 +1,3 @@
-from typing import List
 from just_bin_it.endpoints.kafka_consumer import Consumer
 
 
@@ -10,20 +9,20 @@ class MockConsumerRecord:
 
 
 class MockConsumer(Consumer):
-    def __init__(self, brokers: List[str], topics: List[str]):
+    def __init__(self, brokers, topics, num_partitions=1):
         super().__init__(brokers, topics)
-        self.messages = []
-        # Keeps track of how far through the message queue we are
-        self.offset = 0
+        self.topic_partitions = {}
+        for i in range(num_partitions):
+            self.topic_partitions[i] = {"messages": [], "offset": 0}
 
-    def add_messages(self, messages):
-        self.messages.extend(messages)
+    def add_messages(self, messages, partition=0):
+        self.topic_partitions[partition]["messages"].extend(messages)
 
     def _create_consumer(self, brokers):
         return {"brokers": brokers}
 
-    def _create_topics(self, topics):
-        self.topic_partitions = topics
+    def _assign_topics(self, topics):
+        pass
 
     def _get_new_messages(self):
         # From Kafka we get a dictionary of topics which contains a list of
@@ -31,52 +30,68 @@ class MockConsumer(Consumer):
         # Recreate the structure here to match that.
         data = {}
 
-        for t in self.topic_partitions:
+        for k, v in self.topic_partitions.items():
             records = []
-            while self.offset < len(self.messages):
-                msg = self.messages[self.offset]
-                records.append(MockConsumerRecord(msg[0], msg[1], msg[2]))
-                self.offset += 1
-            data[t] = records
+            while v["offset"] < len(v["messages"]):
+                msg = v["messages"][v["offset"]]
+                records.append(MockConsumerRecord(msg[0], v["offset"], msg[2]))
+                v["offset"] += 1
+            data[k] = records
         return data
 
-    def _seek_by_offset(self, offset):
-        self.offset = offset
+    def _seek_by_offsets(self, offsets):
+        for tp, offset in zip(self.topic_partitions.values(), offsets):
+            tp["offset"] = offset
 
     def _get_offset_range(self):
-        return 0, len(self.messages) - 1
+        offset_ranges = []
+        for tp in self.topic_partitions.values():
+            if tp["messages"]:
+                offset_ranges.append((0, len(tp["messages"])))
+            else:
+                offset_ranges.append((0, 0))
+
+        return offset_ranges
 
     def _offset_for_time(self, start_time):
-        self.offset = None
-        for i, m in enumerate(self.messages):
-            if m[0] >= start_time:
-                self.offset = i
-                break
+        result = []
+        for tp in self.topic_partitions.values():
+            count = 0
+            found = False
+            for msg in tp["messages"]:
+                if msg[0] >= start_time:
+                    result.append(count)
+                    found = True
+                    break
+                count += 1
+            # If not found append None
+            if not found:
+                result.append(None)
+        return result
 
-        return self.offset
 
-
-def get_fake_event_messages(num_messages):
+def get_fake_event_messages(num_messages, num_partitions=1):
     messages = []
     pulse_time = 0
     # The real gap would be 1/14 but we use 1/20 to make things easier.
     pulse_gap = 50_000_000  # 1/20 * 10**9
     offset = 0
 
-    for _ in range(num_messages):
+    for _ in range(num_messages // num_partitions):
         tofs = []
         dets = []
         for j in range(10):
             tofs.append(j * 1_000_000)
             dets.append(j)
 
-        messages.append(
-            (
-                pulse_time,
-                offset,
-                {"pulse_time": pulse_time, "tofs": tofs, "det_ids": dets},
-            )
-        )
-        pulse_time += pulse_gap
-        offset += 1
+            for n in range(num_partitions):
+                messages.append(
+                    (
+                        pulse_time,
+                        offset,
+                        {"pulse_time": pulse_time, "tofs": tofs, "det_ids": dets},
+                    )
+                )
+                pulse_time += pulse_gap
+            offset += 1
     return messages

@@ -2,6 +2,7 @@ import logging
 from typing import List
 from kafka import KafkaConsumer, TopicPartition
 from kafka.errors import KafkaError
+from just_bin_it.exceptions import KafkaException
 
 
 class Consumer:
@@ -10,6 +11,8 @@ class Consumer:
 
     This contains the least amount of logic so as to make mocking and testing
     easier.
+
+    Note: Can only handle one topic.
     """
 
     def __init__(self, brokers: List[str], topics: List[str]):
@@ -19,27 +22,32 @@ class Consumer:
         :param brokers: The names of the brokers to connect to.
         :param topics: The names of the data topics.
         """
+        self.topic_partitions = []
         try:
             self.consumer = self._create_consumer(brokers)
-            self.topic_partitions = []
-            self._create_topics(topics)
+            self._assign_topics(topics)
         except KafkaError as error:
-            raise Exception(error)
+            raise KafkaException(error)
 
     def _create_consumer(self, brokers):
         return KafkaConsumer(bootstrap_servers=brokers)
 
-    def _create_topics(self, topics):
+    def _assign_topics(self, topics):
+        # Only use the first topic
+        topic = topics[0]
+
         available_topics = self.consumer.topics()
 
-        for t in topics:
-            if t not in available_topics:
-                raise Exception(f"Requested topic {t} not available")
+        if topic not in available_topics:
+            raise KafkaException(f"Requested topic {topic} not available")
 
-            topic = TopicPartition(t, 0)
-            self.topic_partitions.append(topic)
-            self.consumer.assign([topic])
-            self.consumer.seek_to_end(topic)
+        partition_numbers = self.consumer.partitions_for_topic(topic)
+
+        for pn in partition_numbers:
+            self.topic_partitions.append(TopicPartition(topic, pn))
+
+        self.consumer.assign(self.topic_partitions)
+        self.consumer.seek_to_end()
 
     def _get_new_messages(self):
         data = self.consumer.poll(5)
@@ -67,26 +75,29 @@ class Consumer:
         return self._offset_for_time(start_time)
 
     def _offset_for_time(self, start_time):
-        # TODO: what about more than one topic?
-        answer = self.consumer.offsets_for_times({self.topic_partitions[0]: start_time})
-        if answer[self.topic_partitions[0]] is None:
-            # Either the topic is empty or the requested time is greater than
-            # highest message time in the topic.
-            return None
-        return answer[self.topic_partitions[0]].offset
+        partitions = {tp: start_time for tp in self.topic_partitions}
+        offsets = self.consumer.offsets_for_times(partitions)
+        result = []
+        for tp in self.topic_partitions:
+            if offsets[tp] is None:
+                # Either the topic is empty or the requested time is greater than
+                # highest message time in the topic.
+                result.append(None)
+            else:
+                result.append(offsets[tp].offset)
+        return result
 
-    def seek_by_offset(self, offset):
+    def seek_by_offsets(self, offsets):
         """
-        Move to the specified offset.
+        Move to the specified offsets.
 
-        :param offset: The requested offset
-        :return:
+        :param offsets: The requested offsets.
         """
-        self._seek_by_offset(offset)
+        self._seek_by_offsets(offsets)
 
-    def _seek_by_offset(self, offset):
-        # TODO: what about more than one topic?
-        self.consumer.seek(self.topic_partitions[0], offset)
+    def _seek_by_offsets(self, offsets):
+        for tp, offset in zip(self.topic_partitions, offsets):
+            self.consumer.seek(tp, offset)
 
     def get_offset_range(self):
         """
@@ -97,11 +108,10 @@ class Consumer:
         return self._get_offset_range()
 
     def _get_offset_range(self):
-        # TODO: what about more than one topic?
-        lowest = self.consumer.beginning_offsets(self.topic_partitions)[
-            self.topic_partitions[0]
-        ]
-        highest = self.consumer.end_offsets(self.topic_partitions)[
-            self.topic_partitions[0]
-        ]
-        return lowest, highest
+        lowest = self.consumer.beginning_offsets(self.topic_partitions)
+        highest = self.consumer.end_offsets(self.topic_partitions)
+        offset_ranges = []
+        for tp in self.topic_partitions:
+            offset_ranges.append((lowest[tp], highest[tp]))
+
+        return offset_ranges
