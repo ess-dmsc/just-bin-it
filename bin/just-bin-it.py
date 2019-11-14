@@ -146,7 +146,7 @@ class Main:
             self.histogrammer.publish_histograms(time.time_ns())
 
             hist_stats = self.histogrammer.get_histogram_stats()
-            logging.warning("%s", json.dumps(hist_stats))
+            logging.info("%s", json.dumps(hist_stats))
 
             if self.stats_publisher:
                 try:
