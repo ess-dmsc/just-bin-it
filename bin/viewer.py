@@ -1,42 +1,36 @@
 import argparse
 import os
 import sys
-import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.sources import HistogramSource
+from just_bin_it.utilities.plotter import plot_histograms
 
 
-def plot_histogram(hist):
+def convert_for_plotting(histogram):
     """
-    Plot a histogram.
+    Convert histogram data to a form for plotting.
 
-    :param hist: The histogram to plot.
+    :param histogram: The histogram to convert.
     """
-    import matplotlib
 
-    matplotlib.use("TkAgg")
-    from matplotlib import pyplot as plt
+    class Histogram:
+        pass
 
-    n_dims = len(hist["dims"])
+    h = Histogram()
 
-    if n_dims == 1:
-        edges = hist["dims"][0]["edges"]
-        data = hist["data"]
-        width = 0.8 * (edges[1] - edges[0])
-        plt.bar(edges[:-1], data, align="edge", width=width)
-        plt.show()
-    elif n_dims == 2:
-        x_edges = hist["dims"][0]["edges"]
-        y_edges = hist["dims"][1]["edges"]
-        data = hist["data"].T
+    if len(histogram["dims"]) == 1:
+        # 1-D
+        h.x_edges = histogram["dims"][0]["edges"]
+    else:
+        # 2-D
+        h.x_edges = histogram["dims"][0]["edges"]
+        h.y_edges = histogram["dims"][1]["edges"]
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        x, y = np.meshgrid(x_edges, y_edges)
-        ax.pcolormesh(x, y, data)
-        plt.show()
+    h.data = histogram["data"]
+
+    return [h]
 
 
 def main(brokers, topic):
@@ -55,9 +49,10 @@ def main(brokers, topic):
         buffs = hist_source.get_new_data()
 
     # Only care about the most recent histogram and don't care about kafka timestamps
-    _, _, hist = buffs[-1]
+    _, _, hist_data = buffs[-1]
 
-    plot_histogram(hist)
+    hists = convert_for_plotting(hist_data)
+    plot_histograms(hists)
 
 
 if __name__ == "__main__":

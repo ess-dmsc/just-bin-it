@@ -4,7 +4,6 @@ import logging
 import os
 import sys
 import time
-import numpy as np
 import graphyte
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -13,8 +12,8 @@ from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
-from just_bin_it.histograms.histogram1d import Histogram1d
 from just_bin_it.histograms.histogrammer import create_histogrammer
+from just_bin_it.utilities.plotter import plot_histograms
 
 
 class StatisticsPublisher:
@@ -42,31 +41,6 @@ class StatisticsPublisher:
                 stat["sum"],
                 timestamp=stat["last_pulse_time"] / 10 ** 9,
             )
-
-
-def plot_histogram(hist):
-    """
-    Plot a histogram.
-
-    :param hist: The histogram to plot.
-    """
-    import matplotlib
-
-    matplotlib.use("TkAgg")
-    from matplotlib import pyplot as plt
-
-    if isinstance(hist, Histogram1d):
-        width = 0.8 * (hist.x_edges[1] - hist.x_edges[0])
-        center = (hist.x_edges[:-1] + hist.x_edges[1:]) / 2
-        plt.bar(center, hist.data, align="center", width=width)
-        plt.show()
-    else:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        x, y = np.meshgrid(hist.x_edges, hist.y_edges)
-        # Need to transpose the data for display
-        ax.pcolormesh(x, y, hist.data.T)
-        plt.show()
 
 
 def load_json_config_file(file):
@@ -165,8 +139,7 @@ class Main:
                 self.histogrammer.add_data(event_buffer)
 
                 if self.one_shot:
-                    # Only plot the first histogram
-                    plot_histogram(self.histogrammer.histograms[0])
+                    plot_histograms(self.histogrammer.histograms)
                     # Exit the program when the graph is closed
                     return
 
