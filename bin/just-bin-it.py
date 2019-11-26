@@ -90,10 +90,9 @@ class Main:
         self.stats_publisher = stats_publisher
         # How often to publish in ms.
         self.publish_interval = 500
+        self.time_to_publish = 0
 
     def run(self):
-        time_to_publish = 0
-
         if self.simulation:
             logging.warning("RUNNING IN SIMULATION MODE")
 
@@ -149,21 +148,22 @@ class Main:
 
             # Only publish at specified rate
             curr_time = time.time_ns()
-            if curr_time // 1_000_000 > time_to_publish:
-                self.histogrammer.publish_histograms(curr_time)
-                hist_stats = self.histogrammer.get_histogram_stats()
-                logging.warning("%s", json.dumps(hist_stats))
-
-                if self.stats_publisher:
-                    try:
-                        self.stats_publisher.send_histogram_stats(hist_stats)
-                    except Exception as error:
-                        logging.error("Could not publish statistics: %s", error)
-
-                time_to_publish = curr_time // 1_000_000 + self.publish_interval
-                time_to_publish -= time_to_publish % self.publish_interval
+            if curr_time // 1_000_000 > self.time_to_publish:
+                self.publish(curr_time)
 
             time.sleep(0.01)
+
+    def publish(self, curr_time):
+        self.histogrammer.publish_histograms(curr_time)
+        hist_stats = self.histogrammer.get_histogram_stats()
+        logging.warning("%s", json.dumps(hist_stats))
+        if self.stats_publisher:
+            try:
+                self.stats_publisher.send_histogram_stats(hist_stats)
+            except Exception as error:
+                logging.error("Could not publish statistics: %s", error)
+        self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
+        self.time_to_publish -= self.time_to_publish % self.publish_interval
 
     def create_config_listener(self):
         """
