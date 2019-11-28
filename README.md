@@ -102,7 +102,7 @@ A JSON histogramming configuration has the following parameters:
 * "histograms" (array of dicts): the histograms to create, contains the following:
     * "type" (string): the histogram type (hist1d or hist2d)
     * "tof_range" (array of ints): the time-of-flight range to histogram
-    * "det_range" (array of ints): the range of detectors to histogram [2-D only]
+    * "det_range" (array of ints): the range of detectors to histogram
     * "num_bins" (int): the number of histogram bins
     * "topic" (string): the topic to write histogram data to
     * "source" (string): the name of the source to accept data from
