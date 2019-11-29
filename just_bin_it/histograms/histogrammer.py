@@ -1,7 +1,6 @@
 import json
-import time
 from just_bin_it.endpoints.histogram_sink import HistogramSink
-from just_bin_it.histograms.histogram_factory import HistogramFactory
+from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
 
 
 HISTOGRAM_STATES = {
@@ -11,35 +10,16 @@ HISTOGRAM_STATES = {
 }
 
 
-def create_histogrammer(producer, configuration, current_time=None):
+def create_histogrammer(producer, configuration):
     """
     Creates a fully configured histogrammer.
 
     :param producer: The
     :param configuration: The configuration message.
-    :param current_time: Used to set start time if interval is supplied (ms).
     :return: The created histogrammer.
     """
-    histograms = HistogramFactory.generate(configuration)
-    start = configuration["start"] if "start" in configuration else None
-    stop = configuration["stop"] if "stop" in configuration else None
-
-    # Interval is configured in seconds but needs to be converted to milliseconds
-    interval = (
-        configuration["interval"] * 10 ** 3 if "interval" in configuration else None
-    )
-
-    if interval and (start or stop):
-        raise Exception(
-            "Cannot define 'interval' in combination with start and/or stop"
-        )
-
-    if interval and interval < 0:
-        raise Exception("Interval cannot be negative")
-
-    if interval:
-        start = int(current_time) if current_time else int(time.time() * 1000)
-        stop = start + interval
+    start, stop, hist_configs = parse_config(configuration)
+    histograms = HistogramFactory.generate(hist_configs)
 
     return Histogrammer(producer, histograms, start, stop)
 

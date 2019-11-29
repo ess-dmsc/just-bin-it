@@ -1,8 +1,43 @@
 import logging
+import time
 from just_bin_it.histograms.det_histogram import DetHistogram
 from just_bin_it.histograms.histogram1d import Histogram1d
 from just_bin_it.histograms.histogram2d import Histogram2d
 from just_bin_it.histograms.single_event_histogram1d import SingleEventHistogram1d
+
+
+def parse_config(configuration, current_time=None):
+    brokers = configuration["data_brokers"]
+    topics = configuration["data_topics"]
+    start = configuration["start"] if "start" in configuration else None
+    stop = configuration["stop"] if "stop" in configuration else None
+
+    # Interval is configured in seconds but needs to be converted to milliseconds
+    interval = (
+        configuration["interval"] * 10 ** 3 if "interval" in configuration else None
+    )
+
+    if interval and (start or stop):
+        raise Exception(
+            "Cannot define 'interval' in combination with start and/or stop"
+        )
+
+    if interval and interval < 0:
+        raise Exception("Interval cannot be negative")
+
+    if interval:
+        start = int(current_time) if current_time else int(time.time() * 1000)
+        stop = start + interval
+
+    hist_configs = []
+
+    if "histograms" in configuration:
+        for hist in configuration["histograms"]:
+            hist["data_brokers"] = brokers
+            hist["data_topics"] = topics
+            hist_configs.append(hist)
+
+    return start, stop, hist_configs
 
 
 class HistogramFactory:
@@ -16,10 +51,10 @@ class HistogramFactory:
         """
         histograms = []
 
-        if "histograms" not in configuration:
-            return histograms
+        # if "histograms" not in configuration:
+        #     return histograms
 
-        for h in configuration["histograms"]:
+        for h in configuration:
             hist = None
 
             hist_type = h["type"]
