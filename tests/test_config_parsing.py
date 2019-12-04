@@ -54,6 +54,22 @@ CONFIG_INTERVAL = {
     ],
 }
 
+CONFIG_NO_DET_RANGE = {
+    "cmd": "config",
+    "data_brokers": ["localhost:9092"],
+    "data_topics": ["junk_data_2"],
+    "interval": 5,
+    "histograms": [
+        {
+            "type": "hist1d",
+            "tof_range": [0, 100000000],
+            "num_bins": 50,
+            "topic": "hist-topic1",
+            "id": "abcdef",
+        }
+    ],
+}
+
 
 class TestConfigHandler:
     @pytest.fixture(autouse=True)

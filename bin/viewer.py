@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_consumer import Consumer
@@ -22,11 +23,11 @@ def convert_for_plotting(histogram):
 
     if len(histogram["dims"]) == 1:
         # 1-D
-        h.x_edges = histogram["dims"][0]["edges"]
+        h.x_edges = np.array(histogram["dims"][0]["edges"])
     else:
         # 2-D
-        h.x_edges = histogram["dims"][0]["edges"]
-        h.y_edges = histogram["dims"][1]["edges"]
+        h.x_edges = np.array(histogram["dims"][0]["edges"])
+        h.y_edges = np.array(histogram["dims"][1]["edges"])
 
     h.data = histogram["data"]
 

@@ -12,8 +12,7 @@ from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
-from just_bin_it.histograms.histogrammer import create_histogrammer
-from just_bin_it.utilities.plotter import plot_histograms
+from just_bin_it.histograms.histogrammer import create_histogrammer, parse_config
 
 
 class StatisticsPublisher:
@@ -88,6 +87,7 @@ class Main:
         self.config_topic = config_topic
         self.config_listener = None
         self.stats_publisher = stats_publisher
+        self.hist_process = []
 
     def run(self):
         if self.simulation:
@@ -108,53 +108,37 @@ class Main:
 
                 try:
                     logging.warning("New configuration command received")
-                    self.handle_command_message(msg)
-                    if not self.one_shot:
-                        # Publish initial empty histograms.
-                        self.histogrammer.publish_histograms()
+
+                    # TODO: stop existing processes here?
+
+                    start, stop, hist_configs = parse_config(msg)
+
+                    # TODO: Check kafka settings etc here?
+
+                    for hist in hist_configs:
+                        from just_bin_it.histograms.histogram_process import (
+                            HistogramProcess,
+                        )
+
+                        p = HistogramProcess(hist, start, stop)
+                        self.hist_process.append(p)
+
+                    # TODO: Handle different msg types
+                    # self.handle_command_message(msg)
+                    # if not self.one_shot:
+                    #     # Publish initial empty histograms.
+                    #     self.histogrammer.publish_histograms()
                 except Exception as error:
                     logging.error("Could not handle configuration: %s", error)
 
-            if self.event_source is None:
-                # No event source means we are waiting for a configuration.
-                continue
+            # TODO:
+            # if self.stats_publisher:
+            #     try:
+            #         self.stats_publisher.send_histogram_stats(hist_stats)
+            #     except Exception as error:
+            #         logging.error("Could not publish statistics: %s", error)
 
-            event_buffer = []
-
-            while len(event_buffer) == 0:
-                event_buffer = self.event_source.get_new_data()
-
-                # Check to see if there is a new configuration message
-                if self.config_listener.check_for_messages():
-                    break
-
-                # See if the stop time has been exceeded
-                if len(event_buffer) == 0:
-                    if self.histogrammer.check_stop_time_exceeded(
-                        time.time_ns() // 1_000_000
-                    ):
-                        break
-
-            if event_buffer:
-                self.histogrammer.add_data(event_buffer)
-
-                if self.one_shot:
-                    plot_histograms(self.histogrammer.histograms)
-                    # Exit the program when the graph is closed
-                    return
-
-            self.histogrammer.publish_histograms(time.time_ns())
-
-            hist_stats = self.histogrammer.get_histogram_stats()
-            logging.info("%s", json.dumps(hist_stats))
-
-            if self.stats_publisher:
-                try:
-                    self.stats_publisher.send_histogram_stats(hist_stats)
-                except Exception as error:
-                    logging.error("Could not publish statistics: %s", error)
-
-            time.sleep(0.01)
+            time.sleep(0.1)
 
     def create_config_listener(self):
         """

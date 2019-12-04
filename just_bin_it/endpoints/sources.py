@@ -102,7 +102,7 @@ class HistogramSource(BaseSource):
 class SimulatedEventSource:
     def __init__(self, config):
         self.tof_range = (0, 100_000_000)
-        self.det_id = (1, 512)
+        self.det_range = (1, 512)
         self.num_events = 1000
 
         # Based on the config, guess gaussian settings.
