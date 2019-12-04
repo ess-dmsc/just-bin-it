@@ -73,7 +73,7 @@ def process(msg_queue, configuration, start, stop, simulation=False):
         histogrammer.publish_histograms(time.time_ns())
 
         hist_stats = histogrammer.get_histogram_stats()
-        logging.warning("%s", json.dumps(hist_stats))
+        logging.info("%s", json.dumps(hist_stats))
 
         # TODO: How to publish?
         # if self.stats_publisher:
