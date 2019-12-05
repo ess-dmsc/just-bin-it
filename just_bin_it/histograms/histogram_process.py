@@ -82,7 +82,7 @@ def process(msg_queue, configuration, start, stop, simulation=False):
         #     except Exception as error:
         #         logging.error("Could not publish statistics: %s", error)
 
-        time.sleep(0.1)
+        time.sleep(0.01)
 
 
 class HistogramProcess:
@@ -95,3 +95,4 @@ class HistogramProcess:
 
     def stop_process(self):
         self.queue.put("quit")
+        self.process.join()
