@@ -45,21 +45,23 @@ def create_histogrammer(configuration, start, stop):
     return Histogrammer(producer, histograms, start, stop)
 
 
-def publish_data(histogrammer, current_time):
+def publish_data(histogrammer, current_time, stats_queue):
     """
     Publish data, both histograms and statistics
 
     :param histogrammer: The histogrammer.
-    :param current_time: The time to associate the publishing with
+    :param current_time: The time to associate the publishing with.
+    :param stats_queue: The queue to send statistics to.
     """
     histogrammer.publish_histograms(current_time)
     hist_stats = histogrammer.get_histogram_stats()
     logging.info("%s", json.dumps(hist_stats))
-    # TODO: Publish to graphana
+    stats_queue.put(hist_stats)
 
 
 def process(
     msg_queue,
+    stats_queue,
     configuration,
     start,
     stop,
@@ -75,6 +77,7 @@ def process(
     within the process
 
     :param msg_queue: The message queue for communicating with the process.
+    :param stats_queue: The queue to send statistics to.
     :param configuration: The histogramming configuration.
     :param start: The start time.
     :param stop: The stop time.
@@ -124,7 +127,7 @@ def process(
         # Only publish at specified rate
         curr_time = time.time_ns()
         if curr_time // 1_000_000 > time_to_publish:
-            publish_data(histogrammer, curr_time)
+            publish_data(histogrammer, curr_time, stats_queue)
             time_to_publish = curr_time // 1_000_000 + publish_interval
             time_to_publish -= time_to_publish % publish_interval
 
@@ -139,12 +142,28 @@ class HistogramProcess:
         ):
             raise KafkaException("Invalid event source settings")
 
-        self.queue = Queue()
-        self.process = Process(
-            target=process, args=(self.queue, configuration, start, stop, simulation)
+        self._msg_queue = Queue()
+        self._stats_queue = Queue()
+        self._process = Process(
+            target=process,
+            args=(
+                self._msg_queue,
+                self._stats_queue,
+                configuration,
+                start,
+                stop,
+                simulation,
+            ),
         )
-        self.process.start()
+        self._process.start()
 
     def stop(self):
-        self.queue.put("quit")
-        self.process.join()
+        self._msg_queue.put("quit")
+        self._process.join()
+
+    def get_stats(self):
+        # Empty the queue and only return the most recent value
+        most_recent = None
+        while not self._stats_queue.empty():
+            most_recent = self._stats_queue.get(False)
+        return most_recent

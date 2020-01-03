@@ -57,6 +57,9 @@ class Main:
         self.config_listener = None
         self.stats_publisher = stats_publisher
         self.hist_process = []
+        # How often to publish in ms.
+        self.publish_interval = 1000
+        self.time_to_publish = 0
 
     def run(self):
         if self.simulation:
@@ -82,14 +85,24 @@ class Main:
                 except Exception as error:
                     logging.error("Could not handle configuration: %s", error)
 
-            # TODO:
-            # if self.stats_publisher:
-            #     try:
-            #         self.stats_publisher.send_histogram_stats(hist_stats)
-            #     except Exception as error:
-            #         logging.error("Could not publish statistics: %s", error)
+            # Handle publishing of statistics
+            curr_time = time.time_ns()
+            if curr_time // 1_000_000 > self.time_to_publish:
+                self.publish(curr_time)
 
             time.sleep(0.1)
+
+    def publish(self, curr_time):
+        if self.stats_publisher:
+            for i, process in enumerate(self.hist_process):
+                try:
+                    stats = self.hist_process[i].get_stats()
+                    if stats:
+                        self.stats_publisher.send_histogram_stats(stats, i)
+                except Exception as error:
+                    logging.error("Could not publish statistics: %s", error)
+        self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
+        self.time_to_publish -= self.time_to_publish % self.publish_interval
 
     def create_config_listener(self):
         """
@@ -127,7 +140,7 @@ class Main:
             # TODO: Check kafka settings etc here?
 
             for hist in hist_configs:
-                process = HistogramProcess(hist, start, stop)
+                process = HistogramProcess(hist, start, stop, self.simulation)
                 self.hist_process.append(process)
         else:
             raise Exception(f"Unknown command type '{message['cmd']}'")

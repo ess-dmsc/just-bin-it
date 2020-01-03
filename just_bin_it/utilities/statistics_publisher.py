@@ -19,10 +19,15 @@ class StatisticsPublisher:
         # Initialise the connection
         graphyte.init(server, port=port, prefix=prefix)
 
-    def send_histogram_stats(self, hist_stats):
+    def send_histogram_stats(self, hist_stats, process_index):
         for i, stat in enumerate(hist_stats):
             graphyte.send(
-                f"{self.metric}{i}",
+                f"{self.metric}{process_index}-{i}-sum",
                 stat["sum"],
+                timestamp=stat["last_pulse_time"] / 10 ** 9,
+            )
+            graphyte.send(
+                f"{self.metric}{process_index}-{i}-diff",
+                stat["diff"],
                 timestamp=stat["last_pulse_time"] / 10 ** 9,
             )

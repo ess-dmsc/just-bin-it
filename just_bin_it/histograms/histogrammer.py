@@ -48,6 +48,7 @@ class Histogrammer:
         self._stop_publishing = False
         self._started = False
         self._stop_leeway = 5000
+        self._previous_sum = [0 for _ in self.histograms]
 
     def add_data(self, event_buffer, simulation=False):
         """
@@ -110,8 +111,9 @@ class Histogrammer:
         """
         Clear/zero the histograms but retain the shape etc.
         """
-        for hist in self.histograms:
+        for i, hist in enumerate(self.histograms):
             hist.clear_data()
+            self._previous_sum[i] = 0
 
     def get_histogram_stats(self):
         """
@@ -121,8 +123,17 @@ class Histogrammer:
         """
         results = []
 
-        for h in self.histograms:
-            results.append({"last_pulse_time": h.last_pulse_time, "sum": h.data.sum()})
+        for i, hist in enumerate(self.histograms):
+            total_counts = hist.data.sum()
+            diff = total_counts - self._previous_sum[i]
+            self._previous_sum[i] = total_counts
+            results.append(
+                {
+                    "last_pulse_time": hist.last_pulse_time,
+                    "sum": total_counts,
+                    "diff": diff,
+                }
+            )
 
         return results
 
