@@ -7,6 +7,7 @@ from just_bin_it.endpoints.serialisation import (
     deserialise_hs00,
     get_schema,
 )
+from just_bin_it.exceptions import JustBinItException
 
 
 class TestDeserialisationEv42:
@@ -73,5 +74,5 @@ class TestDeserialisationHs00:
     def test_if_schema_is_incorrect_then_throws(self):
         new_buf = self.buf[:4] + b"na12" + self.buf[8:]
 
-        with pytest.raises(Exception):
+        with pytest.raises(JustBinItException):
             deserialise_hs00(new_buf)

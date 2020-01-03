@@ -118,8 +118,8 @@ class Main:
             self.histogrammer.clear_histograms()
         elif message["cmd"] == "config":
             logging.info("Stopping existing processes")
-            for proc in self.hist_process:
-                proc.stop_process()
+            for process in self.hist_process:
+                process.stop()
             self.hist_process.clear()
 
             start, stop, hist_configs = parse_config(message)
@@ -127,8 +127,8 @@ class Main:
             # TODO: Check kafka settings etc here?
 
             for hist in hist_configs:
-                p = HistogramProcess(hist, start, stop)
-                self.hist_process.append(p)
+                process = HistogramProcess(hist, start, stop)
+                self.hist_process.append(process)
         else:
             raise Exception(f"Unknown command type '{message['cmd']}'")
 
