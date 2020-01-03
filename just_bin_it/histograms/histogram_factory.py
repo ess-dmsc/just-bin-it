@@ -51,9 +51,6 @@ class HistogramFactory:
         """
         histograms = []
 
-        # if "histograms" not in configuration:
-        #     return histograms
-
         for h in configuration:
             hist = None
 
