@@ -314,8 +314,23 @@ class TestHistogrammer:
 
         assert stats[0]["last_pulse_time"] == 1002 * 10 ** 9
         assert stats[0]["sum"] == 28
+        assert stats[0]["diff"] == 28
         assert stats[1]["last_pulse_time"] == 1002 * 10 ** 9
         assert stats[1]["sum"] == 28
+        assert stats[1]["diff"] == 28
+
+    def test_get_stats_returns_correct_counts_since_last_request(self):
+        histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
+        histogrammer.add_data(EVENT_DATA)
+        histogrammer.get_histogram_stats()
+        histogrammer.add_data(EVENT_DATA)
+        histogrammer.get_histogram_stats()
+        histogrammer.add_data(EVENT_DATA)
+
+        stats = histogrammer.get_histogram_stats()
+
+        assert stats[0]["diff"] == 28
+        assert stats[1]["diff"] == 28
 
     def test_get_stats_returns_correct_stats_2d(self):
         histogrammer = create_histogrammer(self.mock_producer, START_2D_CONFIG)
@@ -325,8 +340,10 @@ class TestHistogrammer:
 
         assert stats[0]["last_pulse_time"] == 1002 * 10 ** 9
         assert stats[0]["sum"] == 28
+        assert stats[0]["diff"] == 28
         assert stats[1]["last_pulse_time"] == 1002 * 10 ** 9
         assert stats[1]["sum"] == 28
+        assert stats[1]["diff"] == 28
 
     def test_get_stats_with_no_histogram_returns_empty(self):
         histogrammer = create_histogrammer(self.mock_producer, NO_HIST_CONFIG)
@@ -384,6 +401,20 @@ class TestHistogrammer:
 
         assert histogrammer.histograms[0].data.sum() == 0
         assert histogrammer.histograms[1].data.sum() == 0
+
+    def test_clear_histograms_resets_statistics(self):
+        histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
+        histogrammer.add_data(EVENT_DATA)
+        histogrammer.get_histogram_stats()
+
+        histogrammer.clear_histograms()
+
+        stats = histogrammer.get_histogram_stats()
+
+        assert stats[0]["sum"] == 0
+        assert stats[0]["diff"] == 0
+        assert stats[1]["sum"] == 0
+        assert stats[1]["diff"] == 0
 
     def test_if_no_data_after_start_time_and_stop_time_exceeded_histogram_is_finished(
         self

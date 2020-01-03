@@ -37,8 +37,13 @@ class StatisticsPublisher:
     def send_histogram_stats(self, hist_stats):
         for i, stat in enumerate(hist_stats):
             graphyte.send(
-                f"{self.metric}{i}",
+                f"{self.metric}{i}-sum",
                 stat["sum"],
+                timestamp=stat["last_pulse_time"] / 10 ** 9,
+            )
+            graphyte.send(
+                f"{self.metric}{i}-diff",
+                stat["diff"],
                 timestamp=stat["last_pulse_time"] / 10 ** 9,
             )
 
@@ -88,6 +93,9 @@ class Main:
         self.config_topic = config_topic
         self.config_listener = None
         self.stats_publisher = stats_publisher
+        # How often to publish in ms.
+        self.publish_interval = 500
+        self.time_to_publish = 0
 
     def run(self):
         if self.simulation:
@@ -111,7 +119,7 @@ class Main:
                     self.handle_command_message(msg)
                     if not self.one_shot:
                         # Publish initial empty histograms.
-                        self.histogrammer.publish_histograms()
+                        self.histogrammer.publish_histograms(time.time_ns())
                 except Exception as error:
                     logging.error("Could not handle configuration: %s", error)
 
@@ -143,18 +151,24 @@ class Main:
                     # Exit the program when the graph is closed
                     return
 
-            self.histogrammer.publish_histograms(time.time_ns())
-
-            hist_stats = self.histogrammer.get_histogram_stats()
-            logging.info("%s", json.dumps(hist_stats))
-
-            if self.stats_publisher:
-                try:
-                    self.stats_publisher.send_histogram_stats(hist_stats)
-                except Exception as error:
-                    logging.error("Could not publish statistics: %s", error)
+            # Only publish at specified rate
+            curr_time = time.time_ns()
+            if curr_time // 1_000_000 > self.time_to_publish:
+                self.publish(curr_time)
 
             time.sleep(0.01)
+
+    def publish(self, curr_time):
+        self.histogrammer.publish_histograms(curr_time)
+        hist_stats = self.histogrammer.get_histogram_stats()
+        logging.warning("%s", json.dumps(hist_stats))
+        if self.stats_publisher:
+            try:
+                self.stats_publisher.send_histogram_stats(hist_stats)
+            except Exception as error:
+                logging.error("Could not publish statistics: %s", error)
+        self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
+        self.time_to_publish -= self.time_to_publish % self.publish_interval
 
     def create_config_listener(self):
         """
