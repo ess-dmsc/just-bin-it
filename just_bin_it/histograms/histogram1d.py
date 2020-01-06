@@ -7,7 +7,7 @@ class Histogram1d:
     """One dimensional histogram for time-of-flight."""
 
     def __init__(
-        self, topic, num_bins, tof_range, det_range=None, source=None, identifier=""
+        self, topic, num_bins, tof_range, det_range=None, source="", identifier=""
     ):
         """
         Constructor.
@@ -27,10 +27,10 @@ class Histogram1d:
         self.tof_range = tof_range
         self.det_range = det_range
         self.num_bins = num_bins
-        self.source = source
         self.topic = topic
         self.last_pulse_time = 0
         self.identifier = identifier
+        self.source = source if source.strip() != "" else None
 
         self._intialise_histogram()
 

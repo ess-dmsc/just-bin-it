@@ -59,7 +59,7 @@ class HistogramFactory:
             num_bins = h["num_bins"] if "num_bins" in h else None
             tof_range = tuple(h["tof_range"]) if "tof_range" in h else None
             det_range = tuple(h["det_range"]) if "det_range" in h else None
-            source = h["source"] if "source" in h else None
+            source = h["source"] if "source" in h else ""
             identifier = h["id"] if "id" in h else ""
             width = h["width"] if "width" in h else 512
             height = h["height"] if "height" in h else 512

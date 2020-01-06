@@ -5,9 +5,7 @@ import numpy as np
 class Histogram2d:
     """Two dimensional histogram for time-of-flight."""
 
-    def __init__(
-        self, topic, num_bins, tof_range, det_range, source=None, identifier=""
-    ):
+    def __init__(self, topic, num_bins, tof_range, det_range, source="", identifier=""):
         """
         Constructor.
 
@@ -27,7 +25,7 @@ class Histogram2d:
         self.topic = topic
         self.last_pulse_time = 0
         self.identifier = identifier
-        self.source = source
+        self.source = source if source.strip() != "" else None
 
         self._intialise_histogram()
 
