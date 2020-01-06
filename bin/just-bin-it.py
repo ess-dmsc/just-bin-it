@@ -8,6 +8,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.config_listener import ConfigListener
 from just_bin_it.endpoints.kafka_consumer import Consumer
+from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.histograms.histogrammer import parse_config
 from just_bin_it.histograms.histogram_process import HistogramProcess
@@ -35,6 +36,7 @@ class Main:
         self,
         config_brokers,
         config_topic,
+        heartbeat_topic,
         simulation,
         initial_config=None,
         stats_publisher=None,
@@ -44,6 +46,7 @@ class Main:
 
         :param config_brokers: The brokers to listen for the configuration commands on.
         :param config_topic: The topic to listen for commands on.
+        :param heartbeat_topic: The topic where to publish heartbeat messages.
         :param simulation: Run in simulation mode.
         :param initial_config: A histogram configuration to start with.
         :param stats_publisher: Publisher for the histograms statistics.
@@ -54,12 +57,15 @@ class Main:
         self.initial_config = initial_config
         self.config_brokers = config_brokers
         self.config_topic = config_topic
+        self.heartbeat_topic = heartbeat_topic
         self.config_listener = None
+        self.heartbeat_producer = None
         self.stats_publisher = stats_publisher
         self.hist_process = []
-        # How often to publish in ms.
-        self.publish_interval = 1000
-        self.time_to_publish = 0
+        self.stats_interval_ms = 1000
+        self.time_to_publish_stats = 0
+        self.heartbeat_interval_ms = 1000
+        self.time_to_publish_heartbeat = 0
 
     def run(self):
         if self.simulation:
@@ -67,6 +73,8 @@ class Main:
 
         # Blocks until can connect to the config topic.
         self.create_config_listener()
+
+        self.heartbeat_producer = Producer(self.config_brokers)
 
         while True:
             # Handle configuration messages
@@ -87,12 +95,24 @@ class Main:
 
             # Handle publishing of statistics
             curr_time = time.time_ns()
-            if curr_time // 1_000_000 > self.time_to_publish:
-                self.publish(curr_time)
+            if curr_time // 1_000_000 > self.time_to_publish_stats:
+                self.publish_stats(curr_time)
+
+            if curr_time // 1_000_000 > self.time_to_publish_heartbeat:
+                self.publish_heartbeat(curr_time)
 
             time.sleep(0.1)
 
-    def publish(self, curr_time):
+    def publish_heartbeat(self, curr_time):
+        self.heartbeat_producer.publish_message(self.heartbeat_topic, b"Hello")
+        self.time_to_publish_heartbeat = (
+            curr_time // 1_000_000 + self.heartbeat_interval_ms
+        )
+        self.time_to_publish_heartbeat -= (
+            self.time_to_publish_heartbeat % self.heartbeat_interval_ms
+        )
+
+    def publish_stats(self, curr_time):
         if self.stats_publisher:
             for i, process in enumerate(self.hist_process):
                 try:
@@ -101,8 +121,10 @@ class Main:
                         self.stats_publisher.send_histogram_stats(stats, i)
                 except Exception as error:
                     logging.error("Could not publish statistics: %s", error)
-        self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
-        self.time_to_publish -= self.time_to_publish % self.publish_interval
+        self.time_to_publish_stats = curr_time // 1_000_000 + self.stats_interval_ms
+        self.time_to_publish_stats -= (
+            self.time_to_publish_stats % self.stats_interval_ms
+        )
 
     def create_config_listener(self):
         """
@@ -127,8 +149,8 @@ class Main:
         :param message: The message.
         """
         if message["cmd"] == "restart":
-            # TODO: Sort this out
-            self.histogrammer.clear_histograms()
+            for process in self.hist_process:
+                process.clear()
         elif message["cmd"] == "config":
             logging.info("Stopping existing processes")
             for process in self.hist_process:
@@ -160,7 +182,15 @@ if __name__ == "__main__":
     )
 
     required_args.add_argument(
-        "-t", "--topic", type=str, help="the configuration topic", required=True
+        "-t", "--conf-topic", type=str, help="the configuration topic", required=True
+    )
+
+    required_args.add_argument(
+        "-hb",
+        "--hb-topic",
+        type=str,
+        help="the topic where the heartbeat is published",
+        required=True,
     )
 
     parser.add_argument(
@@ -188,7 +218,7 @@ if __name__ == "__main__":
         "-l",
         "--log-level",
         type=int,
-        default=3,
+        default=2,
         help="sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.",
     )
 
@@ -216,6 +246,11 @@ if __name__ == "__main__":
         logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 
     main = Main(
-        args.brokers, args.topic, args.simulation_mode, init_hist_json, stats_publisher
+        args.brokers,
+        args.conf_topic,
+        args.hb_topic,
+        args.simulation_mode,
+        init_hist_json,
+        stats_publisher,
     )
     main.run()

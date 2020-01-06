@@ -110,6 +110,9 @@ def process(
                     logging.info("Stopping histogramming process")
                     exit_requested = True
                     break
+                elif msg == "clear":
+                    logging.info("Clearing histograms")
+                    histogrammer.clear_histograms()
 
             if exit_requested:
                 break
@@ -159,6 +162,10 @@ class HistogramProcess:
 
     def stop(self):
         self._msg_queue.put("quit")
+        self._process.join()
+
+    def clear(self):
+        self._msg_queue.put("clear")
         self._process.join()
 
     def get_stats(self):
