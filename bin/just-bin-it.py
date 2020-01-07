@@ -104,7 +104,10 @@ class Main:
             time.sleep(0.1)
 
     def publish_heartbeat(self, curr_time):
-        self.heartbeat_producer.publish_message(self.heartbeat_topic, b"Hello")
+        msg = {"message": "hello", "message_interval": self.heartbeat_interval_ms}
+        self.heartbeat_producer.publish_message(
+            self.heartbeat_topic, bytes(json.dumps(msg), "utf-8")
+        )
         self.time_to_publish_heartbeat = (
             curr_time // 1_000_000 + self.heartbeat_interval_ms
         )
