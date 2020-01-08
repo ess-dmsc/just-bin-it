@@ -114,9 +114,6 @@ def process(
                     logging.info("Clearing histograms")
                     histogrammer.clear_histograms()
 
-            if exit_requested:
-                break
-
             event_buffer = event_source.get_new_data()
 
             # See if the stop time has been exceeded

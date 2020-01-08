@@ -38,13 +38,17 @@ def test_process_exits_when_requested():
     histogrammer = create_histogrammer(MockProducer(), VALID_CONFIG)
     consumer = MockConsumer(["broker"], ["topic"])
     event_source = EventSource(consumer, lambda x: x)
-    queue = Queue()
-    queue.put("quit")
+    msg_queue = Queue()
+    stats_queue = Queue()
 
-    p = Process(target=process, args=(queue, histogrammer, event_source))
+    p = Process(
+        target=process,
+        args=(msg_queue, stats_queue, {}, 0, 0, False, histogrammer, event_source),
+    )
     p.start()
 
     assert p.is_alive()
+    msg_queue.put("quit")
 
     p.join(5)
 

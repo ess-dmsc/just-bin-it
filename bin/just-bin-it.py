@@ -221,7 +221,7 @@ if __name__ == "__main__":
         "-l",
         "--log-level",
         type=int,
-        default=2,
+        default=3,
         help="sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.",
     )
 
