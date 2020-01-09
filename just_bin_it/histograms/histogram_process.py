@@ -140,7 +140,7 @@ class HistogramProcess:
         if not are_kafka_settings_valid(
             configuration["data_brokers"], configuration["data_topics"]
         ):
-            raise KafkaException("Invalid event source settings")
+            raise KafkaException("Invalid Kafka settings")
 
         self._msg_queue = Queue()
         self._stats_queue = Queue()

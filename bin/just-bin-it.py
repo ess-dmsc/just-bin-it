@@ -36,8 +36,8 @@ class Main:
         self,
         config_brokers,
         config_topic,
-        heartbeat_topic,
         simulation,
+        heartbeat_topic=None,
         initial_config=None,
         stats_publisher=None,
     ):
@@ -46,8 +46,8 @@ class Main:
 
         :param config_brokers: The brokers to listen for the configuration commands on.
         :param config_topic: The topic to listen for commands on.
-        :param heartbeat_topic: The topic where to publish heartbeat messages.
         :param simulation: Run in simulation mode.
+        :param heartbeat_topic: The topic where to publish heartbeat messages.
         :param initial_config: A histogram configuration to start with.
         :param stats_publisher: Publisher for the histograms statistics.
         """
@@ -59,8 +59,8 @@ class Main:
         self.config_topic = config_topic
         self.heartbeat_topic = heartbeat_topic
         self.config_listener = None
-        self.heartbeat_producer = None
         self.stats_publisher = stats_publisher
+        self.heartbeat_publisher = Producer(config_brokers) if heartbeat_topic else None
         self.hist_process = []
         self.stats_interval_ms = 1000
         self.time_to_publish_stats = 0
@@ -73,8 +73,6 @@ class Main:
 
         # Blocks until can connect to the config topic.
         self.create_config_listener()
-
-        self.heartbeat_producer = Producer(self.config_brokers)
 
         while True:
             # Handle configuration messages
@@ -104,16 +102,17 @@ class Main:
             time.sleep(0.1)
 
     def publish_heartbeat(self, curr_time):
-        msg = {"message": "hello", "message_interval": self.heartbeat_interval_ms}
-        self.heartbeat_producer.publish_message(
-            self.heartbeat_topic, bytes(json.dumps(msg), "utf-8")
-        )
-        self.time_to_publish_heartbeat = (
-            curr_time // 1_000_000 + self.heartbeat_interval_ms
-        )
-        self.time_to_publish_heartbeat -= (
-            self.time_to_publish_heartbeat % self.heartbeat_interval_ms
-        )
+        if self.heartbeat_publisher:
+            msg = {"message": "hello", "message_interval": self.heartbeat_interval_ms}
+            self.heartbeat_publisher.publish_message(
+                self.heartbeat_topic, bytes(json.dumps(msg), "utf-8")
+            )
+            self.time_to_publish_heartbeat = (
+                curr_time // 1_000_000 + self.heartbeat_interval_ms
+            )
+            self.time_to_publish_heartbeat -= (
+                self.time_to_publish_heartbeat % self.heartbeat_interval_ms
+            )
 
     def publish_stats(self, curr_time):
         if self.stats_publisher:
@@ -162,8 +161,6 @@ class Main:
 
             start, stop, hist_configs = parse_config(message)
 
-            # TODO: Check kafka settings etc here?
-
             for hist in hist_configs:
                 process = HistogramProcess(hist, start, stop, self.simulation)
                 self.hist_process.append(process)
@@ -188,12 +185,8 @@ if __name__ == "__main__":
         "-t", "--conf-topic", type=str, help="the configuration topic", required=True
     )
 
-    required_args.add_argument(
-        "-hb",
-        "--hb-topic",
-        type=str,
-        help="the topic where the heartbeat is published",
-        required=True,
+    parser.add_argument(
+        "-hb", "--hb-topic", type=str, help="the topic where the heartbeat is published"
     )
 
     parser.add_argument(
@@ -251,8 +244,8 @@ if __name__ == "__main__":
     main = Main(
         args.brokers,
         args.conf_topic,
-        args.hb_topic,
         args.simulation_mode,
+        args.hb_topic,
         init_hist_json,
         stats_publisher,
     )

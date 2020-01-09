@@ -2,13 +2,13 @@
     "cmd": "config",
     "data_brokers": ["localhost:9092"],
     "data_topics": ["LOQ_events"],
-    "interval": 50,
     "histograms": [
         {
-            "type": "hist2d",
+            "type": "dethist",
             "tof_range": [0, 100000000],
-            "det_range": [0, 100],
-            "num_bins": 50,
+            "det_range": [1, 6144],
+            "width": 32,
+            "height": 192,
             "topic": "hist-topic",
             "id": "some_id"
         }
