@@ -3,7 +3,7 @@
 A lightweight program for histogramming neutron event data.
 
 ## Setup
-Python 3.6+ only.
+Python 3.7+ only.
 
 ```
 >>> pip install -r requirements.txt
@@ -12,20 +12,21 @@ Python 3.6+ only.
 ## Usage
 
 ```
-usage: python bin/just-bin-it.py [-h] -b BROKERS [BROKERS ...] -t TOPIC [-c CONFIG_FILE]
-               [-g GRAPHITE_CONFIG_FILE] [-o] [-s]
+usage: just-bin-it.py [-h] -b BROKERS [BROKERS ...] -t CONF_TOPIC
+                      [-hb HB_TOPIC] [-c CONFIG_FILE]
+                      [-g GRAPHITE_CONFIG_FILE] [-s] [-l LOG_LEVEL]
 
 optional arguments:
   -h, --help            show this help message and exit
+  -hb HB_TOPIC, --hb-topic HB_TOPIC
+                        the topic where the heartbeat is published
   -c CONFIG_FILE, --config-file CONFIG_FILE
                         configure an initial histogram from a file
   -g GRAPHITE_CONFIG_FILE, --graphite-config-file GRAPHITE_CONFIG_FILE
                         configuration file for publishing to Graphite
-  -o, --one-shot-plot   runs the program until it gets some data, plot it and
-                        then exit. Used for testing
   -s, --simulation-mode
-                        runs the program in simulation mode.
-
+                        runs the program in simulation mode. 1-D histograms
+                        only
   -l LOG_LEVEL, --log-level LOG_LEVEL
                         sets the logging level: debug=1, info=2, warning=3,
                         error=4, critical=5.
@@ -33,18 +34,17 @@ optional arguments:
 required arguments:
   -b BROKERS [BROKERS ...], --brokers BROKERS [BROKERS ...]
                         the broker addresses
-  -t TOPIC, --topic TOPIC
+  -t CONF_TOPIC, --conf-topic CONF_TOPIC
                         the configuration topic
 ```
 
 
-## How to run
+## How to run just-bin-it
 This assumes you have Kafka running somewhere with an incoming stream of event
 data (ev42 schema).
 
-For demo/testing purposes this could be Kafka running on localhost with the
-NeXus-Streamer running in the background using the SANS_test_reduced.hdf5
-dataset.
+For demo/testing purposes this could be Kafka running on localhost with
+generate_event_data.py running (see Generating fake event data below).
 
 Start the histogrammer from the command-line:
 ```
@@ -63,7 +63,7 @@ CONFIG_JSON = b"""
 {
   "cmd": "config",
   "data_brokers": ["localhost:9092"],
-  "data_topics": ["TEST_events"],
+  "data_topics": ["fake_events"],
   "histograms": [
     {
       "type": "hist1d",
@@ -83,35 +83,29 @@ producer.flush()
 This will start histogramming data from the `TEST_events` topic and publish the
 histogrammed data to `output_topic` using the hs00 schema.
 
-To see what the data looks like run the viewer:
-
-```
-python bin/viewer.py --brokers localhost:9092 --topic output_topic
-```
-This will plot a graph of the most recent histogram.
+To see what the data looks like see Viewing the histogram data below:
 
 ### Configuring histogramming
+Note: sending a new configuration replace the existing configuration meaning that
+existing histograms will no longer be updated.
 
 A JSON histogramming configuration has the following parameters:
 
 * "data_brokers" (string array): the addresses of the Kafka brokers
 * "data_topics" (string array): the topics to listen for event data on
-* "start" (seconds since epoch in ms): only histogram data after this UTC time [optional]
-* "stop" (seconds since epoch in ms): only histogram data up to this UTC time [optional]
-* "interval" (seconds): only histogram for this interval [optional]
+* "start" (seconds since epoch in ms): only histogram data after this UTC time (optional)
+* "stop" (seconds since epoch in ms): only histogram data up to this UTC time (optional)
+* "interval" (seconds): only histogram for this interval (optional)
 * "histograms" (array of dicts): the histograms to create, contains the following:
-    * "type" (string): the histogram type (hist1d or hist2d)
+    * "type" (string): the histogram type (hist1d, hist2d or dethist)
     * "tof_range" (array of ints): the time-of-flight range to histogram
-    * "det_range" (array of ints): the range of detectors to histogram
-    * "num_bins" (int): the number of histogram bins
+    * "det_range" (array of ints): the range of detectors to histogram (optional for hist1d)
+    * "width" (int): the width of the detector (dethist only)
+    * "height" (int): the height of the detector (dethist only)
+    * "num_bins" (int): the number of histogram bins (hist1d and hist2d only)
     * "topic" (string): the topic to write histogram data to
     * "source" (string): the name of the source to accept data from
-    * "id" (string): an identifier for the histogram which will be contained in the published histogram data [optional]
-
-If "start" is not defined then counting with start with the next message.
-If "stop" is not defined then counting will not stop.
-
-If "interval" is defined in combination with "start" and/or "stop" then the message will be treated as invalid and ignored.
+    * "id" (string): an identifier for the histogram which will be contained in the published histogram data (optional)
 
 For example:
 ```json
@@ -128,21 +122,77 @@ For example:
       "num_bins": 50,
       "topic": "output_topic_for_1d",
       "source": "monitor1",
-      "id": "histogram1"
+      "id": "histogram1d"
     },
     {
       "type": "hist2d",
       "tof_range": [0, 100000000],
       "det_range": [100, 1000],
       "num_bins": 50,
-      "topic": "output_topic_for_2d"
+      "topic": "output_topic_for_2d",
+      "source": "detector1",
+      "id": "histogram2d"
+    },
+    {
+      "type": "dethist",
+      "tof_range":[0, 100000000],
+      "det_range":[1, 6144],
+      "width":32,
+      "height":192,
+      "topic": "output_topic_for_map",
+      "source": "freia_detector",
+      "id": "histogram-map"
     }
   ]
 }
 ```
 
-Note: sending a new configuration replace the existing configuration meaning that
-existing histograms will no longer be updated.
+#### Counting for a specified time
+By default just-bin-it will start counting from when it receives the configuration
+command and continue indefinitely.
+
+If `start` is supplied then it will start histogramming from that time regardless
+if it is the future or past.
+If `stop` is supplied then histogramming will stop at that time.
+If both `start` and `stop` are in the past then historic data will be used
+(provided it still exists)
+
+`interval` starts counting immediately and stops after the interval time is exceeded.
+
+If "interval" is defined
+If `interval`"` is defined in combination with `start` and/or `stop` then the
+message will be treated as invalid and ignored.
+
+#### Histogram types
+
+##### hist1d
+A simple 1-D histogram of time-of-flight vs counts.
+
+The `tof_range` specifies the time-of-flight range to histogram over and `num_bins`
+specifies how many bins to divide the range up into. Note: the bins are equally sized.
+
+The `det_range` is optional but if supplied then data from detectors with IDs outside of that
+range are ignored.
+
+##### hist2d
+A 2-D histogram of time-of-flight vs detector IDs.
+
+The `tof_range` specifies the time-of-flight range to histogram over and `num_bins`
+specifies how many bins to divide the range up into. Note: the bins are equally sized.
+
+The `det_range` specifies the range of detector IDs to histogram over and `num_bins`
+specifies how many bins to divide the range up into. Note: the bins are equally sized.
+
+Currently the number of bins are the same for time-of-flight and the detectors.
+
+##### dethist
+A 2-D histogram of detector IDs (pixels) where each ID is a bin and the histogram
+is arranged to approximate the physical layout of the detector.
+
+The `det_range` specifies the range of detector IDs to histogram over.
+
+The `width` and `height` define the dimensions of the detector for the
+conversion of detector IDs into their respective 2-D positions.
 
 ### Restarting the count
 To restarting the histograms counting from zero, send the restart command:
@@ -159,15 +209,14 @@ When in simulation mode just-bin-it will try to provide simulated data matching
 the requested configuration. For example: if the config specifies a 2-D
 histogram then the simulated data will be 2-D.
 
-### One-shot plot
-When the `one-shot-plot` option is specified then the program with collect a
-small amount of data, histogram it and then plot the histogram before stopping.
-This can be useful for checking that the data and program are behaving correctly.
+### Enabling a heartbeat
+When a heartbeat topic is supplied via the `hb-topic` option then just-bin-it
+will send periodic messages to that topic.
 
 Note: no histogram data is written to the output topic in Kafka with this mode.
 
 ```
-python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands --one-shot-plot
+python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands --hb-topic heartbeat
 ```
 
 ### Supplying a configuration file
@@ -194,14 +243,7 @@ directory.
 The histogram data generated by just-bin-it is written to Kafka using the hs00 FlatBuffers schema.
 The info field is used to store extra data about the histogram such as the histogramming state and
 the histogram ID.
-This data is stored as a string representation of a JSON dictionary, for example:
-
-```json
-{
-    "state": "COUNTING",
-    "id": "histogram1"
-}
-```
+This data is stored as a JSON representation of a dictionary with the keys `state` and `id`.
 
 ### Sending statistics to Graphite
 To enable statistics about the histograms to be send to Graphite it is necessary
@@ -213,11 +255,10 @@ python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands --graph
 
 The file must contain the following:
 
-* "address" (string): the server name or address of the Graphite server.
-* "port" (int): the port Graphite is listening on.
-* "prefix" (string): the overarching name to store all histogram data under.
-* "metric" (string): the base name to give individual histograms,
-the histogram index will be auto appended.
+* "address" (string): the server name or address of the Graphite server
+* "port" (int): the port Graphite is listening on
+* "prefix" (string): the overarching name to store all histogram data under
+* "metric" (string): the base name to give individual histograms, the histogram index will be auto appended
 
 For example:
 ```json
@@ -229,12 +270,39 @@ For example:
 }
 ```
 
-In this case, the histogram data would be stored in Graphite as
-`just-bin-it.histogram-0`, `just-bin-it.histogram-1` etc. depending on the number
-of histograms.
-
 An example configuration file (graphite.json) is included in the example_configs
 directory.
+
+## Generating fake event data
+For testing purposes it is possible to create fake event data that is send to Kafka.
+
+```
+python bin/generate_event_data.py --brokers localhost:9092 --topic fake_events --num_messages 100 --num_events 10000
+```
+The command line parameters are:
+* brokers (string): the address for the Kafka brokers
+* topic (string): the topic to publish the fake events to
+* num_messages (int): the number of messages to send
+* num_events (int): the number of events to put in each message (optional)
+
+The messages are sent periodically and contain data that is roughly Gaussian.
+
+### Viewing the histogram data
+There are two simple ways to view the data being produced by just-bin-it:
+bin/viewer.py and bin/view_output_messages.py.
+
+viewer.py will produce a matplotlib plot of the histogram data. Example usage:
+```
+python bin/viewer.py --brokers localhost:9092 --topic output_topic
+```
+This will plot a graph of the most recent histogram. Note: the plot does not update,
+so it will be necessary to re-run it to get fresh data.
+
+view_output_messages.py will continously print a textual representation of the
+data being outputted. Example usage:
+```
+python bin/view_output_messages.py --brokers localhost:9092 --topic output_topic
+```
 
 ## Supported schemas
 

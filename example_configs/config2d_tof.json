@@ -4,8 +4,9 @@
     "data_topics": ["fake_events"],
     "histograms": [
         {
-            "type": "hist1d",
+            "type": "hist2d",
             "tof_range": [0, 100000000],
+            "det_range": [0, 100],
             "num_bins": 50,
             "topic": "hist-topic",
             "id": "some_id"
