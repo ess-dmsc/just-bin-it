@@ -29,7 +29,7 @@ def convert_for_plotting(histogram):
         h.x_edges = np.array(histogram["dims"][0]["edges"])
         h.y_edges = np.array(histogram["dims"][1]["edges"])
 
-    h.data = histogram["data"]
+    h.data = np.array(histogram["data"])
 
     return [h]
 

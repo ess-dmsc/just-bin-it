@@ -128,6 +128,18 @@ class Main:
             self.time_to_publish_stats % self.stats_interval_ms
         )
 
+    def publish(self, curr_time):
+        self.histogrammer.publish_histograms(curr_time)
+        hist_stats = self.histogrammer.get_histogram_stats()
+        logging.warning("%s", json.dumps(hist_stats))
+        if self.stats_publisher:
+            try:
+                self.stats_publisher.send_histogram_stats(hist_stats)
+            except Exception as error:
+                logging.error("Could not publish statistics: %s", error)
+        self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
+        self.time_to_publish -= self.time_to_publish % self.publish_interval
+
     def create_config_listener(self):
         """
         Create the configuration listener.
