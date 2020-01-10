@@ -25,8 +25,7 @@ optional arguments:
   -g GRAPHITE_CONFIG_FILE, --graphite-config-file GRAPHITE_CONFIG_FILE
                         configuration file for publishing to Graphite
   -s, --simulation-mode
-                        runs the program in simulation mode. 1-D histograms
-                        only
+                        runs the program in simulation mode.
   -l LOG_LEVEL, --log-level LOG_LEVEL
                         sets the logging level: debug=1, info=2, warning=3,
                         error=4, critical=5.

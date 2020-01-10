@@ -219,7 +219,7 @@ if __name__ == "__main__":
         "-s",
         "--simulation-mode",
         action="store_true",
-        help="runs the program in simulation mode. 1-D histograms only",
+        help="runs the program in simulation mode",
     )
 
     parser.add_argument(
