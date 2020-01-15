@@ -1,5 +1,4 @@
 black
-fast-histogram
 flake8
 flatbuffers
 kafka-python
