@@ -4,48 +4,15 @@ import logging
 import os
 import sys
 import time
-import graphyte
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.config_listener import ConfigListener
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
-from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
-from just_bin_it.histograms.histogrammer import create_histogrammer
-from just_bin_it.utilities.plotter import plot_histograms
-
-
-class StatisticsPublisher:
-    def __init__(self, server, port, prefix, metric):
-        """
-        Constructor.
-
-        :param server: The Graphite server to send to.
-        :param port: The Graphite port to send to.
-        :param prefix: The data prefix in Graphite.
-        :param metric: The name to serve data in Graphite as.
-        """
-        self.server = server
-        self.port = port
-        self.prefix = prefix
-        self.metric = metric
-
-        # Initialise the connection
-        graphyte.init(server, port=port, prefix=prefix)
-
-    def send_histogram_stats(self, hist_stats):
-        for i, stat in enumerate(hist_stats):
-            graphyte.send(
-                f"{self.metric}{i}-sum",
-                stat["sum"],
-                timestamp=stat["last_pulse_time"] / 10 ** 9,
-            )
-            graphyte.send(
-                f"{self.metric}{i}-diff",
-                stat["diff"],
-                timestamp=stat["last_pulse_time"] / 10 ** 9,
-            )
+from just_bin_it.histograms.histogrammer import parse_config
+from just_bin_it.histograms.histogram_process import HistogramProcess
+from just_bin_it.utilities.statistics_publisher import StatisticsPublisher
 
 
 def load_json_config_file(file):
@@ -69,8 +36,8 @@ class Main:
         self,
         config_brokers,
         config_topic,
-        one_shot,
         simulation,
+        heartbeat_topic=None,
         initial_config=None,
         stats_publisher=None,
     ):
@@ -79,23 +46,26 @@ class Main:
 
         :param config_brokers: The brokers to listen for the configuration commands on.
         :param config_topic: The topic to listen for commands on.
-        :param one_shot: Histogram some data then plot it. Does not publish results.
         :param simulation: Run in simulation mode.
+        :param heartbeat_topic: The topic where to publish heartbeat messages.
         :param initial_config: A histogram configuration to start with.
         :param stats_publisher: Publisher for the histograms statistics.
         """
         self.event_source = None
         self.histogrammer = None
-        self.one_shot = one_shot
         self.simulation = simulation
         self.initial_config = initial_config
         self.config_brokers = config_brokers
         self.config_topic = config_topic
+        self.heartbeat_topic = heartbeat_topic
         self.config_listener = None
         self.stats_publisher = stats_publisher
-        # How often to publish in ms.
-        self.publish_interval = 500
-        self.time_to_publish = 0
+        self.heartbeat_publisher = Producer(config_brokers) if heartbeat_topic else None
+        self.hist_process = []
+        self.stats_interval_ms = 1000
+        self.time_to_publish_stats = 0
+        self.heartbeat_interval_ms = 1000
+        self.time_to_publish_heartbeat = 0
 
     def run(self):
         if self.simulation:
@@ -116,47 +86,47 @@ class Main:
 
                 try:
                     logging.warning("New configuration command received")
+                    logging.warning("%s", msg)
                     self.handle_command_message(msg)
-                    if not self.one_shot:
-                        # Publish initial empty histograms.
-                        self.histogrammer.publish_histograms(time.time_ns())
                 except Exception as error:
                     logging.error("Could not handle configuration: %s", error)
 
-            if self.event_source is None:
-                # No event source means we are waiting for a configuration.
-                continue
-
-            event_buffer = []
-
-            while len(event_buffer) == 0:
-                event_buffer = self.event_source.get_new_data()
-
-                # Check to see if there is a new configuration message
-                if self.config_listener.check_for_messages():
-                    break
-
-                # See if the stop time has been exceeded
-                if len(event_buffer) == 0:
-                    if self.histogrammer.check_stop_time_exceeded(
-                        time.time_ns() // 1_000_000
-                    ):
-                        break
-
-            if event_buffer:
-                self.histogrammer.add_data(event_buffer)
-
-                if self.one_shot:
-                    plot_histograms(self.histogrammer.histograms)
-                    # Exit the program when the graph is closed
-                    return
-
-            # Only publish at specified rate
+            # Handle publishing of statistics
             curr_time = time.time_ns()
-            if curr_time // 1_000_000 > self.time_to_publish:
-                self.publish(curr_time)
+            if curr_time // 1_000_000 > self.time_to_publish_stats:
+                self.publish_stats(curr_time)
 
-            time.sleep(0.01)
+            if curr_time // 1_000_000 > self.time_to_publish_heartbeat:
+                self.publish_heartbeat(curr_time)
+
+            time.sleep(0.1)
+
+    def publish_heartbeat(self, curr_time):
+        if self.heartbeat_publisher:
+            msg = {"message": "hello", "message_interval": self.heartbeat_interval_ms}
+            self.heartbeat_publisher.publish_message(
+                self.heartbeat_topic, bytes(json.dumps(msg), "utf-8")
+            )
+            self.time_to_publish_heartbeat = (
+                curr_time // 1_000_000 + self.heartbeat_interval_ms
+            )
+            self.time_to_publish_heartbeat -= (
+                self.time_to_publish_heartbeat % self.heartbeat_interval_ms
+            )
+
+    def publish_stats(self, curr_time):
+        if self.stats_publisher:
+            for i, process in enumerate(self.hist_process):
+                try:
+                    stats = self.hist_process[i].get_stats()
+                    if stats:
+                        self.stats_publisher.send_histogram_stats(stats, i)
+                except Exception as error:
+                    logging.error("Could not publish statistics: %s", error)
+        self.time_to_publish_stats = curr_time // 1_000_000 + self.stats_interval_ms
+        self.time_to_publish_stats -= (
+            self.time_to_publish_stats % self.stats_interval_ms
+        )
 
     def publish(self, curr_time):
         self.histogrammer.publish_histograms(curr_time)
@@ -186,51 +156,26 @@ class Main:
             Consumer(self.config_brokers, [self.config_topic])
         )
 
-    def configure_histograms(self, config):
-        """
-        Configure histogramming based on the supplied configuration.
-
-        :param config: The configuration.
-        """
-        producer = Producer(config["data_brokers"])
-        self.histogrammer = create_histogrammer(
-            producer, config, int(time.time() * 1000)
-        )
-        if self.histogrammer.start:
-            self.event_source.seek_to_time(self.histogrammer.start)
-
-    def configure_event_source(self, config):
-        """
-        Configure the event source.
-
-        :param config: The configuration.
-        :return: The new event source.
-        """
-        # Check brokers and data topics exist
-        if not are_kafka_settings_valid(config["data_brokers"], config["data_topics"]):
-            raise Exception("Invalid event source settings")
-
-        consumer = Consumer(config["data_brokers"], config["data_topics"])
-        event_source = EventSource(consumer)
-
-        return event_source
-
     def handle_command_message(self, message):
         """
         Handle the message received.
 
         :param message: The message.
         """
-
         if message["cmd"] == "restart":
-            self.histogrammer.clear_histograms()
+            for process in self.hist_process:
+                process.clear()
         elif message["cmd"] == "config":
-            if self.simulation:
-                logging.warning("RUNNING IN SIMULATION MODE")
-                self.event_source = SimulatedEventSource(message)
-            else:
-                self.event_source = self.configure_event_source(message)
-            self.configure_histograms(message)
+            logging.info("Stopping existing processes")
+            for process in self.hist_process:
+                process.stop()
+            self.hist_process.clear()
+
+            start, stop, hist_configs = parse_config(message)
+
+            for hist in hist_configs:
+                process = HistogramProcess(hist, start, stop, self.simulation)
+                self.hist_process.append(process)
         else:
             raise Exception(f"Unknown command type '{message['cmd']}'")
 
@@ -249,7 +194,11 @@ if __name__ == "__main__":
     )
 
     required_args.add_argument(
-        "-t", "--topic", type=str, help="the configuration topic", required=True
+        "-t", "--conf-topic", type=str, help="the configuration topic", required=True
+    )
+
+    parser.add_argument(
+        "-hb", "--hb-topic", type=str, help="the topic where the heartbeat is published"
     )
 
     parser.add_argument(
@@ -267,18 +216,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-o",
-        "--one-shot-plot",
-        action="store_true",
-        help="runs the program until it gets some data, plot it and then exit."
-        " Used for testing",
-    )
-
-    parser.add_argument(
         "-s",
         "--simulation-mode",
         action="store_true",
-        help="runs the program in simulation mode. 1-D histograms only",
+        help="runs the program in simulation mode",
     )
 
     parser.add_argument(
@@ -314,9 +255,9 @@ if __name__ == "__main__":
 
     main = Main(
         args.brokers,
-        args.topic,
-        args.one_shot_plot,
+        args.conf_topic,
         args.simulation_mode,
+        args.hb_topic,
         init_hist_json,
         stats_publisher,
     )

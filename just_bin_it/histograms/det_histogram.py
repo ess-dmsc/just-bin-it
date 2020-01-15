@@ -6,7 +6,7 @@ class DetHistogram:
     """Two dimensional histogram for detectors."""
 
     def __init__(
-        self, topic, tof_range, det_range, width, height, source=None, identifier=""
+        self, topic, tof_range, det_range, width, height, source="", identifier=""
     ):
         """
         Constructor.
@@ -30,7 +30,7 @@ class DetHistogram:
         self.topic = topic
         self.last_pulse_time = 0
         self.identifier = identifier
-        self.source = source
+        self.source = source if source.strip() != "" else None
 
         self._intialise_histogram()
 

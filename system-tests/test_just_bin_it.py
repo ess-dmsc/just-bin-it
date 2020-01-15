@@ -67,9 +67,6 @@ class TestJustBinIt:
         if final_offset <= self.initial_offset:
             raise Exception("No new data found on the topic - is just-bin-it running?")
 
-        # Move it back one so we can read the final histogram
-        self.consumer.seek(self.topic_part, final_offset - 1)
-
     def send_message(self, topic, message):
         self.producer.send(topic, message)
         self.producer.flush()
@@ -88,6 +85,11 @@ class TestJustBinIt:
 
     def get_hist_data_from_kafka(self):
         data = []
+        # Move it to one from the end so we can read the final histogram
+        self.consumer.seek_to_end(self.topic_part)
+        end_pos = self.consumer.position(self.topic_part)
+        self.consumer.seek(self.topic_part, end_pos - 1)
+
         while not data:
             data = self.consumer.poll(5)
 
@@ -100,7 +102,8 @@ class TestJustBinIt:
         # Configure just-bin-it
         self.send_message(CMD_TOPIC, bytes(json.dumps(CONFIG_JSON), "utf-8"))
 
-        time.sleep(2)
+        # Give it time to start counting
+        time.sleep(5)
 
         # Send fake data
         num_msgs = 10
@@ -110,6 +113,8 @@ class TestJustBinIt:
             time.sleep(0.5)
 
         total_events = sum(self.num_events_per_msg)
+
+        time.sleep(5)
 
         # Check that end offset has changed otherwise we could be looking at old test
         # data
@@ -140,7 +145,8 @@ class TestJustBinIt:
         config["stop"] = stop
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
-        time.sleep(2)
+        # Give it time to start counting
+        time.sleep(5)
 
         # Check that end offset has changed otherwise we could be looking at old test
         # data.
@@ -158,6 +164,9 @@ class TestJustBinIt:
         config = copy.deepcopy(CONFIG_JSON)
         config["interval"] = interval_length
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(5)
 
         # Send fake data
         num_msgs = 12
@@ -191,6 +200,9 @@ class TestJustBinIt:
         config["interval"] = interval_length
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
+        # Give it time to start counting
+        time.sleep(5)
+
         # Send no data, but wait for the interval to pass
         time.sleep(interval_length * 3)
 
@@ -212,13 +224,13 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(1)
+        time.sleep(5)
 
         # Send one fake data message
         self.generate_and_send_data(1)
 
         # Send no data, but wait for interval to pass
-        time.sleep(interval_length * 2)
+        time.sleep(interval_length * 3)
 
         # Check that end offset has changed otherwise we could be looking at old test
         # data.
@@ -244,7 +256,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(1)
+        time.sleep(5)
 
         # Send no data, but wait for interval to pass
         time.sleep(interval_length)
@@ -252,7 +264,7 @@ class TestJustBinIt:
         # Send one fake data message just after the interval, but probably in the leeway
         self.generate_and_send_data(1)
 
-        time.sleep(1)
+        time.sleep(5)
 
         # Check that end offset has changed otherwise we could be looking at old test
         # data.

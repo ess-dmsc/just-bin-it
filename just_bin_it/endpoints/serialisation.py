@@ -5,6 +5,7 @@ import just_bin_it.fbschemas.hs00.ArrayDouble as ArrayDouble
 import just_bin_it.fbschemas.hs00.DimensionMetaData as DimensionMetaData
 import just_bin_it.fbschemas.hs00.EventHistogram as EventHistogram
 from just_bin_it.fbschemas.hs00.Array import Array
+from just_bin_it.exceptions import JustBinItException
 
 
 def get_schema(buf):
@@ -27,7 +28,7 @@ def deserialise_ev42(buf):
     # Check schema is correct
     schema = get_schema(buf)
     if schema != "ev42":
-        raise Exception(f"Incorrect schema: expected ev42 but got {schema}")
+        raise JustBinItException(f"Incorrect schema: expected ev42 but got {schema}")
 
     event = EventMessage.EventMessage.GetRootAsEventMessage(buf, 0)
 
@@ -50,7 +51,9 @@ def deserialise_hs00(buf):
     """
     # Check schema is correct
     if get_schema(buf) != "hs00":
-        raise Exception(f"Incorrect schema: expected hs00 but got {get_schema(buf)}")
+        raise JustBinItException(
+            f"Incorrect schema: expected hs00 but got {get_schema(buf)}"
+        )
 
     event_hist = EventHistogram.EventHistogram.GetRootAsEventHistogram(buf, 0)
 

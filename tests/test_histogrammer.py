@@ -76,21 +76,6 @@ STOP_CONFIG = {
     ],
 }
 
-INTERVAL_CONFIG = {
-    "cmd": "config",
-    "data_brokers": ["fakehost:9092"],
-    "data_topics": ["LOQ_events"],
-    "interval": 5,
-    "histograms": [
-        {
-            "type": "hist1d",
-            "tof_range": [0, 100000000],
-            "num_bins": 50,
-            "topic": "hist-topic2",
-            "id": "abcdef",
-        }
-    ],
-}
 
 # Data in each "pulse" increases by factor of 2, that way we can know which
 # messages were consumed by looking at the histogram sum.
@@ -211,11 +196,6 @@ class TestHistogrammer:
         assert len(histogrammer.histograms) == 2
         assert histogrammer.hist_sink is not None
 
-    def test_if_config_does_not_contains_histogram_then_none_created(self):
-        histogrammer = create_histogrammer(self.mock_producer, NO_HIST_CONFIG)
-
-        assert len(histogrammer.histograms) == 0
-
     def test_data_only_added_if_pulse_time_is_later_or_equal_to_start(self):
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)
@@ -231,7 +211,7 @@ class TestHistogrammer:
 
         assert histogrammer.histograms[0].data.sum() == 0
 
-    def test_data_only_add_up_to_stop_time(self):
+    def test_data_only_added_up_to_stop_time(self):
         histogrammer = create_histogrammer(self.mock_producer, STOP_CONFIG)
 
         histogrammer.add_data(EVENT_DATA)
@@ -361,37 +341,6 @@ class TestHistogrammer:
         data = deserialise_hs00(self.mock_producer.messages[0][1])
         info = json.loads(data["info"])
         assert info["id"] == "abcdef"
-
-    def test_if_interval_and_start_defined_then_creation_throws(self):
-        config = copy.deepcopy(INTERVAL_CONFIG)
-        config["start"] = 1 * 10 ** 9
-
-        with pytest.raises(Exception):
-            create_histogrammer(self.mock_producer, config)
-
-    def test_if_interval_and_stop_defined_then_creation_throws(self):
-        config = copy.deepcopy(INTERVAL_CONFIG)
-        config["stop"] = 1 * 10 ** 9
-
-        with pytest.raises(Exception):
-            create_histogrammer(self.mock_producer, config)
-
-    def test_if_interval_defined_then_start_and_stop_are_initialised(self):
-        current_time = 1000
-        interval = INTERVAL_CONFIG["interval"] * 10 ** 3
-        histogrammer = create_histogrammer(
-            self.mock_producer, INTERVAL_CONFIG, current_time
-        )
-
-        assert histogrammer.start == current_time
-        assert histogrammer.stop == current_time + interval
-
-    def test_if_interval_negative_then_throws(self):
-        config = copy.deepcopy(INTERVAL_CONFIG)
-        config["interval"] = -5
-
-        with pytest.raises(Exception):
-            create_histogrammer(self.mock_producer, config)
 
     def test_clear_histograms_empties_all_histograms(self):
         histogrammer = create_histogrammer(self.mock_producer, START_CONFIG)

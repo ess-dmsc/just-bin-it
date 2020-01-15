@@ -17,7 +17,7 @@ docker-compose up &
 
 * Start just-bin-it
 ```
-python ..\bin\just-bin-it.py -b localhost:9092 -t hist_commands &
+python ../bin/just-bin-it.py -b localhost:9092 -t hist_commands &
 ```
 
 * Run the test files via pytest:
