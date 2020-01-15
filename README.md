@@ -47,7 +47,7 @@ generate_event_data.py running (see Generating fake event data below).
 
 Start the histogrammer from the command-line:
 ```
-python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands
+python bin/just-bin-it.py --brokers localhost:9092 --conf-topic hist_commands
 ```
 
 Next send a JSON configuration via Kafka (the format of the message is described
@@ -215,7 +215,7 @@ will send periodic messages to that topic.
 Note: no histogram data is written to the output topic in Kafka with this mode.
 
 ```
-python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands --hb-topic heartbeat
+python bin/just-bin-it.py --brokers localhost:9092 --conf-topic hist_commands --hb-topic heartbeat
 ```
 
 ### Supplying a configuration file
@@ -229,10 +229,10 @@ The configuration file should contain the standard JSON for configuring histogra
 as described above.
 
 ```
-python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands --config_file example_configs/config1d.json
+python bin/just-bin-it.py --brokers localhost:9092 --conf-topic hist_commands --config_file example_configs/config1d.json
 ```
 
-Note: this configuration will be replaced if a new configuration is sent the command
+Note: this configuration will be replaced if a new configuration is sent to the command
 topic.
 
 An example configuration file (config.json) is included in the example_configs
@@ -249,7 +249,7 @@ To enable statistics about the histograms to be send to Graphite it is necessary
 to supply a configuration JSON file, for example
 
 ```
-python bin/just-bin-it.py --brokers localhost:9092 --topic hist_commands --graphite-config-file graphite_config.json
+python bin/just-bin-it.py --brokers localhost:9092 --conf-topic hist_commands --graphite-config-file graphite_config.json
 ```
 
 The file must contain the following:
@@ -276,7 +276,7 @@ directory.
 For testing purposes it is possible to create fake event data that is send to Kafka.
 
 ```
-python bin/generate_event_data.py --brokers localhost:9092 --topic fake_events --num_messages 100 --num_events 10000
+python bin/generate_event_data.py --brokers localhost:9092 --conf-topic fake_events --num_messages 100 --num_events 10000
 ```
 The command line parameters are:
 * brokers (string): the address for the Kafka brokers
@@ -292,7 +292,7 @@ bin/viewer.py and bin/view_output_messages.py.
 
 viewer.py will produce a matplotlib plot of the histogram data. Example usage:
 ```
-python bin/viewer.py --brokers localhost:9092 --topic output_topic
+python bin/viewer.py --brokers localhost:9092 --conf-topic output_topic
 ```
 This will plot a graph of the most recent histogram. Note: the plot does not update,
 so it will be necessary to re-run it to get fresh data.
@@ -300,7 +300,7 @@ so it will be necessary to re-run it to get fresh data.
 view_output_messages.py will continously print a textual representation of the
 data being outputted. Example usage:
 ```
-python bin/view_output_messages.py --brokers localhost:9092 --topic output_topic
+python bin/view_output_messages.py --brokers localhost:9092 --conf-topic output_topic
 ```
 
 ## Supported schemas
