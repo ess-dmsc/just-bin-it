@@ -29,7 +29,7 @@ def main(brokers, topic, num_msgs, num_points):
     start_time = None
     end_time = None
 
-    while count < num_msgs:
+    while num_msgs == 0 or count < num_msgs:
         timestamp, data = generate_data("just-bin-it", message_id, num_points)
         producer.publish_message(topic, data)
         message_id += 1
@@ -62,12 +62,12 @@ if __name__ == "__main__":
         "-t", "--topic", type=str, help="the topic to write to", required=True
     )
 
-    required_args.add_argument(
+    parser.add_argument(
         "-n",
         "--num_messages",
         type=int,
-        help="the number of messages to write",
-        required=True,
+        help="the number of messages to write (0 = run continuously)",
+        default=0,
     )
 
     parser.add_argument(
