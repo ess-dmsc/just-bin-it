@@ -104,13 +104,21 @@ class SimulatedEventSource:
         self.tof_range = (0, 100_000_000)
         self.det_range = (1, 512)
         self.num_events = 1000
+        self.is_dethist = False
+        self.width = 0
+        self.height = 0
 
-        # Based on the config, guess gaussian settings.
-        if "histograms" in config and len(config["histograms"]) > 0:
-            self.tof_range = config["histograms"][0]["tof_range"]
+        if config["type"] == "dethist":
+            # Different behaviour for this type of histogram
+            self.is_dethist = True
+            self.width = config["width"]
+            self.height = config["height"]
+        else:
+            # Based on the config, guess gaussian settings.
+            self.tof_range = config["tof_range"]
 
-            if "det_range" in config["histograms"][0]:
-                self.det_range = config["histograms"][0]["det_range"]
+            if "det_range" in config:
+                self.det_range = config["det_range"]
 
     def get_new_data(self):
         """
@@ -118,12 +126,35 @@ class SimulatedEventSource:
 
         :return: The generated data.
         """
-        tofs, dets = generate_fake_data(self.tof_range, self.det_range, self.num_events)
+        if self.is_dethist:
+            return self._generate_dethist_data()
+        else:
+            return self._generate_data()
 
+    def _generate_data(self):
+        tofs, dets = generate_fake_data(self.tof_range, self.det_range, self.num_events)
         data = {
             "pulse_time": math.floor(time.time() * 10 ** 9),
             "tofs": tofs,
             "det_ids": dets,
+            "source": "simulator",
+        }
+        return [(int(time.time() * self.num_events), 0, data)]
+
+    def _generate_dethist_data(self):
+        dets = []
+
+        for h in range(self.height):
+            _, new_dets = generate_fake_data(
+                self.tof_range, (0, self.width), self.num_events
+            )
+            for det in new_dets:
+                dets.append(h * self.width + det)
+
+        data = {
+            "pulse_time": math.floor(time.time() * 10 ** 9),
+            "det_ids": dets,
+            "tofs": [],
             "source": "simulator",
         }
         return [(int(time.time() * self.num_events), 0, data)]

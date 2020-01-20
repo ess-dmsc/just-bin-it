@@ -97,7 +97,7 @@ A JSON histogramming configuration has the following parameters:
 * "interval" (seconds): only histogram for this interval (optional)
 * "histograms" (array of dicts): the histograms to create, contains the following:
     * "type" (string): the histogram type (hist1d, hist2d or dethist)
-    * "tof_range" (array of ints): the time-of-flight range to histogram
+    * "tof_range" (array of ints): the time-of-flight range to histogram (hist1d and hist2d only)
     * "det_range" (array of ints): the range of detectors to histogram (optional for hist1d)
     * "width" (int): the width of the detector (dethist only)
     * "height" (int): the height of the detector (dethist only)

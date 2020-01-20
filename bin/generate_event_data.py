@@ -10,7 +10,9 @@ from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
 TOF_RANGE = (0, 100_000_000)
-DET_RANGE = (1, 512)
+DET_RANGE = (1, 10000)
+DET_WIDTH = 100
+DET_HEIGHT = 100
 
 
 def generate_data(source, message_id, num_points):
@@ -22,7 +24,21 @@ def generate_data(source, message_id, num_points):
     return time_stamp, data
 
 
-def main(brokers, topic, num_msgs, num_points):
+def generate_dethist_data(source, message_id, num_points):
+    dets = []
+
+    for h in range(DET_HEIGHT):
+        _, new_dets = generate_fake_data(TOF_RANGE, (0, DET_WIDTH), num_points)
+        for det in new_dets:
+            dets.append(h * DET_WIDTH + det)
+
+    time_stamp = time.time_ns()
+
+    data = serialise_ev42(source, message_id, time_stamp, [], dets)
+    return time_stamp, data
+
+
+def main(brokers, topic, num_msgs, num_points, det_hist=False):
     producer = Producer(brokers)
     count = 0
     message_id = 1
@@ -30,7 +46,12 @@ def main(brokers, topic, num_msgs, num_points):
     end_time = None
 
     while num_msgs == 0 or count < num_msgs:
-        timestamp, data = generate_data("just-bin-it", message_id, num_points)
+        if det_hist:
+            timestamp, data = generate_dethist_data(
+                "just-bin-it", message_id, num_points
+            )
+        else:
+            timestamp, data = generate_data("just-bin-it", message_id, num_points)
         producer.publish_message(topic, data)
         message_id += 1
         count += 1
@@ -78,6 +99,10 @@ if __name__ == "__main__":
         help="the number of events per message",
     )
 
+    parser.add_argument(
+        "-dh", "--det-hist", action="store_true", help="output the data as a det hist"
+    )
+
     args = parser.parse_args()
 
-    main(args.brokers, args.topic, args.num_messages, args.num_events)
+    main(args.brokers, args.topic, args.num_messages, args.num_events, args.det_hist)
