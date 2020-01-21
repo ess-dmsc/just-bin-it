@@ -28,7 +28,7 @@ def deserialise_ev42(buf):
     # Check schema is correct
     schema = get_schema(buf)
     if schema != "ev42":
-        raise JustBinItException(f"Incorrect schema: expected ev42 but got {schema}")
+        raise JustBinItException(f"Incorrect schema, expected ev42 but got {schema}")
 
     event = EventMessage.EventMessage.GetRootAsEventMessage(buf, 0)
 
