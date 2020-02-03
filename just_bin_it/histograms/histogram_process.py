@@ -6,7 +6,7 @@ from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
-from just_bin_it.exceptions import KafkaException
+from just_bin_it.exceptions import KafkaException, JustBinItException
 from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.histograms.histogram_factory import HistogramFactory
 
@@ -59,7 +59,7 @@ def publish_data(histogrammer, current_time, stats_queue):
     stats_queue.put(hist_stats)
 
 
-def process(
+def _process(
     msg_queue,
     stats_queue,
     configuration,
@@ -69,22 +69,6 @@ def process(
     histogrammer=None,
     event_source=None,
 ):
-    """
-    The target to run in a multi-processing instance for histogramming.
-
-    Note: passing objects into a process requires the classes to be picklable.
-    The histogrammer and event source classes are not picklable, so need to be created
-    within the process
-
-    :param msg_queue: The message queue for communicating with the process.
-    :param stats_queue: The queue to send statistics to.
-    :param configuration: The histogramming configuration.
-    :param start: The start time.
-    :param stop: The stop time.
-    :param simulation: Whether to run in simulation.
-    :param histogrammer: The histogrammer to use - unit tests only.
-    :param event_source: The event-source to use - unit tests only.
-    """
     publish_interval = 500
     time_to_publish = 0
     exit_requested = False
@@ -134,6 +118,72 @@ def process(
         time.sleep(0.01)
 
 
+def process(
+    msg_queue,
+    stats_queue,
+    configuration,
+    start,
+    stop,
+    simulation=False,
+    histogrammer=None,
+    event_source=None,
+):
+    """
+    The target to run in a multi-processing instance for histogramming.
+
+    Note: passing objects into a process requires the classes to be pickleable.
+    The histogrammer and event source classes are not pickleable, so need to be created
+    within the process
+
+    :param msg_queue: The message queue for communicating with the process.
+    :param stats_queue: The queue to send statistics to.
+    :param configuration: The histogramming configuration.
+    :param start: The start time.
+    :param stop: The stop time.
+    :param simulation: Whether to run in simulation.
+    :param histogrammer: The histogrammer to use - unit tests only.
+    :param event_source: The event-source to use - unit tests only.
+    """
+    try:
+        _process(
+            msg_queue,
+            stats_queue,
+            configuration,
+            start,
+            stop,
+            simulation,
+            histogrammer,
+            event_source,
+        )
+    except JustBinItException as error:
+        logging.error("Histogram process failed: {}", error)
+
+
+def _create_process(
+    msg_queue,
+    stats_queue,
+    configuration,
+    start,
+    stop,
+    simulation=False,
+    histogrammer=None,
+    event_source=None,
+):
+    return Process(
+        target=process,
+        args=(
+            msg_queue,
+            stats_queue,
+            configuration,
+            start,
+            stop,
+            simulation,
+            histogrammer,
+            event_source,
+        ),
+    )
+
+
 class HistogramProcess:
     def __init__(self, configuration, start, stop, simulation=False):
         # Check brokers and data topics exist
@@ -144,16 +194,8 @@ class HistogramProcess:
 
         self._msg_queue = Queue()
         self._stats_queue = Queue()
-        self._process = Process(
-            target=process,
-            args=(
-                self._msg_queue,
-                self._stats_queue,
-                configuration,
-                start,
-                stop,
-                simulation,
-            ),
+        self._process = _create_process(
+            self._msg_queue, self._stats_queue, configuration, start, stop, simulation
         )
         self._process.start()
 
