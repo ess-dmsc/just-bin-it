@@ -11,12 +11,16 @@ class MockConsumerRecord:
 class MockConsumer(Consumer):
     def __init__(self, brokers, topics, num_partitions=1):
         super().__init__(brokers, topics)
+        self.topic_names = topics
         self.topic_partitions = {}
         for i in range(num_partitions):
             self.topic_partitions[i] = {"messages": [], "offset": 0}
 
     def add_messages(self, messages, partition=0):
         self.topic_partitions[partition]["messages"].extend(messages)
+
+    def topics(self):
+        return self.topic_names
 
     def _create_consumer(self, brokers):
         return {"brokers": brokers}

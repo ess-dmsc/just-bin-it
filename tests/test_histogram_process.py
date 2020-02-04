@@ -1,6 +1,6 @@
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
 import pytest
-from just_bin_it.histograms.histogram_process import HistogramProcess, process
+from just_bin_it.histograms.histogram_process import HistogramProcess, _create_process
 from just_bin_it.exceptions import KafkaException
 from just_bin_it.histograms.histogrammer import create_histogrammer
 from just_bin_it.endpoints.sources import EventSource
@@ -41,9 +41,8 @@ def test_process_exits_when_requested():
     msg_queue = Queue()
     stats_queue = Queue()
 
-    p = Process(
-        target=process,
-        args=(msg_queue, stats_queue, {}, 0, 0, False, histogrammer, event_source),
+    p = _create_process(
+        msg_queue, stats_queue, {}, 0, 0, False, histogrammer, event_source
     )
     p.start()
 

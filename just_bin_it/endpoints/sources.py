@@ -162,10 +162,10 @@ class SimulatedEventSource:
         """
         Does nothing.
 
-        This command needs to be available so that the simulated source can be used as
-        a like for like replacement for a real source
+        This command needs to be available so that the simulated source can be
+        used as a like for like replacement for a real source.
 
-        :param requested_time: ignored
+        :param requested_time: ignored.
         :return:
         """
         return 0

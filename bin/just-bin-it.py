@@ -156,6 +156,11 @@ class Main:
             Consumer(self.config_brokers, [self.config_topic])
         )
 
+    def stop_processes(self):
+        for process in self.hist_process:
+            process.stop()
+        self.hist_process.clear()
+
     def handle_command_message(self, message):
         """
         Handle the message received.
@@ -167,15 +172,19 @@ class Main:
                 process.clear()
         elif message["cmd"] == "config":
             logging.info("Stopping existing processes")
-            for process in self.hist_process:
-                process.stop()
-            self.hist_process.clear()
+            self.stop_processes()
 
             start, stop, hist_configs = parse_config(message)
 
-            for hist in hist_configs:
-                process = HistogramProcess(hist, start, stop, self.simulation)
-                self.hist_process.append(process)
+            try:
+                for config in hist_configs:
+
+                    process = HistogramProcess(config, start, stop, self.simulation)
+                    self.hist_process.append(process)
+            except Exception as error:
+                # If one fails then close any that were started then rethrow
+                self.stop_processes()
+                raise error
         else:
             raise Exception(f"Unknown command type '{message['cmd']}'")
 
@@ -194,7 +203,7 @@ if __name__ == "__main__":
     )
 
     required_args.add_argument(
-        "-t", "--conf-topic", type=str, help="the configuration topic", required=True
+        "-t", "--config-topic", type=str, help="the configuration topic", required=True
     )
 
     parser.add_argument(
@@ -255,7 +264,7 @@ if __name__ == "__main__":
 
     main = Main(
         args.brokers,
-        args.conf_topic,
+        args.config_topic,
         args.simulation_mode,
         args.hb_topic,
         init_hist_json,

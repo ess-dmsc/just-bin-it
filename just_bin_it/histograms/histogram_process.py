@@ -11,20 +11,25 @@ from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.histograms.histogram_factory import HistogramFactory
 
 
-def create_event_source(configuration, simulation, start, consumer):
+def create_simulated_event_source(configuration):
+    """
+    Create a simulated event source.
+
+    :param configuration The configuration.
+    :return: The created event source.
+    """
+    return SimulatedEventSource(configuration)
+
+
+def create_event_source(consumer, start):
     """
     Create the event source.
 
-    :param configuration The configuration.
-    :param simulation: Whether to create a simulated source.
-    :param start: The start time.
     :param consumer: The consumer to use.
+    :param start: The start time.
     :return: The created event source.
     """
-    if simulation:
-        event_source = SimulatedEventSource(configuration)
-    else:
-        event_source = EventSource(consumer)
+    event_source = EventSource(consumer)
 
     if start:
         event_source.seek_to_time(start)
@@ -77,8 +82,13 @@ def _process(
         histogrammer = create_histogrammer(configuration, start, stop)
 
     if event_source is None:
-        consumer = Consumer(configuration["data_brokers"], configuration["data_topics"])
-        event_source = create_event_source(configuration, simulation, start, consumer)
+        if simulation:
+            event_source = create_simulated_event_source(configuration)
+        else:
+            consumer = Consumer(
+                configuration["data_brokers"], configuration["data_topics"]
+            )
+            event_source = create_event_source(consumer, start)
 
     # Publish initial empty histograms.
     histogrammer.publish_histograms()
@@ -186,8 +196,8 @@ def _create_process(
 
 class HistogramProcess:
     def __init__(self, configuration, start, stop, simulation=False):
-        # Check brokers and data topics exist
-        if not are_kafka_settings_valid(
+        # Check brokers and data topics exist (skip in simulation)
+        if not simulation and not are_kafka_settings_valid(
             configuration["data_brokers"], configuration["data_topics"]
         ):
             raise KafkaException("Invalid Kafka settings")

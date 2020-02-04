@@ -10,13 +10,22 @@ def are_kafka_settings_valid(brokers, topics):
     :param brokers: The broker names.
     :return: True if they exist.
     """
-
-    try:
-        consumer = KafkaConsumer(bootstrap_servers=brokers)
-    except KafkaError as error:
-        logging.error("Could not connect to Kafka brokers: %s", error)
+    consumer = are_brokers_present(brokers)
+    if consumer is None:
         return False
 
+    return are_topics_present(consumer, topics)
+
+
+def are_brokers_present(brokers):
+    try:
+        return KafkaConsumer(bootstrap_servers=brokers)
+    except KafkaError as error:
+        logging.error("Could not connect to Kafka brokers: %s", error)
+        return None
+
+
+def are_topics_present(consumer, topics):
     result = True
     try:
         existing_topics = consumer.topics()
