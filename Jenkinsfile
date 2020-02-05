@@ -61,74 +61,12 @@ builders = pipeline_builder.createBuilders { container ->
 
   } // stage
 
-//  pipeline_builder.stage("${container.key}: System Tests") {
-//    def test_output = "SystemTestResults.xml"
-//    container.sh """
-//      ${python} --version
-//      cd ${project}/system-tests
-//      docker-compose up &
-//      ${python} ../bin/just-bin-it.py -b localhost:9092 -t hist_commands &
-//      ${python} -m pytest --junitxml=${test_output}
-//    """
-//    container.copyFrom("${project}/${test_output}", ".")
-//    junit "${test_output}"
-//
-//  } // stage
-
 }  // createBuilders
-
-def get_system_tests_pipeline() {
-  return {
-    node('system-test') {
-      cleanWs()
-      dir("${project}") {
-        try {
-          stage("System tests: Checkout") {
-            checkout scm
-          }  // stage
-          stage("System tests: Install requirements") {
-            sh """${python} -m pip install --user --upgrade pip
-                  ${python} -m pip install --user -r system-tests/requirements.txt
-               """
-          }  // stage
-          stage("System tests: Run") {
-            // Stop and remove any containers that may have been from the job before,
-            // i.e. if a Jenkins job has been aborted.
-            sh "docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true"
-            timeout(time: 30, activity: true){
-              sh """
-                    cd ${project}/system-tests
-                    docker-compose up &
-                    ${python} ../bin/just-bin-it.py -b localhost:9092 -t hist_commands &
-                    ${python} -m pytest --junitxml=SystemTestResults.xml
-              """
-            }
-          }  // stage
-        } finally {
-          stage ("System tests: Clean Up") {
-            // The statements below return true because the build should pass
-            // even if there are no docker containers or output files to be
-            // removed.
-            sh """rm -rf system-tests/output-files/* || true
-            docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true
-            """
-          }  // stage
-          stage("System tests: Archive") {
-            junit "system-tests/SystemTestsOutput.xml"
-            archiveArtifacts "system-tests/logs/*.log"
-          }
-        }  // try/finally
-      } // dir
-    }  // node
-  }  // return
-} // def
 
 node {
   dir("${project}") {
     scm_vars = checkout scm
   }
-
-  builders['system tests'] = get_system_tests_pipeline()
 
   try {
     parallel builders
