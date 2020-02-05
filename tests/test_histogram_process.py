@@ -2,10 +2,6 @@ from multiprocessing import Queue
 import pytest
 from just_bin_it.histograms.histogram_process import HistogramProcess, _create_process
 from just_bin_it.exceptions import KafkaException
-from just_bin_it.histograms.histogrammer import create_histogrammer
-from just_bin_it.endpoints.sources import EventSource
-from tests.mock_consumer import MockConsumer
-from tests.mock_producer import MockProducer
 
 
 VALID_CONFIG = {
@@ -35,15 +31,10 @@ def test_histogram_process_throws_if_cannot_connect_to_kafka():
 
 
 def test_process_exits_when_requested():
-    histogrammer = create_histogrammer(MockProducer(), VALID_CONFIG)
-    consumer = MockConsumer(["broker"], ["topic"])
-    event_source = EventSource(consumer, lambda x: x)
     msg_queue = Queue()
     stats_queue = Queue()
 
-    p = _create_process(
-        msg_queue, stats_queue, {}, 0, 0, False, histogrammer, event_source
-    )
+    p = _create_process(msg_queue, stats_queue, {}, 0, 0, False, use_mocks=True)
     p.start()
 
     assert p.is_alive()

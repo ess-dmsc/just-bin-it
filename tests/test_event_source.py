@@ -1,6 +1,6 @@
 import pytest
 from just_bin_it.endpoints.sources import EventSource, TooOldTimeRequestedException
-from tests.mock_consumer import MockConsumer, get_fake_event_messages
+from just_bin_it.utilities.mock_consumer import MockConsumer, get_fake_event_messages
 
 
 class TestEventSourceSinglePartition:

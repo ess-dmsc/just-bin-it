@@ -9,6 +9,8 @@ from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
 from just_bin_it.exceptions import KafkaException, JustBinItException
 from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.histograms.histogram_factory import HistogramFactory
+from just_bin_it.utilities.mock_consumer import MockConsumer
+from just_bin_it.utilities.mock_producer import MockProducer
 
 
 def create_simulated_event_source(configuration):
@@ -36,16 +38,16 @@ def create_event_source(consumer, start):
     return event_source
 
 
-def create_histogrammer(configuration, start, stop):
+def create_histogrammer(producer, configuration, start, stop):
     """
     Create a histogrammer.
 
+    :param: producer: The producer.
     :param configuration: The configuration.
     :param start: The start time.
     :param stop: The stop time.
     :return: The created histogrammer.
     """
-    producer = Producer(configuration["data_brokers"])
     histograms = HistogramFactory.generate([configuration])
     return Histogrammer(producer, histograms, start, stop)
 
@@ -64,31 +66,30 @@ def publish_data(histogrammer, current_time, stats_queue):
     stats_queue.put(hist_stats)
 
 
-def _process(
+def _histogramming_process(
     msg_queue,
     stats_queue,
     configuration,
     start,
     stop,
     simulation=False,
-    histogrammer=None,
-    event_source=None,
+    use_mocks=False,
 ):
     publish_interval = 500
     time_to_publish = 0
     exit_requested = False
 
-    if histogrammer is None:
-        histogrammer = create_histogrammer(configuration, start, stop)
+    producer = MockProducer() if use_mocks else Producer(configuration["data_brokers"])
+    histogrammer = create_histogrammer(producer, configuration, start, stop)
 
-    if event_source is None:
-        if simulation:
-            event_source = create_simulated_event_source(configuration)
-        else:
-            consumer = Consumer(
-                configuration["data_brokers"], configuration["data_topics"]
-            )
-            event_source = create_event_source(consumer, start)
+    consumer = MockConsumer(configuration["data_brokers"], configuration["data_topics"])
+    if not use_mocks and not simulation:
+        consumer = Consumer(configuration["data_brokers"], configuration["data_topics"])
+
+    if simulation:
+        event_source = create_simulated_event_source(configuration)
+    else:
+        event_source = create_event_source(consumer, start)
 
     # Publish initial empty histograms.
     histogrammer.publish_histograms()
@@ -135,8 +136,7 @@ def process(
     start,
     stop,
     simulation=False,
-    histogrammer=None,
-    event_source=None,
+    use_mocks=False,
 ):
     """
     The target to run in a multi-processing instance for histogramming.
@@ -151,19 +151,11 @@ def process(
     :param start: The start time.
     :param stop: The stop time.
     :param simulation: Whether to run in simulation.
-    :param histogrammer: The histogrammer to use - unit tests only.
-    :param event_source: The event-source to use - unit tests only.
+    :param use_mocks: Use Kafka mocks when unit-testing.
     """
     try:
-        _process(
-            msg_queue,
-            stats_queue,
-            configuration,
-            start,
-            stop,
-            simulation,
-            histogrammer,
-            event_source,
+        _histogramming_process(
+            msg_queue, stats_queue, configuration, start, stop, simulation, use_mocks
         )
     except JustBinItException as error:
         logging.error("Histogram process failed: {}", error)
@@ -176,8 +168,7 @@ def _create_process(
     start,
     stop,
     simulation=False,
-    histogrammer=None,
-    event_source=None,
+    use_mocks=False,
 ):
     return Process(
         target=process,
@@ -188,8 +179,7 @@ def _create_process(
             start,
             stop,
             simulation,
-            histogrammer,
-            event_source,
+            use_mocks,
         ),
     )
 

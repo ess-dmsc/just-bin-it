@@ -59,6 +59,18 @@ builders = pipeline_builder.createBuilders { container ->
 
   } // stage
 
+  pipeline_builder.stage("${container.key}: System Tests") {
+    def test_output = "SystemTestResults.xml"
+    container.sh """
+      python3.6 --version
+      cd ${project}/system-tests
+      python3.6 -m pytest --junitxml=${test_output}
+    """
+    container.copyFrom("${project}/${test_output}", ".")
+    junit "${test_output}"
+
+  } // stage
+
 }  // createBuilders
 
 node {

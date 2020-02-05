@@ -3,7 +3,7 @@ import json
 import pytest
 from just_bin_it.endpoints.serialisation import deserialise_hs00
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, create_histogrammer
-from tests.mock_producer import MockProducer
+from just_bin_it.utilities.mock_producer import MockProducer
 
 
 START_CONFIG = {

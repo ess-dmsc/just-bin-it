@@ -1,7 +1,7 @@
 from unittest.mock import patch
 import pytest
 from just_bin_it.endpoints.sources import HistogramSource
-from tests.mock_consumer import MockConsumer
+from just_bin_it.utilities.mock_consumer import MockConsumer
 
 
 TEST_MESSAGE = b"this is a byte message"

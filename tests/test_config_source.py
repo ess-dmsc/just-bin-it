@@ -1,6 +1,6 @@
 import pytest
 from just_bin_it.endpoints.sources import ConfigSource
-from tests.mock_consumer import MockConsumer
+from just_bin_it.utilities.mock_consumer import MockConsumer
 
 
 CONFIG_BASIC_1 = """

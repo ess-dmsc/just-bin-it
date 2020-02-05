@@ -1,5 +1,5 @@
 from just_bin_it.endpoints.kafka_tools import are_brokers_present, are_topics_present
-from tests.mock_consumer import MockConsumer
+from just_bin_it.utilities.mock_consumer import MockConsumer
 
 
 def test_checking_for_non_existent_broker_returns_none():

@@ -1,6 +1,6 @@
 import pytest
 from just_bin_it.endpoints.histogram_sink import HistogramSink
-from tests.mock_producer import MockProducer, MockThrowsProducer
+from just_bin_it.utilities.mock_producer import MockProducer, MockThrowsProducer
 
 
 TEST_MESSAGE = "this is a message"
