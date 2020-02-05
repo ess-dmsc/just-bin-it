@@ -4,11 +4,15 @@ import ecdcpipeline.PipelineBuilder
 
 project = "just-bin-it"
 
+python = "python3.6"
+
 container_build_nodes = [
-  'ubuntu1804': ContainerBuildNode.getDefaultContainerBuildNode('ubuntu1804')
+//  'centos7': ContainerBuildNode.getDefaultContainerBuildNode('centos7'),
+  'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7'),
+//  'debian9': ContainerBuildNode.getDefaultContainerBuildNode('debian9'),
+//  'ubuntu1804': ContainerBuildNode.getDefaultContainerBuildNode('ubuntu1804')
 ]
 
-python = 'python3.8'
 
 // Define number of old builds to keep.
 num_artifacts_to_keep = '1'
@@ -41,12 +45,7 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Dependencies") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
-      su -
-      apt update && apt install -yq wget git software-properties-common curl
-      add-apt-repository -y ppa:deadsnakes/ppa
-      apt install -yq ${python}
-      curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && ${python} get-pip.py
-      ${python} -m pip install -r ${project}/requirements.txt
+      pip install --user -r ${project}/requirements.txt
     """
   } // stage
 
@@ -62,19 +61,19 @@ builders = pipeline_builder.createBuilders { container ->
 
   } // stage
 
-  pipeline_builder.stage("${container.key}: System Tests") {
-    def test_output = "SystemTestResults.xml"
-    container.sh """
-      ${python} --version
-      cd ${project}/system-tests
-      docker-compose up &
-      ${python} ../bin/just-bin-it.py -b localhost:9092 -t hist_commands &
-      ${python} -m pytest --junitxml=${test_output}
-    """
-    container.copyFrom("${project}/${test_output}", ".")
-    junit "${test_output}"
-
-  } // stage
+//  pipeline_builder.stage("${container.key}: System Tests") {
+//    def test_output = "SystemTestResults.xml"
+//    container.sh """
+//      ${python} --version
+//      cd ${project}/system-tests
+//      docker-compose up &
+//      ${python} ../bin/just-bin-it.py -b localhost:9092 -t hist_commands &
+//      ${python} -m pytest --junitxml=${test_output}
+//    """
+//    container.copyFrom("${project}/${test_output}", ".")
+//    junit "${test_output}"
+//
+//  } // stage
 
 }  // createBuilders
 
