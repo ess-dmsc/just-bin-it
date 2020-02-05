@@ -41,12 +41,10 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Dependencies") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
-      sudo apt update
-      sudo apt install -yq wget git software-properties-common curl apt-transport-https ca-certificates gnupg-agent
-      sudo apt install docker.io
-      sudo systemctl start docker
-      sudo add-apt-repository -y ppa:deadsnakes/ppa
-      sudo apt install -yq ${python}
+      apt update
+      apt install -yq wget git software-properties-common curl apt-transport-https ca-certificates gnupg-agent
+      add-apt-repository -y ppa:deadsnakes/ppa
+      apt install -yq ${python}
       curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && ${python} get-pip.py
       ${python} -m pip install -r ${project}/requirements.txt
     """
