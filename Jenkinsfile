@@ -5,12 +5,10 @@ import ecdcpipeline.PipelineBuilder
 project = "just-bin-it"
 
 container_build_nodes = [
-//  'centos7': ContainerBuildNode.getDefaultContainerBuildNode('centos7'),
-  'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7'),
-//  'debian9': ContainerBuildNode.getDefaultContainerBuildNode('debian9'),
-//  'ubuntu1804': ContainerBuildNode.getDefaultContainerBuildNode('ubuntu1804')
+  'ubuntu1804': ContainerBuildNode.getDefaultContainerBuildNode('ubuntu1804')
 ]
 
+python = 'python3.8'
 
 // Define number of old builds to keep.
 num_artifacts_to_keep = '1'
@@ -43,16 +41,25 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Dependencies") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
-      pip install --user -r ${project}/requirements.txt
+      apt update
+      apt install -yq wget git software-properties-common curl apt-transport-https ca-certificates gnupg-agent
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+      add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+      apt update
+      apt install docker-ce
+      add-apt-repository -y ppa:deadsnakes/ppa
+      apt install -yq ${python}
+      curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && ${python} get-pip.py
+      ${python} -m pip install -r ${project}/requirements.txt
     """
   } // stage
 
   pipeline_builder.stage("${container.key}: Test") {
     def test_output = "TestResults.xml"
     container.sh """
-      python3.6 --version
+      ${python} --version
       cd ${project}
-      python3.6 -m pytest --junitxml=${test_output}
+      ${python} -m pytest --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
     junit "${test_output}"
@@ -62,11 +69,11 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: System Tests") {
     def test_output = "SystemTestResults.xml"
     container.sh """
-      python3.6 --version
+      ${python} --version
       cd ${project}/system-tests
       docker-compose up &
-      python3.6 ../bin/just-bin-it.py -b localhost:9092 -t hist_commands &
-      python3.6 -m pytest --junitxml=${test_output}
+      ${python} ../bin/just-bin-it.py -b localhost:9092 -t hist_commands &
+      ${python} -m pytest --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
     junit "${test_output}"
