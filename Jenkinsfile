@@ -43,10 +43,8 @@ builders = pipeline_builder.createBuilders { container ->
     container.sh """
       apt update
       apt install -yq wget git software-properties-common curl apt-transport-https ca-certificates gnupg-agent
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-      add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable"
-      apt update
-      apt install docker-ce
+      apt install docker.io
+      systemctl start docker
       add-apt-repository -y ppa:deadsnakes/ppa
       apt install -yq ${python}
       curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && ${python} get-pip.py
