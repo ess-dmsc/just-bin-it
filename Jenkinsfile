@@ -64,6 +64,8 @@ builders = pipeline_builder.createBuilders { container ->
     container.sh """
       python3.6 --version
       cd ${project}/system-tests
+      docker-compose up &
+      python3.6 ../bin/just-bin-it.py -b localhost:9092 -t hist_commands &
       python3.6 -m pytest --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
