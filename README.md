@@ -337,6 +337,14 @@ For HTML output:
 pytest --cov --cov-report html .
 ```
 
+### Tox
+Tox allows the unit tests to be run against multiple versions of Python.
+See the tox.ini file for which versions are supported.
+From the top directory:
+```
+tox
+```
+
 ### System tests
 There are system tests that tests the whole system with a real instance of Kafka.
 See the system-tests folder for more information on how to run them.

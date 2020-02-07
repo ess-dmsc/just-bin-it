@@ -2,7 +2,7 @@ FROM ubuntu:bionic
 ENV PARAMETERS='NO PARAMETERS SUPPLIED'
 
 RUN apt update && \
-    apt install -yq wget git software-properties-common curl
+    apt install -yq wget git software-properties-common curl tmux
 
 RUN add-apt-repository -y ppa:deadsnakes/ppa
 
