@@ -16,4 +16,5 @@ RUN git clone https://github.com/ess-dmsc/just-bin-it.git && \
 
 WORKDIR just-bin-it
 
-CMD python3.7 bin/just-bin-it.py $PARAMETERS
+# Git pull on every start, so we get the latest code
+CMD git pull && python3.7 bin/just-bin-it.py $PARAMETERS

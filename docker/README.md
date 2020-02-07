@@ -2,7 +2,7 @@
 
 ## Building
 ```
-docker build -t just_bin_it  .
+docker build --no-cache -t just_bin_it  .
 ```
 
 ## Running
