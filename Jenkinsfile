@@ -57,8 +57,9 @@ builders = pipeline_builder.createBuilders { container ->
       ${python} -m pytest --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
-    junit "${test_output}"
+//    junit "${test_output}"
 
+        recordIssues sourceCodeEncoding: 'UTF-8', qualityGates: [[threshold: 2, type: 'TOTAL', unstable: false]], tools: [junit(pattern: "${test_output}", reportEncoding: 'UTF-8')]
   } // stage
 
 }  // createBuilders
