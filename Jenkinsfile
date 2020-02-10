@@ -59,7 +59,7 @@ builders = pipeline_builder.createBuilders { container ->
     container.copyFrom("${project}/${test_output}", ".")
 //    junit "${test_output}"
 
-        recordIssues sourceCodeEncoding: 'UTF-8', qualityGates: [[threshold: 2, type: 'TOTAL', unstable: false]], tools: [junit(pattern: "${test_output}", reportEncoding: 'UTF-8')]
+    xunit thresholds: [failed(unstableThreshold: '2')], tools: [JUnit(deleteOutputFiles: true, failIfNotNew: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
   } // stage
 
 }  // createBuilders
