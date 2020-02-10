@@ -54,7 +54,7 @@ builders = pipeline_builder.createBuilders { container ->
     container.sh """
       ${python} --version
       cd ${project}
-      ${python} -m pytest --junitxml=${test_output} --junit_family=xunit2
+      ${python} -m pytest --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
 //    junit "${test_output}"
