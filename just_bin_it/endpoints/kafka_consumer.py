@@ -115,3 +115,17 @@ class Consumer:
             offset_ranges.append((lowest[tp], highest[tp]))
 
         return offset_ranges
+
+    def get_positions(self):
+        """
+        Get the position of the consumer for each partition.
+
+        :return: List of positions.
+        """
+        return self._get_positions()
+
+    def _get_positions(self):
+        positions = []
+        for tp in self.topic_partitions:
+            positions.append(self.consumer.position(tp))
+        return positions

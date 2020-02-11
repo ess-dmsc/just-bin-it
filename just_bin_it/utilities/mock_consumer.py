@@ -57,13 +57,13 @@ class MockConsumer(Consumer):
 
         return offset_ranges
 
-    def _offset_for_time(self, start_time):
+    def _offset_for_time(self, requested_time):
         result = []
         for tp in self.topic_partitions.values():
             count = 0
             found = False
             for msg in tp["messages"]:
-                if msg[0] >= start_time:
+                if msg[0] >= requested_time:
                     result.append(count)
                     found = True
                     break
@@ -72,6 +72,12 @@ class MockConsumer(Consumer):
             if not found:
                 result.append(None)
         return result
+
+    def _get_positions(self):
+        positions = []
+        for tp in self.topic_partitions.values():
+            positions.append(tp["offset"])
+        return positions
 
 
 def get_fake_event_messages(num_messages, num_partitions=1):

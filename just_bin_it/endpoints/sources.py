@@ -1,10 +1,18 @@
+from enum import Enum
 import json
 import logging
 import math
 import time
+from typing import Optional
 from just_bin_it.endpoints.serialisation import deserialise_ev42, deserialise_hs00
 from just_bin_it.exceptions import SourceException, TooOldTimeRequestedException
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
+
+
+class StopTimeStatus(Enum):
+    UNKNOWN = 0
+    EXCEEDED = 1
+    NOT_EXCEEDED = 2
 
 
 class BaseSource:
@@ -48,8 +56,16 @@ class ConfigSource(BaseSource):
 
 
 class EventSource(BaseSource):
-    def __init__(self, consumer, deserialise_function=deserialise_ev42):
+    def __init__(
+        self,
+        consumer,
+        start_time: int,
+        stop_time: Optional[int] = None,
+        deserialise_function=deserialise_ev42,
+    ):
         super().__init__(consumer)
+        self.start_time = start_time
+        self.stop_time = stop_time
         self.deserialise_function = deserialise_function
 
     def _process_record(self, record):
@@ -58,19 +74,18 @@ class EventSource(BaseSource):
         except Exception as error:
             raise SourceException(error)
 
-    def seek_to_time(self, requested_time: int):
+    def seek_to_start_time(self):
         """
-        Repositions the consumer to the first message >= the specified time.
+        Repositions the consumer to the first message >= the start time.
 
         Note: this is the Kafka message time.
 
-        :param requested_time: Time in milliseconds.
         :return: The corresponding offsets.
         """
         offset_ranges = self.consumer.get_offset_range()
 
         # Kafka uses milliseconds
-        offsets = self.consumer.offset_for_time(requested_time)
+        offsets = self.consumer.offset_for_time(self.start_time)
 
         for i, (lowest, highest) in enumerate(offset_ranges):
             if offsets[i] is None:
@@ -88,6 +103,30 @@ class EventSource(BaseSource):
         self.consumer.seek_by_offsets(offsets)
 
         return offsets
+
+    def stop_time_exceeded(self):
+        """
+        Has the defined stop time been exceeded in Kafka.
+
+        :return: A StopTimeStatus.
+        """
+        if not self.stop_time:
+            # If the stop time is not defined then it cannot be exceeded
+            return StopTimeStatus.NOT_EXCEEDED
+        offsets = self.consumer.offset_for_time(self.stop_time)
+
+        if not any(offsets):
+            # If all the offsets are None then the stop_time is later than the
+            # latest message in Kafka
+            return StopTimeStatus.UNKNOWN
+        else:
+            # Check to see if the consumer is past the offsets
+            positions = self.consumer.get_positions()
+            for offset, pos in zip(offsets, positions):
+                if offset is not None:
+                    if pos < offset:
+                        return StopTimeStatus.NOT_EXCEEDED
+            return StopTimeStatus.EXCEEDED
 
 
 class HistogramSource(BaseSource):
@@ -158,14 +197,13 @@ class SimulatedEventSource:
         }
         return [(int(time.time() * self.num_events), 0, data)]
 
-    def seek_to_time(self, requested_time: int):
+    def seek_to_start_time(self):
         """
         Does nothing.
 
         This command needs to be available so that the simulated source can be
         used as a like for like replacement for a real source.
 
-        :param requested_time: ignored.
         :return:
         """
         return 0

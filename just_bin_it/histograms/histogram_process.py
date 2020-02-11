@@ -5,7 +5,11 @@ import time
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
-from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
+from just_bin_it.endpoints.sources import (
+    EventSource,
+    SimulatedEventSource,
+    StopTimeStatus,
+)
 from just_bin_it.exceptions import KafkaException, JustBinItException
 from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.histograms.histogram_factory import HistogramFactory
@@ -23,18 +27,19 @@ def create_simulated_event_source(configuration):
     return SimulatedEventSource(configuration)
 
 
-def create_event_source(consumer, start):
+def create_event_source(consumer, start, stop):
     """
     Create the event source.
 
     :param consumer: The consumer to use.
     :param start: The start time.
+    :param stop: The stop time.
     :return: The created event source.
     """
-    event_source = EventSource(consumer)
+    event_source = EventSource(consumer, start, stop)
 
     if start:
-        event_source.seek_to_time(start)
+        event_source.seek_to_start_time()
     return event_source
 
 
@@ -42,7 +47,7 @@ def create_histogrammer(producer, configuration, start, stop):
     """
     Create a histogrammer.
 
-    :param: producer: The producer.
+    :param producer: The producer.
     :param configuration: The configuration.
     :param start: The start time.
     :param stop: The stop time.
@@ -89,7 +94,7 @@ def _histogramming_process(
     if simulation:
         event_source = create_simulated_event_source(configuration)
     else:
-        event_source = create_event_source(consumer, start)
+        event_source = create_event_source(consumer, start, stop)
 
     # Publish initial empty histograms.
     histogrammer.publish_histograms()
@@ -111,9 +116,23 @@ def _histogramming_process(
 
             event_buffer = event_source.get_new_data()
 
-            # See if the stop time has been exceeded
-            if len(event_buffer) == 0:
+            kafka_stop_time_exceeded = event_source.stop_time_exceeded()
+
+            if kafka_stop_time_exceeded == StopTimeStatus.EXCEEDED:
+                # According to Kafka the stop time has been exceeded.
+                # There may be some data in the event buffer to add though.
+                logging.info("Stop time exceeded according to Kafka")
+                break
+
+            # See if the stop time has been exceeded by the wall-clock.
+            # This may happen if there has not been any data for a while, so
+            # Kafka cannot tell us if the stop time has been exceeded.
+            if (
+                len(event_buffer) == 0
+                and kafka_stop_time_exceeded == StopTimeStatus.UNKNOWN
+            ):
                 if histogrammer.check_stop_time_exceeded(time.time_ns() // 1_000_000):
+                    logging.info("Stop time exceeded according to wall-clock")
                     break
 
         if event_buffer:
