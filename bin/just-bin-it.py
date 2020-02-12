@@ -60,7 +60,7 @@ class Main:
         self.heartbeat_topic = heartbeat_topic
         self.config_listener = None
         self.stats_publisher = stats_publisher
-        self.heartbeat_publisher = Producer(config_brokers) if heartbeat_topic else None
+        self.heartbeat_publisher = None
         self.hist_process = []
         self.stats_interval_ms = 1000
         self.time_to_publish_stats = 0
@@ -68,11 +68,15 @@ class Main:
         self.time_to_publish_heartbeat = 0
 
     def run(self):
+        """
+        The main loop for listening to messages and handling them.
+        """
         if self.simulation:
             logging.warning("RUNNING IN SIMULATION MODE")
 
         # Blocks until can connect to the config topic.
         self.create_config_listener()
+        self.create_heartbeat_producer()
 
         while True:
             # Handle configuration messages
@@ -101,20 +105,37 @@ class Main:
 
             time.sleep(0.1)
 
-    def publish_heartbeat(self, curr_time):
+    def create_heartbeat_producer(self):
+        """
+        Create the Kafka producer for publishing heart-beat messages.
+        """
+        if self.heartbeat_topic:
+            self.heartbeat_publisher = Producer(self.config_brokers)
+
+    def publish_heartbeat(self, current_time):
+        """
+        Publish heart-beat messages.
+
+        :param current_time: The current time.
+        """
         if self.heartbeat_publisher:
             msg = {"message": "hello", "message_interval": self.heartbeat_interval_ms}
             self.heartbeat_publisher.publish_message(
                 self.heartbeat_topic, bytes(json.dumps(msg), "utf-8")
             )
             self.time_to_publish_heartbeat = (
-                curr_time // 1_000_000 + self.heartbeat_interval_ms
+                current_time // 1_000_000 + self.heartbeat_interval_ms
             )
             self.time_to_publish_heartbeat -= (
                 self.time_to_publish_heartbeat % self.heartbeat_interval_ms
             )
 
-    def publish_stats(self, curr_time):
+    def publish_stats(self, current_time):
+        """
+        Publish the statistics from the histogram processes.
+
+        :param current_time: The current time.
+        """
         if self.stats_publisher:
             for i, process in enumerate(self.hist_process):
                 try:
@@ -123,22 +144,10 @@ class Main:
                         self.stats_publisher.send_histogram_stats(stats, i)
                 except Exception as error:
                     logging.error("Could not publish statistics: %s", error)
-        self.time_to_publish_stats = curr_time // 1_000_000 + self.stats_interval_ms
+        self.time_to_publish_stats = current_time // 1_000_000 + self.stats_interval_ms
         self.time_to_publish_stats -= (
             self.time_to_publish_stats % self.stats_interval_ms
         )
-
-    def publish(self, curr_time):
-        self.histogrammer.publish_histograms(curr_time)
-        hist_stats = self.histogrammer.get_histogram_stats()
-        logging.warning("%s", json.dumps(hist_stats))
-        if self.stats_publisher:
-            try:
-                self.stats_publisher.send_histogram_stats(hist_stats)
-            except Exception as error:
-                logging.error("Could not publish statistics: %s", error)
-        self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
-        self.time_to_publish -= self.time_to_publish % self.publish_interval
 
     def create_config_listener(self):
         """
@@ -157,6 +166,9 @@ class Main:
         )
 
     def stop_processes(self):
+        """
+        Request the processes to stop.
+        """
         for process in self.hist_process:
             process.stop()
         self.hist_process.clear()
