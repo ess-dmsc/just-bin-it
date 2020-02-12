@@ -1,6 +1,5 @@
 import json
 from just_bin_it.endpoints.histogram_sink import HistogramSink
-from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
 
 
 HISTOGRAM_STATES = {
@@ -10,30 +9,12 @@ HISTOGRAM_STATES = {
 }
 
 
-def create_histogrammer(producer, configuration):
-    """
-    Creates a fully configured histogrammer.
-
-    :param producer: The
-    :param configuration: The configuration message.
-    :return: The created histogrammer.
-    """
-    start, stop, hist_configs = parse_config(configuration)
-    histograms = HistogramFactory.generate(hist_configs)
-
-    return Histogrammer(producer, histograms, start, stop)
-
-
 class Histogrammer:
     def __init__(self, producer, histograms, start=None, stop=None):
         """
         Constructor.
 
-        Preferred method of creation is via the create_histogrammer method.
-
         All times are given in ns since the Unix epoch.
-
-        Note: interval cannot be defined when start and/or stop defined.
 
         :param producer: The producer for the sink.
         :param histograms: The histograms.

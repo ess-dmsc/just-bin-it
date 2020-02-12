@@ -2,7 +2,8 @@ import copy
 import json
 import pytest
 from just_bin_it.endpoints.serialisation import deserialise_hs00
-from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, create_histogrammer
+from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
+from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
 from just_bin_it.utilities.mock_producer import MockProducer
 
 
@@ -184,6 +185,20 @@ UNORDERED_EVENT_DATA = [
         },
     ),
 ]
+
+
+def create_histogrammer(producer, configuration):
+    """
+    Creates a fully configured histogrammer.
+
+    :param producer: The
+    :param configuration: The configuration message.
+    :return: The created histogrammer.
+    """
+    start, stop, hist_configs = parse_config(configuration)
+    histograms = HistogramFactory.generate(hist_configs)
+
+    return Histogrammer(producer, histograms, start, stop)
 
 
 class TestHistogrammer:

@@ -1,8 +1,19 @@
 # Creating a Docker image
 
-## Building
+## Building, tagging and pushing
+Build:
 ```
-docker build --no-cache -t just_bin_it  .
+docker build --no-cache -t just_bin_it .
+```
+
+Tag:
+```
+docker tag just_bin_it screamingudder/just-bin-it:latest
+```
+
+Push:
+```
+docker push screamingudder/just-bin-it:latest
 ```
 
 ## Running
