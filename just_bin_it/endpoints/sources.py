@@ -207,3 +207,14 @@ class SimulatedEventSource:
         :return:
         """
         return 0
+
+    def stop_time_exceeded(self):
+        """
+        Does nothing.
+
+        This command needs to be available so that the simulated source can be
+        used as a like for like replacement for a real source.
+
+        :return:
+        """
+        return StopTimeStatus.NOT_EXCEEDED
