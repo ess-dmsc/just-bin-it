@@ -190,7 +190,6 @@ class Main:
 
             try:
                 for config in hist_configs:
-
                     process = HistogramProcess(config, start, stop, self.simulation)
                     self.hist_process.append(process)
             except Exception as error:

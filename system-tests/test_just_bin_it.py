@@ -97,7 +97,7 @@ class TestJustBinIt:
         return deserialise_hs00(msg.value)
 
     def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(
-        self
+        self, just_bin_it
     ):
         # Configure just-bin-it
         self.send_message(CMD_TOPIC, bytes(json.dumps(CONFIG_JSON), "utf-8"))
@@ -126,7 +126,9 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "COUNTING"
 
-    def test_number_events_histogrammed_correspond_to_start_and_stop_times(self):
+    def test_number_events_histogrammed_correspond_to_start_and_stop_times(
+        self, just_bin_it
+    ):
         # Send fake data
         num_msgs = 10
 
@@ -158,7 +160,7 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_gets_all_data_during_interval(self):
+    def test_counting_for_an_interval_gets_all_data_during_interval(self, just_bin_it):
         # Config just-bin-it
         interval_length = 5
         config = copy.deepcopy(CONFIG_JSON)
@@ -193,7 +195,7 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert info["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_with_no_data_exits_interval(self):
+    def test_counting_for_an_interval_with_no_data_exits_interval(self, just_bin_it):
         # Config just-bin-it
         interval_length = 5
         config = copy.deepcopy(CONFIG_JSON)
@@ -216,7 +218,9 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == 0
         assert info["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_with_only_one_event_messge_gets_data(self):
+    def test_counting_for_an_interval_with_only_one_event_message_gets_data(
+        self, just_bin_it
+    ):
         # Config just-bin-it
         interval_length = 5
         config = copy.deepcopy(CONFIG_JSON)
@@ -224,7 +228,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send one fake data message
         self.generate_and_send_data(1)
@@ -248,7 +252,9 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert info["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_data_after_empty_interval_is_ignored(self):
+    def test_counting_for_an_interval_data_after_empty_interval_is_ignored(
+        self, just_bin_it
+    ):
         # Config just-bin-it
         interval_length = 5
         config = copy.deepcopy(CONFIG_JSON)
