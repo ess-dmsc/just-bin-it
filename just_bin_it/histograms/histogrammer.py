@@ -39,8 +39,7 @@ class Histogrammer:
         :param simulation: Indicates whether in simulation.
         """
         for hist in self.histograms:
-            for msg_time, msg_offset, msg in event_buffer:
-
+            for msg_time, _, msg in event_buffer:
                 if self.start:
                     if msg_time < self.start:
                         continue
