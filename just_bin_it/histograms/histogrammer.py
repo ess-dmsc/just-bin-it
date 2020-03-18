@@ -68,7 +68,7 @@ class Histogrammer:
 
         for h in self.histograms:
             info = self._generate_info(h)
-            logging.error(info)
+            logging.info(info)
             self.hist_sink.send_histogram(h.topic, h, timestamp, json.dumps(info))
 
     def _generate_info(self, histogram):

@@ -9,6 +9,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import serialise_ev42, deserialise_hs00
+from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 TOF_RANGE = (0, 100_000_000)
@@ -72,7 +73,7 @@ class TestJustBinIt:
         self.producer.flush()
 
     def generate_and_send_data(self, msg_id):
-        time_stamp = time.time_ns()
+        time_stamp = time_in_ns()
         # Generate a random number of events so we can be sure the correct data matches
         # up at the end.
         num_events = random.randint(500, 1500)
