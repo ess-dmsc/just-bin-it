@@ -8,7 +8,7 @@ python = "python3.6"
 
 container_build_nodes = [
 //  'centos7': ContainerBuildNode.getDefaultContainerBuildNode('centos7'),
-  'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7'),
+  'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7')
 //  'debian9': ContainerBuildNode.getDefaultContainerBuildNode('debian9'),
 //  'ubuntu1804': ContainerBuildNode.getDefaultContainerBuildNode('ubuntu1804')
 ]
@@ -57,6 +57,23 @@ builders = pipeline_builder.createBuilders { container ->
       ${python} -m pytest --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
+    xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
+  } // stage
+
+  pipeline_builder.stage("${container.key}: System Tests") {
+    def test_output = "SystemTestResults.xml"
+    // Stop and remove any containers that may have been from the job before,
+    // e.g. if a Jenkins job has been aborted.
+    sh "docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true"
+    timeout(time: 30, activity: true) {
+      container.sh """
+      cd ${project}/system-tests
+      pip install --user -r requirements.txt
+      ${python} -m pytest --junitxml=${test_output}
+      """
+    }
+    sh "docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true"
+    container.copyFrom("${project}/system-tests/${test_output}", ".")
     xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
   } // stage
 
