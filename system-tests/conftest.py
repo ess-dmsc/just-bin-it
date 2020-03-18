@@ -6,6 +6,7 @@ from confluent_kafka.admin import AdminClient
 from time import sleep
 from subprocess import Popen
 import signal
+import sys
 
 
 common_options = {
@@ -114,7 +115,7 @@ def just_bin_it(request):
     print("Started preparing test environment...", flush=True)
     proc = Popen(
         [
-            "python",
+            sys.executable,
             "../bin/just-bin-it.py",
             "-b",
             "localhost:9092",
