@@ -1,4 +1,5 @@
 import json
+import logging
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 
 
@@ -67,6 +68,7 @@ class Histogrammer:
 
         for h in self.histograms:
             info = self._generate_info(h)
+            logging.error(info)
             self.hist_sink.send_histogram(h.topic, h, timestamp, json.dumps(info))
 
     def _generate_info(self, histogram):
@@ -138,3 +140,6 @@ class Histogrammer:
             self._stop_time_exceeded = True
 
         return self._stop_time_exceeded
+
+    def set_finished(self):
+        self._stop_time_exceeded = True
