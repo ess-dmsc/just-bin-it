@@ -7,16 +7,11 @@ project = "just-bin-it"
 python = "python3.6"
 
 container_build_nodes = [
-//  'centos7': ContainerBuildNode.getDefaultContainerBuildNode('centos7'),
   'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7')
-//  'debian9': ContainerBuildNode.getDefaultContainerBuildNode('debian9'),
-//  'ubuntu1804': ContainerBuildNode.getDefaultContainerBuildNode('ubuntu1804')
 ]
-
 
 // Define number of old builds to keep.
 num_artifacts_to_keep = '1'
-
 
 // Set number of old builds to keep.
 properties([[
@@ -29,7 +24,6 @@ properties([[
     numToKeepStr: num_artifacts_to_keep
   ]
 ]]);
-
 
 pipeline_builder = new PipelineBuilder(this, container_build_nodes)
 pipeline_builder.activateEmailFailureNotifications()
@@ -59,29 +53,15 @@ builders = pipeline_builder.createBuilders { container ->
     container.copyFrom("${project}/${test_output}", ".")
     xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
   } // stage
-
-  pipeline_builder.stage("${container.key}: System Tests") {
-    def test_output = "SystemTestResults.xml"
-    // Stop and remove any containers that may have been from the job before,
-    // e.g. if a Jenkins job has been aborted.
-    sh "docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true"
-    timeout(time: 30, activity: true) {
-      container.sh """
-      cd ${project}/system-tests
-      pip install --user -r requirements.txt
-      ${python} -m pytest --junitxml=${test_output}
-      """
-    }
-    sh "docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true"
-    container.copyFrom("${project}/system-tests/${test_output}", ".")
-    xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
-  } // stage
-
 }  // createBuilders
 
 node {
   dir("${project}") {
     scm_vars = checkout scm
+  }
+
+  if ( env.CHANGE_ID ) {
+      builders['system tests'] = get_system_tests_pipeline()
   }
 
   try {
@@ -93,3 +73,49 @@ node {
   // Delete workspace when build is done
   cleanWs()
 }
+
+def get_system_tests_pipeline() {
+  return {
+    node('system-test') {
+      cleanWs()
+      dir("${project}") {
+        try {
+          stage("System tests: Checkout") {
+            checkout scm
+          }  // stage
+          stage("System tests: Install requirements") {
+            sh """
+            ${python} -m pip install --user --upgrade pip
+            ${python} -m pip install --user -r requirements.txt
+            ${python} -m pip install --user -r system-tests/requirements.txt
+            """
+          }  // stage
+          stage("System tests: Run") {
+            // Stop and remove any containers that may have been from the job before,
+            // i.e. if a Jenkins job has been aborted.
+            sh "docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true"
+            timeout(time: 30, activity: true){
+              sh """
+              cd system-tests/
+              ${python} -m pytest -s --junitxml=./SystemTestsOutput.xml .
+              """
+            }
+          }  // stage
+        } finally {
+          stage ("System tests: Clean Up") {
+            // The statements below return true because the build should pass
+            // even if there are no docker containers or output files to be
+            // removed.
+            sh """
+            rm -rf system-tests/output-files/* || true
+            docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true
+            """
+          }  // stage
+          stage("System tests: Archive") {
+            junit "system-tests/SystemTestsOutput.xml"
+          }
+        }  // try/finally
+      } // dir
+    }  // node
+  }  // return
+} // def
