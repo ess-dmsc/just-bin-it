@@ -123,6 +123,9 @@ def just_bin_it(request):
         ]
     )
 
+    # Give just-bin-it time to start up
+    sleep(10)
+
     wait_for_debugger = request.config.getoption(WAIT_FOR_DEBUGGER_ATTACH)
 
     if wait_for_debugger:

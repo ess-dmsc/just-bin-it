@@ -103,7 +103,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(CONFIG_JSON), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send fake data
         num_msgs = 10
@@ -168,7 +168,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send fake data
         num_msgs = 12
@@ -177,7 +177,7 @@ class TestJustBinIt:
             self.generate_and_send_data(i + 1)
             time.sleep(0.5)
 
-        time.sleep(2)
+        time.sleep(interval_length * 3)
 
         # Check that end offset has changed otherwise we could be looking at old test
         # data.
@@ -203,7 +203,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send no data, but wait for the interval to pass
         time.sleep(interval_length * 3)
@@ -262,7 +262,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send no data, but wait for interval to pass
         time.sleep(interval_length)
@@ -270,7 +270,7 @@ class TestJustBinIt:
         # Send one fake data message just after the interval, but probably in the leeway
         self.generate_and_send_data(1)
 
-        time.sleep(5)
+        time.sleep(interval_length * 3)
 
         # Check that end offset has changed otherwise we could be looking at old test
         # data.
