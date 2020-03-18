@@ -161,6 +161,7 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "FINISHED"
 
+    @pytest.mark.flaky(reruns=5)
     def test_counting_for_an_interval_gets_all_data_during_interval(self, just_bin_it):
         # Config just-bin-it
         interval_length = 5
