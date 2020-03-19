@@ -13,6 +13,7 @@ from just_bin_it.endpoints.sources import (
 from just_bin_it.exceptions import KafkaException, JustBinItException
 from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.histograms.histogram_factory import HistogramFactory
+from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.mock_consumer import MockConsumer
 from just_bin_it.utilities.mock_producer import MockProducer
 
@@ -82,7 +83,7 @@ def _histogramming_process(
 ):
     publish_interval = 500
     time_to_publish = 0
-    exit_requested = False
+    stop_processing = False
 
     producer = MockProducer() if use_mocks else Producer(configuration["data_brokers"])
     histogrammer = create_histogrammer(producer, configuration, start, stop)
@@ -99,7 +100,7 @@ def _histogramming_process(
     # Publish initial empty histograms.
     histogrammer.publish_histograms()
 
-    while not exit_requested:
+    while not stop_processing:
         event_buffer = []
 
         while len(event_buffer) == 0:
@@ -108,20 +109,20 @@ def _histogramming_process(
                 msg = msg_queue.get(True)
                 if msg == "quit":
                     logging.info("Stopping histogramming process")
-                    exit_requested = True
+                    stop_processing = True
                     break
                 elif msg == "clear":
                     logging.info("Clearing histograms")
                     histogrammer.clear_histograms()
 
             event_buffer = event_source.get_new_data()
-
             kafka_stop_time_exceeded = event_source.stop_time_exceeded()
 
             if kafka_stop_time_exceeded == StopTimeStatus.EXCEEDED:
                 # According to Kafka the stop time has been exceeded.
                 # There may be some data in the event buffer to add though.
-                logging.info("Stop time exceeded according to Kafka")
+                logging.error("Stop time exceeded according to Kafka")
+                stop_processing = True
                 break
 
             # See if the stop time has been exceeded by the wall-clock.
@@ -131,16 +132,20 @@ def _histogramming_process(
                 len(event_buffer) == 0
                 and kafka_stop_time_exceeded == StopTimeStatus.UNKNOWN
             ):
-                if histogrammer.check_stop_time_exceeded(time.time_ns() // 1_000_000):
-                    logging.info("Stop time exceeded according to wall-clock")
+                if histogrammer.check_stop_time_exceeded(time_in_ns() // 1_000_000):
+                    logging.error("Stop time exceeded according to wall-clock")
+                    stop_processing = True
                     break
 
         if event_buffer:
             histogrammer.add_data(event_buffer)
 
-        # Only publish at specified rate
-        curr_time = time.time_ns()
-        if curr_time // 1_000_000 > time_to_publish:
+        if stop_processing:
+            histogrammer.set_finished()
+
+        # Only publish at specified rate or if the process is stopping.
+        curr_time = time_in_ns()
+        if curr_time // 1_000_000 > time_to_publish or stop_processing:
             publish_data(histogrammer, curr_time, stats_queue)
             time_to_publish = curr_time // 1_000_000 + publish_interval
             time_to_publish -= time_to_publish % publish_interval

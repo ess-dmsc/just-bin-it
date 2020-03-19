@@ -9,7 +9,7 @@ def plot_histograms(histograms):
     """
     import matplotlib
 
-    matplotlib.use("TkAgg")
+    matplotlib.use("Qt5Agg")
     from matplotlib import pyplot as plt
 
     fig = plt.figure(1)

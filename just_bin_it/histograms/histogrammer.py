@@ -1,4 +1,5 @@
 import json
+import logging
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 
 
@@ -39,8 +40,7 @@ class Histogrammer:
         :param simulation: Indicates whether in simulation.
         """
         for hist in self.histograms:
-            for msg_time, msg_offset, msg in event_buffer:
-
+            for msg_time, _, msg in event_buffer:
                 if self.start:
                     if msg_time < self.start:
                         continue
@@ -68,6 +68,7 @@ class Histogrammer:
 
         for h in self.histograms:
             info = self._generate_info(h)
+            logging.info(info)
             self.hist_sink.send_histogram(h.topic, h, timestamp, json.dumps(info))
 
     def _generate_info(self, histogram):
@@ -139,3 +140,6 @@ class Histogrammer:
             self._stop_time_exceeded = True
 
         return self._stop_time_exceeded
+
+    def set_finished(self):
+        self._stop_time_exceeded = True

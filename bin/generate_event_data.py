@@ -6,6 +6,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import serialise_ev42
 from just_bin_it.endpoints.kafka_producer import Producer
+from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
@@ -18,7 +19,7 @@ DET_HEIGHT = 100
 def generate_data(source, message_id, num_points):
     tofs, dets = generate_fake_data(TOF_RANGE, DET_RANGE, num_points)
 
-    time_stamp = time.time_ns()
+    time_stamp = time_in_ns()
 
     data = serialise_ev42(source, message_id, time_stamp, tofs, dets)
     return time_stamp, data
@@ -32,7 +33,7 @@ def generate_dethist_data(source, message_id, num_points):
         for det in new_dets:
             dets.append(h * DET_WIDTH + det)
 
-    time_stamp = time.time_ns()
+    time_stamp = time_in_ns()
 
     data = serialise_ev42(source, message_id, time_stamp, [], dets)
     return time_stamp, data

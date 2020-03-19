@@ -9,6 +9,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import serialise_ev42, deserialise_hs00
+from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 TOF_RANGE = (0, 100_000_000)
@@ -72,7 +73,7 @@ class TestJustBinIt:
         self.producer.flush()
 
     def generate_and_send_data(self, msg_id):
-        time_stamp = time.time_ns()
+        time_stamp = time_in_ns()
         # Generate a random number of events so we can be sure the correct data matches
         # up at the end.
         num_events = random.randint(500, 1500)
@@ -97,13 +98,13 @@ class TestJustBinIt:
         return deserialise_hs00(msg.value)
 
     def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(
-        self
+        self, just_bin_it
     ):
         # Configure just-bin-it
         self.send_message(CMD_TOPIC, bytes(json.dumps(CONFIG_JSON), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send fake data
         num_msgs = 10
@@ -126,7 +127,9 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "COUNTING"
 
-    def test_number_events_histogrammed_correspond_to_start_and_stop_times(self):
+    def test_number_events_histogrammed_correspond_to_start_and_stop_times(
+        self, just_bin_it
+    ):
         # Send fake data
         num_msgs = 10
 
@@ -158,7 +161,8 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_gets_all_data_during_interval(self):
+    @pytest.mark.flaky(reruns=5)
+    def test_counting_for_an_interval_gets_all_data_during_interval(self, just_bin_it):
         # Config just-bin-it
         interval_length = 5
         config = copy.deepcopy(CONFIG_JSON)
@@ -166,7 +170,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send fake data
         num_msgs = 12
@@ -175,7 +179,7 @@ class TestJustBinIt:
             self.generate_and_send_data(i + 1)
             time.sleep(0.5)
 
-        time.sleep(2)
+        time.sleep(interval_length * 3)
 
         # Check that end offset has changed otherwise we could be looking at old test
         # data.
@@ -193,7 +197,7 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert info["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_with_no_data_exits_interval(self):
+    def test_counting_for_an_interval_with_no_data_exits_interval(self, just_bin_it):
         # Config just-bin-it
         interval_length = 5
         config = copy.deepcopy(CONFIG_JSON)
@@ -201,7 +205,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send no data, but wait for the interval to pass
         time.sleep(interval_length * 3)
@@ -216,7 +220,9 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == 0
         assert info["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_with_only_one_event_messge_gets_data(self):
+    def test_counting_for_an_interval_with_only_one_event_message_gets_data(
+        self, just_bin_it
+    ):
         # Config just-bin-it
         interval_length = 5
         config = copy.deepcopy(CONFIG_JSON)
@@ -224,7 +230,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send one fake data message
         self.generate_and_send_data(1)
@@ -248,7 +254,9 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert info["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_data_after_empty_interval_is_ignored(self):
+    def test_counting_for_an_interval_data_after_empty_interval_is_ignored(
+        self, just_bin_it
+    ):
         # Config just-bin-it
         interval_length = 5
         config = copy.deepcopy(CONFIG_JSON)
@@ -256,7 +264,7 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
-        time.sleep(5)
+        time.sleep(1)
 
         # Send no data, but wait for interval to pass
         time.sleep(interval_length)
@@ -264,7 +272,7 @@ class TestJustBinIt:
         # Send one fake data message just after the interval, but probably in the leeway
         self.generate_and_send_data(1)
 
-        time.sleep(5)
+        time.sleep(interval_length * 3)
 
         # Check that end offset has changed otherwise we could be looking at old test
         # data.
