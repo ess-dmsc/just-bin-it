@@ -10,6 +10,7 @@ from just_bin_it.endpoints.config_listener import ConfigListener
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
+from just_bin_it.exceptions import KafkaException
 from just_bin_it.histograms.histogram_factory import parse_config
 from just_bin_it.histograms.histogram_process import HistogramProcess
 from just_bin_it.utilities.statistics_publisher import StatisticsPublisher
@@ -119,10 +120,16 @@ class Main:
         :param current_time: The current time.
         """
         if self.heartbeat_publisher:
-            msg = {"message": "hello", "message_interval": self.heartbeat_interval_ms}
-            self.heartbeat_publisher.publish_message(
-                self.heartbeat_topic, bytes(json.dumps(msg), "utf-8")
-            )
+            msg = {
+                "message": current_time // 1_000_000,
+                "message_interval": self.heartbeat_interval_ms,
+            }
+            try:
+                self.heartbeat_publisher.publish_message(
+                    self.heartbeat_topic, bytes(json.dumps(msg), "utf-8")
+                )
+            except KafkaException as error:
+                logging.error("Could not publish heartbeat: %s", error)
             self.time_to_publish_heartbeat = (
                 current_time // 1_000_000 + self.heartbeat_interval_ms
             )
