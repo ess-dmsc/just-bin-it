@@ -226,8 +226,9 @@ class HistogramProcess:
         self._process.start()
 
     def stop(self):
-        self._msg_queue.put("quit")
-        self._process.join()
+        if self._process.is_alive():
+            self._msg_queue.put("quit")
+            self._process.join()
 
     def clear(self):
         self._msg_queue.put("clear")

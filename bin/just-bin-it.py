@@ -74,7 +74,7 @@ class Main:
         The main loop for listening to messages and handling them.
         """
         if self.simulation:
-            logging.warning("RUNNING IN SIMULATION MODE")
+            logging.warning("RUNNING IN SIMULATION MODE!")
 
         # Blocks until can connect to the config topic.
         self.create_config_listener()
@@ -178,7 +178,11 @@ class Main:
         Request the processes to stop.
         """
         for process in self.hist_process:
-            process.stop()
+            try:
+                process.stop()
+            except Exception as error:
+                # Process might have killed itself already
+                logging.info("Stopping process failed %s", error)
         self.hist_process.clear()
 
     def handle_command_message(self, message):
@@ -254,7 +258,7 @@ if __name__ == "__main__":
         "-l",
         "--log-level",
         type=int,
-        default=3,
+        default=2,
         help="sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.",
     )
 
