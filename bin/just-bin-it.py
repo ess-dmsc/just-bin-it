@@ -13,6 +13,7 @@ from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.exceptions import KafkaException
 from just_bin_it.histograms.histogram_factory import parse_config
 from just_bin_it.histograms.histogram_process import HistogramProcess
+from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.statistics_publisher import StatisticsPublisher
 
 
@@ -97,7 +98,7 @@ class Main:
                     logging.error("Could not handle configuration: %s", error)
 
             # Handle publishing of statistics
-            curr_time = time.time_ns()
+            curr_time = time_in_ns()
             if curr_time // 1_000_000 > self.time_to_publish_stats:
                 self.publish_stats(curr_time)
 
@@ -197,7 +198,6 @@ class Main:
 
             try:
                 for config in hist_configs:
-
                     process = HistogramProcess(config, start, stop, self.simulation)
                     self.hist_process.append(process)
             except Exception as error:
