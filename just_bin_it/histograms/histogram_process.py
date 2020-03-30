@@ -18,14 +18,16 @@ from just_bin_it.utilities.mock_consumer import MockConsumer
 from just_bin_it.utilities.mock_producer import MockProducer
 
 
-def create_simulated_event_source(configuration):
+def create_simulated_event_source(configuration, start, stop):
     """
     Create a simulated event source.
 
     :param configuration The configuration.
+    :param start: The start time.
+    :param stop: The stop time.
     :return: The created event source.
     """
-    return SimulatedEventSource(configuration)
+    return SimulatedEventSource(configuration, start, stop)
 
 
 def create_event_source(consumer, start, stop):
@@ -93,7 +95,7 @@ def _histogramming_process(
         consumer = Consumer(configuration["data_brokers"], configuration["data_topics"])
 
     if simulation:
-        event_source = create_simulated_event_source(configuration)
+        event_source = create_simulated_event_source(configuration, start, stop)
     else:
         event_source = create_event_source(consumer, start, stop)
 
@@ -224,8 +226,9 @@ class HistogramProcess:
         self._process.start()
 
     def stop(self):
-        self._msg_queue.put("quit")
-        self._process.join()
+        if self._process.is_alive():
+            self._msg_queue.put("quit")
+            self._process.join()
 
     def clear(self):
         self._msg_queue.put("clear")

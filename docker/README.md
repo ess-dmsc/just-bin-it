@@ -16,6 +16,11 @@ Push:
 docker push screamingudder/just-bin-it:latest
 ```
 
+Pulling:
+```
+docker pull screamingudder/just-bin-it:latest
+```
+
 ## Running
 ```
 docker run -it -e PARAMETERS='--broker 169.254.98.29:9092 --config-topic hist_commands' just_bin_it

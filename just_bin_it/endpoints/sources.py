@@ -138,13 +138,15 @@ class HistogramSource(BaseSource):
 
 
 class SimulatedEventSource:
-    def __init__(self, config):
+    def __init__(self, config, start, stop):
         self.tof_range = (0, 100_000_000)
         self.det_range = (1, 512)
         self.num_events = 1000
         self.is_dethist = False
         self.width = 0
         self.height = 0
+        self.start = start / 1000
+        self.stop = stop / 1000
 
         if config["type"] == "dethist":
             # Different behaviour for this type of histogram
@@ -209,12 +211,7 @@ class SimulatedEventSource:
         return 0
 
     def stop_time_exceeded(self):
-        """
-        Does nothing.
+        if time.time() > self.stop:
+            return StopTimeStatus.EXCEEDED
 
-        This command needs to be available so that the simulated source can be
-        used as a like for like replacement for a real source.
-
-        :return:
-        """
         return StopTimeStatus.NOT_EXCEEDED
