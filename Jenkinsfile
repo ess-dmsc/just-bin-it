@@ -4,6 +4,8 @@ import ecdcpipeline.PipelineBuilder
 
 project = "just-bin-it"
 
+python = "python3.6"
+
 container_build_nodes = [
   'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7-gcc8')
 ]
