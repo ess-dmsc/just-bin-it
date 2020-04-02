@@ -4,8 +4,6 @@ import ecdcpipeline.PipelineBuilder
 
 project = "just-bin-it"
 
-python = "python3.6"
-
 container_build_nodes = [
   'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7')
 ]
@@ -39,16 +37,19 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Dependencies") {
     def conan_remote = "ess-dmsc-local"
     container.sh """
-      pip install --user -r ${project}/requirements.txt
+      /opt/miniconda/bin/conda init bash
+      export PATH=/opt/miniconda/bin:$PATH
+      python --version
+      python -m pip install --user -r ${project}/requirements.txt
     """
   } // stage
 
   pipeline_builder.stage("${container.key}: Test") {
     def test_output = "TestResults.xml"
     container.sh """
-      ${python} --version
+      python --version
       cd ${project}
-      ${python} -m tox -- --junitxml=${test_output}
+      python -m tox -- --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
     xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
