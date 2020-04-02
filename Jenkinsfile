@@ -47,6 +47,7 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Test") {
     def test_output = "TestResults.xml"
     container.sh """
+      export PATH=/opt/miniconda/bin:$PATH
       python --version
       cd ${project}
       python -m tox -- --junitxml=${test_output}
