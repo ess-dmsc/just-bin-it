@@ -48,7 +48,7 @@ builders = pipeline_builder.createBuilders { container ->
     container.sh """
       ${python} --version
       cd ${project}
-      ${python} -m pytest --junitxml=${test_output}
+      ${python} -m tox -- --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
     xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
