@@ -5,7 +5,7 @@ import ecdcpipeline.PipelineBuilder
 project = "just-bin-it"
 
 container_build_nodes = [
-  'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7')
+  'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7-gcc8')
 ]
 
 // Define number of old builds to keep.
