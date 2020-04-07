@@ -1,5 +1,5 @@
-import numpy as np
 import flatbuffers
+import streaming_data_types.histogram_hs00 as hs00
 import just_bin_it.fbschemas.ev42.EventMessage as EventMessage
 import just_bin_it.fbschemas.hs00.ArrayDouble as ArrayDouble
 import just_bin_it.fbschemas.hs00.DimensionMetaData as DimensionMetaData
@@ -49,57 +49,10 @@ def deserialise_hs00(buf):
     :param buf:
     :return: dict of histogram information
     """
-    # Check schema is correct
-    if get_schema(buf) != "hs00":
-        raise JustBinItException(
-            f"Incorrect schema: expected hs00 but got {get_schema(buf)}"
-        )
-
-    event_hist = EventHistogram.EventHistogram.GetRootAsEventHistogram(buf, 0)
-
-    dims = []
-    for i in range(event_hist.DimMetadataLength()):
-        bins_fb = event_hist.DimMetadata(i).BinBoundaries()
-
-        # Get bins
-        temp = ArrayDouble.ArrayDouble()
-        temp.Init(bins_fb.Bytes, bins_fb.Pos)
-        bins = temp.ValueAsNumpy()
-
-        # Get type
-        if event_hist.DimMetadata(i).BinBoundariesType() == Array.ArrayDouble:
-            bin_type = np.float64
-        else:
-            raise TypeError("Type of the bin boundaries is incorrect")
-
-        hist_info = {
-            "length": event_hist.DimMetadata(i).Length(),
-            "edges": bins.tolist(),
-            "type": bin_type,
-        }
-        dims.append(hist_info)
-
-    # Get the data
-    if event_hist.DataType() != Array.ArrayDouble:
-        raise TypeError("Type of the data array is incorrect")  # pragma: no mutate
-
-    data_fb = event_hist.Data()
-    temp = ArrayDouble.ArrayDouble()
-    temp.Init(data_fb.Bytes, data_fb.Pos)
-    data = temp.ValueAsNumpy()
-    shape = event_hist.CurrentShapeAsNumpy().tolist()
-
-    hist = {
-        "source": event_hist.Source().decode("utf-8"),
-        "timestamp": event_hist.Timestamp(),
-        "shape": shape,
-        "dims": dims,
-        "data": data.reshape(shape),
-        "info": event_hist.Info().decode("utf-8")
-        if event_hist.Info()
-        else "",  # pragma: no mutate
-    }
-    return hist
+    try:
+        return hs00.deserialise_hs00(buf)
+    except Exception as error:
+        raise JustBinItException(f"Could not deserialise hs00 buffer: {error}")
 
 
 def _serialise_metadata(builder, edges, length):
