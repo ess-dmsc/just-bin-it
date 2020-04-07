@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import pytest
 import tests
 from just_bin_it.endpoints.serialisation import (
@@ -60,16 +59,15 @@ class TestDeserialisationHs00:
 
         assert data["source"] == "just-bin-it"
         assert data["timestamp"] == 987_654_321
-        assert data["shape"] == [50]
+        assert data["current_shape"] == [50]
         assert len(data["data"]) == 50
-        assert len(data["dims"]) == 1
+        assert len(data["dim_metadata"]) == 1
         assert data["info"] == "hello"
 
-        assert data["dims"][0]["length"] == 50
-        assert data["dims"][0]["type"] == np.float64
-        assert len(data["dims"][0]["edges"]) == 51
-        assert data["dims"][0]["edges"][0] == 0.0
-        assert data["dims"][0]["edges"][50] == 100_000_000.0
+        assert data["dim_metadata"][0]["length"] == 50
+        assert len(data["dim_metadata"][0]["bin_boundaries"]) == 51
+        assert data["dim_metadata"][0]["bin_boundaries"][0] == 0.0
+        assert data["dim_metadata"][0]["bin_boundaries"][50] == 100_000_000.0
 
     def test_if_schema_is_incorrect_then_throws(self):
         new_buf = self.buf[:4] + b"na12" + self.buf[8:]

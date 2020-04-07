@@ -21,13 +21,13 @@ def convert_for_plotting(histogram):
 
     h = Histogram()
 
-    if len(histogram["dims"]) == 1:
+    if len(histogram["dim_metadata"]) == 1:
         # 1-D
-        h.x_edges = np.array(histogram["dims"][0]["edges"])
+        h.x_edges = np.array(histogram["dim_metadata"][0]["bin_boundaries"])
     else:
         # 2-D
-        h.x_edges = np.array(histogram["dims"][0]["edges"])
-        h.y_edges = np.array(histogram["dims"][1]["edges"])
+        h.x_edges = np.array(histogram["dim_metadata"][0]["bin_boundaries"])
+        h.y_edges = np.array(histogram["dim_metadata"][1]["bin_boundaries"])
 
     h.data = np.array(histogram["data"])
 

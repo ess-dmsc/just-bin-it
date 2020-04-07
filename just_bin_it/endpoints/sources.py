@@ -146,7 +146,10 @@ class SimulatedEventSource:
         self.width = 0
         self.height = 0
         self.start = start / 1000
-        self.stop = stop / 1000
+        if stop:
+            self.stop = stop / 1000
+        else:
+            self.stop = None
 
         if config["type"] == "dethist":
             # Different behaviour for this type of histogram
@@ -211,7 +214,7 @@ class SimulatedEventSource:
         return 0
 
     def stop_time_exceeded(self):
-        if time.time() > self.stop:
+        if self.stop and time.time() > self.stop:
             return StopTimeStatus.EXCEEDED
 
         return StopTimeStatus.NOT_EXCEEDED
