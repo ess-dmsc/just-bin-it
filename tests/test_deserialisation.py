@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import pytest
 import tests
 from just_bin_it.endpoints.serialisation import (
@@ -66,7 +65,6 @@ class TestDeserialisationHs00:
         assert data["info"] == "hello"
 
         assert data["dim_metadata"][0]["length"] == 50
-        assert data["dim_metadata"][0]["type"] == np.float64
         assert len(data["dim_metadata"][0]["bin_boundaries"]) == 51
         assert data["dim_metadata"][0]["bin_boundaries"][0] == 0.0
         assert data["dim_metadata"][0]["bin_boundaries"][50] == 100_000_000.0

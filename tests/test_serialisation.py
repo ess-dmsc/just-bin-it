@@ -51,7 +51,6 @@ class TestSerialisationHs00:
             hist["dim_metadata"][0]["bin_boundaries"], self.hist_1d.x_edges.tolist()
         )
         assert hist["dim_metadata"][0]["length"] == self.hist_1d.num_bins
-        assert hist["dim_metadata"][0]["type"] == np.float64
         assert np.array_equal(hist["data"], self.hist_1d.data)
 
     def test_if_timestamp_not_supplied_then_it_is_zero(self):
@@ -68,7 +67,6 @@ class TestSerialisationHs00:
             hist["dim_metadata"][0]["bin_boundaries"], self.hist_1d.x_edges.tolist()
         )
         assert hist["dim_metadata"][0]["length"] == self.hist_1d.num_bins
-        assert hist["dim_metadata"][0]["type"] == np.float64
         assert np.array_equal(hist["data"], self.hist_1d.data)
 
     def test_serialises_hs00_message_correctly_for_2d(self):
@@ -88,8 +86,6 @@ class TestSerialisationHs00:
         )
         assert hist["dim_metadata"][0]["length"] == self.hist_2d.num_bins
         assert hist["dim_metadata"][1]["length"] == self.hist_2d.num_bins
-        assert hist["dim_metadata"][0]["type"] == np.float64
-        assert hist["dim_metadata"][1]["type"] == np.float64
         assert np.array_equal(hist["data"], self.hist_2d.data)
 
     def test_serialises_hs00_message_with_info_field_filled_out_correctly(self):
