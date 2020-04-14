@@ -103,41 +103,38 @@ def _histogramming_process(
     histogrammer.publish_histograms()
 
     while not stop_processing:
+        # Check message queue to see if we should stop
+        if not msg_queue.empty():
+            msg = msg_queue.get(True)
+            if msg == "quit":
+                logging.info("Stopping histogramming process")
+                stop_processing = True
+            elif msg == "clear":
+                logging.info("Clearing histograms")
+                histogrammer.clear_histograms()
+
         event_buffer = []
 
-        while len(event_buffer) == 0:
-            # Check message queue to see if we should stop
-            if not msg_queue.empty():
-                msg = msg_queue.get(True)
-                if msg == "quit":
-                    logging.info("Stopping histogramming process")
-                    stop_processing = True
-                    break
-                elif msg == "clear":
-                    logging.info("Clearing histograms")
-                    histogrammer.clear_histograms()
+        # while len(event_buffer) == 0:
+        event_buffer = event_source.get_new_data()
+        kafka_stop_time_exceeded = event_source.stop_time_exceeded()
 
-            event_buffer = event_source.get_new_data()
-            kafka_stop_time_exceeded = event_source.stop_time_exceeded()
+        if kafka_stop_time_exceeded == StopTimeStatus.EXCEEDED:
+            # According to Kafka the stop time has been exceeded.
+            # There may be some data in the event buffer to add though.
+            logging.info("Stop time exceeded according to Kafka")
+            stop_processing = True
 
-            if kafka_stop_time_exceeded == StopTimeStatus.EXCEEDED:
-                # According to Kafka the stop time has been exceeded.
-                # There may be some data in the event buffer to add though.
-                logging.info("Stop time exceeded according to Kafka")
+        # See if the stop time has been exceeded by the wall-clock.
+        # This may happen if there has not been any data for a while, so
+        # Kafka cannot tell us if the stop time has been exceeded.
+        if (
+            len(event_buffer) == 0
+            and kafka_stop_time_exceeded == StopTimeStatus.UNKNOWN
+        ):
+            if histogrammer.check_stop_time_exceeded(time_in_ns() // 1_000_000):
+                logging.info("Stop time exceeded according to wall-clock")
                 stop_processing = True
-                break
-
-            # See if the stop time has been exceeded by the wall-clock.
-            # This may happen if there has not been any data for a while, so
-            # Kafka cannot tell us if the stop time has been exceeded.
-            if (
-                len(event_buffer) == 0
-                and kafka_stop_time_exceeded == StopTimeStatus.UNKNOWN
-            ):
-                if histogrammer.check_stop_time_exceeded(time_in_ns() // 1_000_000):
-                    logging.info("Stop time exceeded according to wall-clock")
-                    stop_processing = True
-                    break
 
         if event_buffer:
             histogrammer.add_data(event_buffer)
