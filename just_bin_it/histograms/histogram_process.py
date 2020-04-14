@@ -123,7 +123,7 @@ def _histogramming_process(
             if kafka_stop_time_exceeded == StopTimeStatus.EXCEEDED:
                 # According to Kafka the stop time has been exceeded.
                 # There may be some data in the event buffer to add though.
-                logging.error("Stop time exceeded according to Kafka")
+                logging.info("Stop time exceeded according to Kafka")
                 stop_processing = True
                 break
 
@@ -135,7 +135,7 @@ def _histogramming_process(
                 and kafka_stop_time_exceeded == StopTimeStatus.UNKNOWN
             ):
                 if histogrammer.check_stop_time_exceeded(time_in_ns() // 1_000_000):
-                    logging.error("Stop time exceeded according to wall-clock")
+                    logging.info("Stop time exceeded according to wall-clock")
                     stop_processing = True
                     break
 
@@ -211,7 +211,7 @@ def _create_process(
 
 
 class HistogramProcess:
-    def __init__(self, configuration, start, stop, simulation=False):
+    def __init__(self, configuration, start_time, stop_time, simulation=False):
         # Check brokers and data topics exist (skip in simulation)
         if not simulation and not are_kafka_settings_valid(
             configuration["data_brokers"], configuration["data_topics"]
@@ -221,7 +221,12 @@ class HistogramProcess:
         self._msg_queue = Queue()
         self._stats_queue = Queue()
         self._process = _create_process(
-            self._msg_queue, self._stats_queue, configuration, start, stop, simulation
+            self._msg_queue,
+            self._stats_queue,
+            configuration,
+            start_time,
+            stop_time,
+            simulation,
         )
         self._process.start()
 
