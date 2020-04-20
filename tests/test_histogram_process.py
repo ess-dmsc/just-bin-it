@@ -1,7 +1,13 @@
 from multiprocessing import Queue
 import pytest
-from just_bin_it.histograms.histogram_process import HistogramProcess, _create_process
 from just_bin_it.exceptions import KafkaException
+from just_bin_it.histograms.histogram_process import (
+    HistogramProcess,
+    _create_process,
+    process_command_message,
+    stop_time_exceeded,
+    StopTimeStatus,
+)
 
 
 VALID_CONFIG = {
@@ -43,3 +49,66 @@ def test_process_exits_when_requested():
     p.join(5)
 
     assert not p.is_alive()
+
+
+class MockHistogrammer:
+    def __init__(self):
+        self.cleared = False
+        self.stop_time_exceeded = False
+
+    def clear_histograms(self):
+        self.cleared = True
+
+    def check_stop_time_exceeded(self, timestamp: int):
+        return self.stop_time_exceeded
+
+
+def test_on_stop_command_requests_stop():
+    histogrammer = MockHistogrammer()
+    msg_queue = Queue()
+    msg_queue.put("stop")
+
+    assert process_command_message(msg_queue, histogrammer)
+
+
+def test_unrecognised_command_ignored():
+    histogrammer = MockHistogrammer()
+    msg_queue = Queue()
+    msg_queue.put("unrecognised")
+
+    assert not process_command_message(msg_queue, histogrammer)
+
+
+def test_on_clear_command_histograms_are_cleared_and_stop_not_requested():
+    histogrammer = MockHistogrammer()
+    msg_queue = Queue()
+    msg_queue.put("clear")
+
+    assert not process_command_message(msg_queue, histogrammer)
+    assert histogrammer.cleared
+
+
+def test_if_stop_time_not_exceeded_then_stop_time_exceeded_is_false():
+    histogrammer = MockHistogrammer()
+
+    assert not stop_time_exceeded(StopTimeStatus.NOT_EXCEEDED, histogrammer)
+
+
+def test_if_stop_time_is_exceeded_then_stop_time_exceeded_is_true():
+    histogrammer = MockHistogrammer()
+
+    assert stop_time_exceeded(StopTimeStatus.EXCEEDED, histogrammer)
+
+
+def test_if_stop_time_is_unknown_then_stop_time_exceeded_if_histogrammer_says_so():
+    histogrammer = MockHistogrammer()
+    histogrammer.stop_time_exceeded = True
+
+    assert stop_time_exceeded(StopTimeStatus.UNKNOWN, histogrammer)
+
+
+def test_if_stop_time_is_unknown_then_stop_time_not_exceeded_if_histogrammer_says_not():
+    histogrammer = MockHistogrammer()
+    histogrammer.stop_time_exceeded = False
+
+    assert not stop_time_exceeded(StopTimeStatus.UNKNOWN, histogrammer)

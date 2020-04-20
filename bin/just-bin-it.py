@@ -202,7 +202,9 @@ class Main:
 
             try:
                 for config in hist_configs:
-                    process = HistogramProcess(config, start, stop, self.simulation)
+                    process = HistogramProcess(
+                        config, start, stop, simulation=self.simulation
+                    )
                     self.hist_process.append(process)
             except Exception as error:
                 # If one fails then close any that were started then rethrow

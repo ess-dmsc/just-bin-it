@@ -74,6 +74,33 @@ def publish_data(histogrammer, current_time, stats_queue):
     stats_queue.put(hist_stats)
 
 
+def process_command_message(msg_queue, histogrammer):
+    msg = msg_queue.get(True)
+    if msg == "stop":
+        logging.info("Stopping histogramming process")
+        return True
+    elif msg == "clear":
+        logging.info("Clearing histograms")
+        histogrammer.clear_histograms()
+    return False
+
+
+def stop_time_exceeded(kafka_stop_time_exceeded, histogrammer, wall_clock=time_in_ns()):
+    if kafka_stop_time_exceeded == StopTimeStatus.EXCEEDED:
+        # According to Kafka the stop time has been exceeded.
+        # There may be some data in the event buffer to add though.
+        logging.info("Stop time exceeded according to Kafka")
+        return True
+    elif kafka_stop_time_exceeded == StopTimeStatus.UNKNOWN:
+        # See if the stop time has been exceeded by the wall-clock.
+        # This may happen if there has not been any data for a while, so
+        # Kafka cannot tell us if the stop time has been exceeded.
+        if histogrammer.check_stop_time_exceeded(wall_clock // 1_000_000):
+            logging.info("Stop time exceeded according to wall-clock")
+            return True
+    return False
+
+
 def _histogramming_process(
     msg_queue,
     stats_queue,
@@ -103,38 +130,13 @@ def _histogramming_process(
     histogrammer.publish_histograms()
 
     while not stop_processing:
-        # Check message queue to see if we should stop
         if not msg_queue.empty():
-            msg = msg_queue.get(True)
-            if msg == "quit":
-                logging.info("Stopping histogramming process")
-                stop_processing = True
-            elif msg == "clear":
-                logging.info("Clearing histograms")
-                histogrammer.clear_histograms()
+            stop_processing |= process_command_message(msg_queue, histogrammer)
 
-        event_buffer = []
-
-        # while len(event_buffer) == 0:
         event_buffer = event_source.get_new_data()
-        kafka_stop_time_exceeded = event_source.stop_time_exceeded()
-
-        if kafka_stop_time_exceeded == StopTimeStatus.EXCEEDED:
-            # According to Kafka the stop time has been exceeded.
-            # There may be some data in the event buffer to add though.
-            logging.info("Stop time exceeded according to Kafka")
-            stop_processing = True
-
-        # See if the stop time has been exceeded by the wall-clock.
-        # This may happen if there has not been any data for a while, so
-        # Kafka cannot tell us if the stop time has been exceeded.
-        if (
-            len(event_buffer) == 0
-            and kafka_stop_time_exceeded == StopTimeStatus.UNKNOWN
-        ):
-            if histogrammer.check_stop_time_exceeded(time_in_ns() // 1_000_000):
-                logging.info("Stop time exceeded according to wall-clock")
-                stop_processing = True
+        stop_processing |= stop_time_exceeded(
+            event_source.stop_time_exceeded(), histogrammer
+        )
 
         if event_buffer:
             histogrammer.add_data(event_buffer)
@@ -208,7 +210,15 @@ def _create_process(
 
 
 class HistogramProcess:
-    def __init__(self, configuration, start_time, stop_time, simulation=False):
+    def __init__(
+        self,
+        configuration,
+        start_time,
+        stop_time,
+        start_running=True,
+        simulation=False,
+        use_mocks=False,
+    ):
         # Check brokers and data topics exist (skip in simulation)
         if not simulation and not are_kafka_settings_valid(
             configuration["data_brokers"], configuration["data_topics"]
@@ -224,17 +234,20 @@ class HistogramProcess:
             start_time,
             stop_time,
             simulation,
+            use_mocks,
         )
-        self._process.start()
+        if start_running:
+            self._process.start()
 
     def stop(self):
         if self._process.is_alive():
-            self._msg_queue.put("quit")
+            self._msg_queue.put("stop")
             self._process.join()
 
     def clear(self):
-        self._msg_queue.put("clear")
-        self._process.join()
+        if self._process.is_alive():
+            self._msg_queue.put("clear")
+            self._process.join()
 
     def get_stats(self):
         # Empty the queue and only return the most recent value
