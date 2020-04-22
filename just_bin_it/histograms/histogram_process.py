@@ -27,15 +27,16 @@ def create_simulated_event_source(configuration, start, stop):
     return SimulatedEventSource(configuration, start, stop)
 
 
-def create_event_source(consumer, start, stop):
+def create_event_source(configuration, start, stop):
     """
-    Create the event source.
+    Create an event source.
 
-    :param consumer: The consumer to use.
+    :param configuration The configuration.
     :param start: The start time.
     :param stop: The stop time.
     :return: The created event source.
     """
+    consumer = Consumer(configuration["data_brokers"], configuration["data_topics"])
     event_source = EventSource(consumer, start, stop)
 
     if start:
@@ -43,23 +44,23 @@ def create_event_source(consumer, start, stop):
     return event_source
 
 
-def create_histogrammer(producer, configuration, start, stop):
+def create_histogrammer(configuration, start, stop):
     """
     Create a histogrammer.
 
-    :param producer: The producer.
     :param configuration: The configuration.
     :param start: The start time.
     :param stop: The stop time.
     :return: The created histogrammer.
     """
+    producer = Producer(configuration["data_brokers"])
     histograms = HistogramFactory.generate([configuration])
     return Histogrammer(producer, histograms, start, stop)
 
 
 class Processor:
     def __init__(
-        self, histogrammer, event_source, msg_queue, stats_queue, publish_interval=500
+        self, histogrammer, event_source, msg_queue, stats_queue, publish_interval
     ):
         """
         Constructor.
@@ -161,7 +162,13 @@ class Processor:
 
 
 def run_processing(
-    msg_queue, stats_queue, configuration, start, stop, simulation=False
+    msg_queue,
+    stats_queue,
+    configuration,
+    start,
+    stop,
+    publish_interval,
+    simulation=False,
 ):
     """
     The target to run in a multi-processing instance for histogramming.
@@ -178,34 +185,40 @@ def run_processing(
     :param configuration: The histogramming configuration.
     :param start: The start time.
     :param stop: The stop time.
+    :param publish_interval: How often to publish histograms and stats (> 0)
     :param simulation: Whether to run in simulation.
     """
     try:
         # Setting up
-        producer = Producer(configuration["data_brokers"])
-        histogrammer = create_histogrammer(producer, configuration, start, stop)
+        histogrammer = create_histogrammer(configuration, start, stop)
 
         if simulation:
             event_source = create_simulated_event_source(configuration, start, stop)
         else:
-            consumer = Consumer(
-                configuration["data_brokers"], configuration["data_topics"]
-            )
-            event_source = create_event_source(consumer, start, stop)
+            event_source = create_event_source(configuration, start, stop)
 
-        processor = Processor(histogrammer, event_source, msg_queue, stats_queue)
+        processor = Processor(
+            histogrammer, event_source, msg_queue, stats_queue, publish_interval
+        )
 
         # Start up the processing
         while not processor.processing_finished:
             processor.run_processing()
             time.sleep(0.01)
-    except JustBinItException as error:
+    except Exception as error:
         logging.error("Histogram process failed: {}", error)
+        raise JustBinItException(f"Histogram process failed: {error}")
 
 
 class HistogramProcess:
     def __init__(
-        self, configuration, start_time, stop_time, start_running=True, simulation=False
+        self,
+        configuration,
+        start_time,
+        stop_time,
+        start_running=True,
+        simulation=False,
+        publish_interval=500,
     ):
         self._msg_queue = Queue()
         self._stats_queue = Queue()
@@ -217,6 +230,7 @@ class HistogramProcess:
                 configuration,
                 start_time,
                 stop_time,
+                publish_interval,
                 simulation,
             ),
         )
@@ -232,7 +246,6 @@ class HistogramProcess:
     def clear(self):
         if self._process.is_alive():
             self._msg_queue.put("clear")
-            self._process.join()
 
     def get_stats(self):
         # Empty the queue and only return the most recent value

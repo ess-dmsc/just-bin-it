@@ -14,16 +14,6 @@ VALID_CONFIG = {
     "source": "source1",
 }
 
-INVALID_KAFKA_CONFIG = {
-    "data_brokers": ["cannot_exist:9092"],
-    "data_topics": ["my_topic"],
-    "type": "hist1d",
-    "tof_range": [20, 2000],
-    "num_bins": 50,
-    "topic": "topic0",
-    "source": "source1",
-}
-
 
 class MockHistogrammer:
     def __init__(self):
@@ -45,7 +35,11 @@ class MockHistogrammer:
         self.histogramming_stopped = True
 
     def get_histogram_stats(self):
-        return {}
+        return {
+            "cleared": self.cleared,
+            "stopped": self.histogramming_stopped,
+            "times_published": self.times_publish_called,
+        }
 
     def add_data(self, event_buffer):
         self.data_received.append(event_buffer)
@@ -74,7 +68,11 @@ class TestHistogramProcessLowLevel:
         self.msg_queue = Queue()
         self.stats_queue = Queue()
         self.processor = Processor(
-            self.histogrammer, self.event_source, self.msg_queue, self.stats_queue
+            self.histogrammer,
+            self.event_source,
+            self.msg_queue,
+            self.stats_queue,
+            publish_interval=500,
         )
 
     def _queue_command_message(self, message):
@@ -210,3 +208,61 @@ class TestHistogramProcessLowLevel:
         self.processor.run_processing()
 
         assert self.histogrammer.data_received
+
+
+def _create_mocked_histogram_process(monkeypatch, publish_interval=1):
+    import just_bin_it.histograms.histogram_process as jbi
+
+    def mock_create_histogrammer(configuration, start, stop):
+        return MockHistogrammer()
+
+    def mock_create_event_source(configuration, start, stop):
+        return MockEventSource()
+
+    monkeypatch.setattr(jbi, "create_histogrammer", mock_create_histogrammer)
+    monkeypatch.setattr(jbi, "create_event_source", mock_create_event_source)
+
+    process = jbi.HistogramProcess(VALID_CONFIG, None, None, publish_interval)
+    return process
+
+
+def test_if_stats_message_waiting_then_can_be_retrieved(monkeypatch):
+    process = _create_mocked_histogram_process(monkeypatch)
+
+    # Give initial stats message time to arrive.
+    time.sleep(0.1)
+
+    assert len(process.get_stats()) > 0
+
+    process.stop()
+
+
+def test_no_stats_message_waiting_then_get_none(monkeypatch):
+    process = _create_mocked_histogram_process(monkeypatch, publish_interval=10000)
+
+    # Give initial stats message time to arrive.
+    time.sleep(0.1)
+
+    # There will be at least one message as initialisation always sends one.
+    _ = process.get_stats()
+
+    # Immediate request for another message should return  None
+    assert process.get_stats() is None
+
+    process.stop()
+
+
+def test_on_clear_message_histograms_are_cleared(monkeypatch):
+    process = _create_mocked_histogram_process(monkeypatch)
+
+    # Give it time to get going.
+    time.sleep(0.1)
+
+    process.clear()
+    time.sleep(0.1)
+
+    # Hacky way to get whether the histogrammer has been cleared
+    stats = process.get_stats()
+    assert stats["cleared"]
+
+    process.stop()
