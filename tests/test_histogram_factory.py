@@ -265,15 +265,15 @@ class TestHistogramFactory2DMap:
 
         assert len(histograms) == 0
 
-        def test_if_no_id_specified_then_empty_string(self):
-            config = deepcopy(self.config)
-            del config[0]["id"]
+    def test_if_no_id_specified_then_empty_string(self):
+        config = deepcopy(self.config)
+        del config[0]["id"]
 
-            histograms = HistogramFactory.generate(config)
+        histograms = HistogramFactory.generate(config)
 
-            assert histograms[0].identifier == ""
+        assert histograms[0].identifier == ""
 
-        def test_config_with_id_specified_sets_id(self):
-            histograms = HistogramFactory.generate(self.config)
+    def test_config_with_id_specified_sets_id(self):
+        histograms = HistogramFactory.generate(self.config)
 
-            assert histograms[0].identifier == "123456"
+        assert histograms[0].identifier == "123456"

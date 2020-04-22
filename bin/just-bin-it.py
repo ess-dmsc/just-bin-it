@@ -202,6 +202,12 @@ class Main:
 
             try:
                 for config in hist_configs:
+                    # Check brokers and data topics exist (skip in simulation)
+                    if not self.simulation and not are_kafka_settings_valid(
+                        config["data_brokers"], config["data_topics"]
+                    ):
+                        raise KafkaException("Invalid Kafka settings")
+
                     process = HistogramProcess(
                         config, start, stop, simulation=self.simulation
                     )
