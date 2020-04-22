@@ -131,25 +131,27 @@ class TestHistogramProcessLowLevel:
         assert self.histogrammer.times_publish_called == 2
 
     def test_stats_published_when_time_to_publish_is_exceeded(self):
-        # Set the publish interval to 1 ns, so it publishes
+        # Set the publish interval to 1 ms, so it publishes
         # every time it is processed.
         self.processor.publish_interval = 1
         times_processed = 3
 
         for _ in range(times_processed):
             self.processor.run_processing()
+            time.sleep(0.01)
 
         # Once on initialisation and once per time run
         assert self._get_number_of_stats_messages() == times_processed + 1
 
     def test_histograms_published_when_time_to_publish_is_exceeded(self):
-        # Set the publish interval to 1 ns, so it publishes
+        # Set the publish interval to 1 ms, so it publishes
         # every time it is processed.
         self.processor.publish_interval = 1
         times_processed = 3
 
         for _ in range(times_processed):
             self.processor.run_processing()
+            time.sleep(0.01)
 
         # Once on initialisation and once per time run
         assert self.histogrammer.times_publish_called == times_processed + 1

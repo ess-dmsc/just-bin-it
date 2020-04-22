@@ -9,7 +9,6 @@ from just_bin_it.endpoints.sources import (
     SimulatedEventSource,
     StopTimeStatus,
 )
-from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.histograms.histogram_factory import HistogramFactory
 from just_bin_it.utilities import time_in_ns
@@ -69,7 +68,7 @@ class Processor:
         :param event_source: The event source for this process.
         :param msg_queue: The queue for receiving messages from outside the process
         :param stats_queue: The queue for publishing stats to the "outside".
-        :param publish_interval: How often to publish histograms and stats (> 0)
+        :param publish_interval: How often to publish histograms and stats in milliseconds.
         """
         assert publish_interval > 0
 
@@ -106,8 +105,8 @@ class Processor:
         curr_time = time_in_ns()
         if curr_time // 1_000_000 > self.time_to_publish or self.processing_finished:
             self.publish_data(curr_time)
-            time_to_publish = curr_time // 1_000_000 + self.publish_interval
-            time_to_publish -= time_to_publish % self.publish_interval
+            self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
+            self.time_to_publish -= self.time_to_publish % self.publish_interval
 
     def stop_time_exceeded(self, wall_clock=time_in_ns()):
         """
@@ -185,7 +184,7 @@ def run_processing(
     :param configuration: The histogramming configuration.
     :param start: The start time.
     :param stop: The stop time.
-    :param publish_interval: How often to publish histograms and stats (> 0)
+    :param publish_interval: How often to publish histograms and stats in milliseconds.
     :param simulation: Whether to run in simulation.
     """
     try:
@@ -206,8 +205,7 @@ def run_processing(
             processor.run_processing()
             time.sleep(0.01)
     except Exception as error:
-        logging.error("Histogram process failed: {}", error)
-        raise JustBinItException(f"Histogram process failed: {error}")
+        logging.error("Histogram process failed: %s", error)
 
 
 class HistogramProcess:
@@ -216,10 +214,18 @@ class HistogramProcess:
         configuration,
         start_time,
         stop_time,
-        start_running=True,
-        simulation=False,
         publish_interval=500,
+        simulation=False,
     ):
+        """
+        Constructor.
+
+        :param configuration: The histogramming configuration.
+        :param start_time: The start time.
+        :param stop_time: The stop time.
+        :param publish_interval: How often to publish histograms and stats in milliseconds.
+        :param simulation: Whether to run in simulation.
+        """
         self._msg_queue = Queue()
         self._stats_queue = Queue()
         self._process = Process(
@@ -235,8 +241,7 @@ class HistogramProcess:
             ),
         )
 
-        if start_running:
-            self._process.start()
+        self._process.start()
 
     def stop(self):
         if self._process.is_alive():
