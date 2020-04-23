@@ -194,6 +194,9 @@ class Main:
         if message["cmd"] == "restart":
             for process in self.hist_process:
                 process.clear()
+        elif message["cmd"] == "stop":
+            for process in self.hist_process:
+                process.stop()
         elif message["cmd"] == "config":
             logging.info("Stopping existing processes")
             self.stop_processes()

@@ -203,6 +203,16 @@ To restarting the histograms counting from zero, send the restart command:
 This will start all the histograms counting from zero but will not change any other
 settings, such as bin edges etc.
 
+### Stoping counting
+In order to stop counting send the stop command:
+```json
+{
+  "cmd" : "stop"
+}
+```
+This will cause histogramming to stop and another, final, histogram to be sent. Restart with 
+either the `config` or ``restart` command.    
+
 ### Simulation mode
 When in simulation mode just-bin-it will try to provide simulated data matching
 the requested configuration. For example: if the config specifies a 2-D
