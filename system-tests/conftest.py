@@ -73,7 +73,7 @@ def wait_until_kafka_ready(docker_cmd, docker_options):
     n_polls = 0
     while n_polls < 10 and not topics_ready:
         topics = client.list_topics().topics.keys()
-        topics_needed = ["hist_commands", "hist_topic"]
+        topics_needed = ["hist_commands"]
         present = [t in topics for t in topics_needed]
         if all(present):
             topics_ready = True
