@@ -192,8 +192,8 @@ class Main:
 
         :param message: The message.
         """
-        if message["cmd"] == "restart":
-            logging.info("Restart command received")
+        if message["cmd"] == "reset_counts":
+            logging.info("Reset command received")
             for process in self.hist_process:
                 process.clear()
         elif message["cmd"] == "stop":

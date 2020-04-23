@@ -194,10 +194,10 @@ The `width` and `height` define the dimensions of the detector for the
 conversion of detector IDs into their respective 2-D positions.
 
 ### Restarting the count
-To restarting the histograms counting from zero, send the restart command:
+To restarting the histograms counting from zero, send the `reset_counts` command:
 ```json
 {
-  "cmd": "restart"
+  "cmd": "reset_counts"
 }
 ```
 This will start all the histograms counting from zero but will not change any other
