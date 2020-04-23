@@ -91,7 +91,7 @@ class Processor:
             self.processing_finished |= self.process_command_message()
 
         event_buffer = self.event_source.get_new_data()
-        self.processing_finished |= self.stop_time_exceeded()
+        self.processing_finished |= self.stop_time_exceeded(time_in_ns())
 
         if event_buffer:
             # Even if the stop time has been exceeded there still may be data
@@ -108,7 +108,7 @@ class Processor:
             self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
             self.time_to_publish -= self.time_to_publish % self.publish_interval
 
-    def stop_time_exceeded(self, wall_clock=time_in_ns()):
+    def stop_time_exceeded(self, wall_clock):
         """
         Check whether the requested stop time has been exceeded.
 
