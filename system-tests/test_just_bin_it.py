@@ -5,6 +5,7 @@ import random
 import sys
 import time
 from kafka import KafkaProducer, KafkaConsumer, TopicPartition
+from confluent_kafka.admin import AdminClient, NewTopic
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -16,21 +17,19 @@ TOF_RANGE = (0, 100_000_000)
 DET_RANGE = (1, 512)
 NUM_BINS = 50
 BROKERS = ["localhost:9092"]
-DATA_TOPIC = "event_data"
-HIST_TOPIC = "hist_topic"
 CMD_TOPIC = "hist_commands"
 
 CONFIG_JSON = {
     "cmd": "config",
     "data_brokers": BROKERS,
-    "data_topics": [DATA_TOPIC],
+    "data_topics": ["your topic goes here"],
     "histograms": [
         {
             "type": "hist1d",
             "tof_range": TOF_RANGE,
             "det_range": DET_RANGE,
             "num_bins": NUM_BINS,
-            "topic": HIST_TOPIC,
+            "topic": "your topic goes here",
             "id": "some_id",
         }
     ],
@@ -54,13 +53,29 @@ def generate_data(msg_id, time_stamp, num_events):
 class TestJustBinIt:
     @pytest.fixture(autouse=True)
     def prepare(self):
+        # Create unique topics for each test
+        conf = {"bootstrap.servers": BROKERS[0], "api.version.request": True}
+        admin_client = AdminClient(conf)
+        uid = time_in_ns()
+        self.hist_topic_name = f"hist_{uid}"
+        self.data_topic_name = f"data_{uid}"
+        hist_topic = NewTopic(self.hist_topic_name, 1, 1)
+        data_topic = NewTopic(self.data_topic_name, 1, 1)
+        admin_client.create_topics([hist_topic, data_topic])
+
         self.producer = KafkaProducer(bootstrap_servers=BROKERS)
-        self.consumer, self.topic_part = create_consumer(HIST_TOPIC)
+        self.consumer, self.topic_part = create_consumer(self.hist_topic_name)
         self.initial_offset = self.consumer.position(self.topic_part)
         self.time_stamps = []
         self.num_events_per_msg = []
 
-    def check_offsets(self):
+    def create_basic_config(self):
+        config = copy.deepcopy(CONFIG_JSON)
+        config["data_topics"] = [self.data_topic_name]
+        config["histograms"][0]["topic"] = self.hist_topic_name
+        return config
+
+    def check_offsets_have_advanced(self):
         # Check that end offset has changed otherwise we could be looking at old test
         # data
         self.consumer.seek_to_end(self.topic_part)
@@ -78,7 +93,7 @@ class TestJustBinIt:
         # up at the end.
         num_events = random.randint(500, 1500)
         data = generate_data(msg_id, time_stamp, num_events)
-        self.send_message(DATA_TOPIC, data)
+        self.send_message(self.data_topic_name, data)
 
         # Need timestamp in ms
         self.time_stamps.append(time_stamp // 1_000_000)
@@ -97,11 +112,16 @@ class TestJustBinIt:
         msg = data[self.topic_part][-1]
         return deserialise_hs00(msg.value)
 
+    def ensure_topic_is_not_empty_on_startup(self):
+        #  Put some data in it, so jbi doesn't complain about an empty topic
+        self.generate_and_send_data(0)
+
     def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(
         self, just_bin_it
     ):
         # Configure just-bin-it
-        self.send_message(CMD_TOPIC, bytes(json.dumps(CONFIG_JSON), "utf-8"))
+        config = self.create_basic_config()
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         # Give it time to start counting
         time.sleep(1)
@@ -117,9 +137,7 @@ class TestJustBinIt:
 
         time.sleep(5)
 
-        # Check that end offset has changed otherwise we could be looking at old test
-        # data
-        self.check_offsets()
+        self.check_offsets_have_advanced()
 
         # Get histogram data
         hist_data = self.get_hist_data_from_kafka()
@@ -143,7 +161,7 @@ class TestJustBinIt:
         stop = self.time_stamps[8]
         total_events = sum(self.num_events_per_msg[3:8])
 
-        config = copy.deepcopy(CONFIG_JSON)
+        config = self.create_basic_config()
         config["start"] = start
         config["stop"] = stop
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
@@ -151,9 +169,7 @@ class TestJustBinIt:
         # Give it time to start counting
         time.sleep(5)
 
-        # Check that end offset has changed otherwise we could be looking at old test
-        # data.
-        self.check_offsets()
+        self.check_offsets_have_advanced()
 
         # Get histogram data
         hist_data = self.get_hist_data_from_kafka()
@@ -163,9 +179,11 @@ class TestJustBinIt:
 
     @pytest.mark.flaky(reruns=5)
     def test_counting_for_an_interval_gets_all_data_during_interval(self, just_bin_it):
+        self.ensure_topic_is_not_empty_on_startup()
+
         # Config just-bin-it
         interval_length = 5
-        config = copy.deepcopy(CONFIG_JSON)
+        config = self.create_basic_config()
         config["interval"] = interval_length
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
@@ -181,9 +199,7 @@ class TestJustBinIt:
 
         time.sleep(interval_length * 3)
 
-        # Check that end offset has changed otherwise we could be looking at old test
-        # data.
-        self.check_offsets()
+        self.check_offsets_have_advanced()
 
         # Get histogram data
         hist_data = self.get_hist_data_from_kafka()
@@ -198,9 +214,11 @@ class TestJustBinIt:
         assert info["state"] == "FINISHED"
 
     def test_counting_for_an_interval_with_no_data_exits_interval(self, just_bin_it):
+        self.ensure_topic_is_not_empty_on_startup()
+
         # Config just-bin-it
         interval_length = 5
-        config = copy.deepcopy(CONFIG_JSON)
+        config = self.create_basic_config()
         config["interval"] = interval_length
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
@@ -208,11 +226,9 @@ class TestJustBinIt:
         time.sleep(1)
 
         # Send no data, but wait for the interval to pass
-        time.sleep(interval_length * 3)
+        time.sleep(interval_length * 4)
 
-        # Check that end offset has changed otherwise we could be looking at old test
-        # data.
-        self.check_offsets()
+        self.check_offsets_have_advanced()
 
         hist_data = self.get_hist_data_from_kafka()
         info = json.loads(hist_data["info"])
@@ -223,9 +239,11 @@ class TestJustBinIt:
     def test_counting_for_an_interval_with_only_one_event_message_gets_data(
         self, just_bin_it
     ):
+        self.ensure_topic_is_not_empty_on_startup()
+
         # Config just-bin-it
         interval_length = 5
-        config = copy.deepcopy(CONFIG_JSON)
+        config = self.create_basic_config()
         config["interval"] = interval_length
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
@@ -238,9 +256,7 @@ class TestJustBinIt:
         # Send no data, but wait for interval to pass
         time.sleep(interval_length * 3)
 
-        # Check that end offset has changed otherwise we could be looking at old test
-        # data.
-        self.check_offsets()
+        self.check_offsets_have_advanced()
 
         # Get histogram data
         hist_data = self.get_hist_data_from_kafka()
@@ -257,9 +273,11 @@ class TestJustBinIt:
     def test_counting_for_an_interval_data_after_empty_interval_is_ignored(
         self, just_bin_it
     ):
+        self.ensure_topic_is_not_empty_on_startup()
+
         # Config just-bin-it
         interval_length = 5
-        config = copy.deepcopy(CONFIG_JSON)
+        config = self.create_basic_config()
         config["interval"] = interval_length
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
@@ -274,9 +292,7 @@ class TestJustBinIt:
 
         time.sleep(interval_length * 3)
 
-        # Check that end offset has changed otherwise we could be looking at old test
-        # data.
-        self.check_offsets()
+        self.check_offsets_have_advanced()
 
         # Get histogram data
         hist_data = self.get_hist_data_from_kafka()
