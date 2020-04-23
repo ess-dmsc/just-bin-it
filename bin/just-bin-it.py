@@ -91,7 +91,7 @@ class Main:
                     msg = self.config_listener.consume_message()
 
                 try:
-                    logging.warning("New configuration command received")
+                    logging.warning("New command received")
                     logging.warning("%s", msg)
                     self.handle_command_message(msg)
                 except Exception as error:
@@ -177,6 +177,7 @@ class Main:
         """
         Request the processes to stop.
         """
+        logging.info("Stopping any existing histogram processes")
         for process in self.hist_process:
             try:
                 process.stop()
@@ -191,14 +192,15 @@ class Main:
 
         :param message: The message.
         """
-        if message["cmd"] == "restart":
+        if message["cmd"] == "reset_counts":
+            logging.info("Reset command received")
             for process in self.hist_process:
                 process.clear()
         elif message["cmd"] == "stop":
-            for process in self.hist_process:
-                process.stop()
+            logging.info("Stop command received")
+            self.stop_processes()
         elif message["cmd"] == "config":
-            logging.info("Stopping existing processes")
+            logging.info("Config command received")
             self.stop_processes()
 
             start, stop, hist_configs = parse_config(message)

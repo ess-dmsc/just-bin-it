@@ -19,7 +19,7 @@ NUM_BINS = 50
 BROKERS = ["localhost:9092"]
 CMD_TOPIC = "hist_commands"
 
-CONFIG_JSON = {
+CONFIG_CMD = {
     "cmd": "config",
     "data_brokers": BROKERS,
     "data_topics": ["your topic goes here"],
@@ -34,6 +34,9 @@ CONFIG_JSON = {
         }
     ],
 }
+
+
+STOP_CMD = {"cmd": "stop"}
 
 
 def create_consumer(topic):
@@ -70,7 +73,7 @@ class TestJustBinIt:
         self.num_events_per_msg = []
 
     def create_basic_config(self):
-        config = copy.deepcopy(CONFIG_JSON)
+        config = copy.deepcopy(CONFIG_CMD)
         config["data_topics"] = [self.data_topic_name]
         config["histograms"][0]["topic"] = self.hist_topic_name
         return config
@@ -226,7 +229,7 @@ class TestJustBinIt:
         time.sleep(1)
 
         # Send no data, but wait for the interval to pass
-        time.sleep(interval_length * 4)
+        time.sleep(interval_length * 3)
 
         self.check_offsets_have_advanced()
 
@@ -305,3 +308,35 @@ class TestJustBinIt:
 
         assert hist_data["data"].sum() == 0
         assert info["state"] == "FINISHED"
+
+    def test_open_ended_counting_for_a_while_then_stop_command_triggers_finished(
+        self, just_bin_it
+    ):
+        # Configure just-bin-it
+        config = self.create_basic_config()
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send fake data
+        num_msgs = 10
+
+        for i in range(num_msgs):
+            self.generate_and_send_data(i + 1)
+            time.sleep(0.5)
+
+        total_events = sum(self.num_events_per_msg)
+
+        time.sleep(5)
+
+        self.check_offsets_have_advanced()
+
+        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
+        time.sleep(1)
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        assert hist_data["data"].sum() == total_events
+        assert json.loads(hist_data["info"])["state"] == "FINISHED"

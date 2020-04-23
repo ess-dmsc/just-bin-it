@@ -65,9 +65,9 @@ CONFIG_INTERVAL = """
 }
 """
 
-RESTART_CMD = """
+RESET_CMD = """
 {
-  "cmd": "restart"
+  "cmd": "reset_counts"
 }
 """
 
@@ -113,12 +113,12 @@ class TestConfigSource:
 
     def test_received_restart_message_converted_correctly(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
-        mock_consumer.add_messages([(0, 0, RESTART_CMD)])
+        mock_consumer.add_messages([(0, 0, RESET_CMD)])
         src = ConfigSource(mock_consumer)
 
         _, _, message = src.get_new_data()[-1]
 
-        assert message["cmd"] == "restart"
+        assert message["cmd"] == "reset_counts"
 
     def test_no_messages_returns_none(self):
         mock_consumer = MockConsumer(["broker1"], ["topic1"])
