@@ -210,8 +210,7 @@ In order to stop counting send the stop command:
   "cmd" : "stop"
 }
 ```
-This will cause histogramming to stop and another, final, histogram to be sent. Restart with 
-either the `config` or ``restart` command.    
+This will cause histogramming to stop and the final histogram to be published.
 
 ### Simulation mode
 When in simulation mode just-bin-it will try to provide simulated data matching
