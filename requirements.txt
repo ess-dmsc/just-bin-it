@@ -2,7 +2,6 @@ black
 confluent-kafka
 fast-histogram
 flake8
-flatbuffers
 graphyte
 kafka-python
 matplotlib

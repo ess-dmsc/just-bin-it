@@ -1,6 +1,6 @@
-import flatbuffers
 import streaming_data_types.histogram_hs00 as hs00
-import just_bin_it.fbschemas.ev42.EventMessage as EventMessage
+import streaming_data_types.eventdata_ev42 as ev42
+from streaming_data_types.eventdata_ev42 import EventData
 from just_bin_it.exceptions import JustBinItException
 
 
@@ -58,59 +58,28 @@ def serialise_hs00(histogrammer, timestamp: int = 0, info_message: str = ""):
     return hs00.serialise_hs00(data)
 
 
-def deserialise_ev42(buf):
+def deserialise_ev42(buf) -> EventData:
     """
     Deserialise an ev42 FlatBuffers message.
 
     :param buf: The raw buffer of the FlatBuffers message.
-    :return: A dictionary of the deserialised values.
+    :return: A tuple of the deserialised values.
     """
-    # Check schema is correct
-    schema = get_schema(buf)
-    if schema != "ev42":
-        raise JustBinItException(f"Incorrect schema, expected ev42 but got {schema}")
-
-    event = EventMessage.EventMessage.GetRootAsEventMessage(buf, 0)
-
-    data = {
-        "message_id": event.MessageId(),
-        "pulse_time": event.PulseTime(),
-        "source": event.SourceName().decode("utf-8"),
-        "det_ids": event.DetectorIdAsNumpy(),
-        "tofs": event.TimeOfFlightAsNumpy(),
-    }
-    return data
+    try:
+        return ev42.deserialise_ev42(buf)
+    except Exception as error:
+        raise JustBinItException(f"Could not deserialise ev42 buffer: {error}")
 
 
 def serialise_ev42(source_name, message_id, pulse_time, tofs, det_ids):
-    file_identifier = b"ev42"
+    """
+    Serialise into an ev42 FlatBuffers message.
 
-    builder = flatbuffers.Builder(1024)
-    source = builder.CreateString(source_name)
-
-    EventMessage.EventMessageStartTimeOfFlightVector(builder, len(tofs))
-    # FlatBuffers builds arrays backwards
-    for x in reversed(tofs):
-        builder.PrependInt32(x)
-    tof_data = builder.EndVector(len(tofs))
-
-    EventMessage.EventMessageStartDetectorIdVector(builder, len(det_ids))
-    # FlatBuffers builds arrays backwards
-    for x in reversed(det_ids):
-        builder.PrependInt32(x)
-    det_data = builder.EndVector(len(det_ids))
-
-    # Build the actual buffer
-    EventMessage.EventMessageStart(builder)
-    EventMessage.EventMessageAddDetectorId(builder, det_data)
-    EventMessage.EventMessageAddTimeOfFlight(builder, tof_data)
-    EventMessage.EventMessageAddPulseTime(builder, pulse_time)
-    EventMessage.EventMessageAddMessageId(builder, message_id)
-    EventMessage.EventMessageAddSourceName(builder, source)
-    data = EventMessage.EventMessageEnd(builder)
-    builder.Finish(data)
-
-    # Generate the output and replace the file_identifier
-    buff = builder.Output()
-    buff[4:8] = file_identifier
-    return buff
+    :param source_name: The source name.
+    :param message_id: The message ID.
+    :param pulse_time: The pulse_time.
+    :param tofs: The time-of-flights for the events.
+    :param det_ids: The detector IDs for the events.
+    :return: The raw buffer of the FlatBuffers message.
+    """
+    return ev42.serialise_ev42(source_name, message_id, pulse_time, tofs, det_ids)

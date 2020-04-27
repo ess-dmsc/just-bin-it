@@ -1,4 +1,5 @@
 from just_bin_it.endpoints.kafka_consumer import Consumer
+from just_bin_it.endpoints.serialisation import EventData
 
 
 class MockConsumerRecord:
@@ -99,7 +100,7 @@ def get_fake_event_messages(num_messages, num_partitions=1):
                     (
                         pulse_time,
                         offset,
-                        {"pulse_time": pulse_time, "tofs": tofs, "det_ids": dets},
+                        EventData("fake_source", offset, pulse_time, tofs, dets, None),
                     )
                 )
                 pulse_time += pulse_gap
