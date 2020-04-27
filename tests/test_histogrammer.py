@@ -1,7 +1,7 @@
 import copy
 import json
 import pytest
-from just_bin_it.endpoints.serialisation import deserialise_hs00
+from just_bin_it.endpoints.serialisation import deserialise_hs00, EventData
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
 from just_bin_it.utilities.mock_producer import MockProducer
@@ -81,55 +81,36 @@ STOP_CONFIG = {
 # Data in each "pulse" increases by factor of 2, that way we can know which
 # messages were consumed by looking at the histogram sum.
 EVENT_DATA = [
-    (
-        998 * 10 ** 3,
-        0,
-        {
-            "pulse_time": 998 * 10 ** 9,
-            "tofs": [1],
-            "det_ids": None,
-            "source": "simulator",
-        },
-    ),
-    (
-        999 * 10 ** 3,
-        1,
-        {
-            "pulse_time": 999 * 10 ** 9,
-            "tofs": [1, 2],
-            "det_ids": [1, 2],
-            "source": "simulator",
-        },
-    ),
+    (998 * 10 ** 3, 0, EventData("simulator", 0, 998 * 10 ** 9, [1], [1], None)),
+    (999 * 10 ** 3, 1, EventData("simulator", 0, 999 * 10 ** 9, [1, 2], [1, 2], None)),
     (
         1000 * 10 ** 3,
         2,
-        {
-            "pulse_time": 1000 * 10 ** 9,
-            "tofs": [1, 2, 3, 4],
-            "det_ids": [1, 2, 3, 4],
-            "source": "simulator",
-        },
+        EventData("simulator", 0, 1000 * 10 ** 9, [1, 2, 3, 4], [1, 2, 3, 4], None),
     ),
     (
         1001 * 10 ** 3,
         3,
-        {
-            "pulse_time": 1001 * 10 ** 9,
-            "tofs": [1, 2, 3, 4, 5, 6, 7, 8],
-            "det_ids": [1, 2, 3, 4, 5, 6, 7, 8],
-            "source": "simulator",
-        },
+        EventData(
+            "simulator",
+            0,
+            1001 * 10 ** 9,
+            [1, 2, 3, 4, 5, 6, 7, 8],
+            [1, 2, 3, 4, 5, 6, 7, 8],
+            None,
+        ),
     ),
     (
         1002 * 10 ** 3,
         4,
-        {
-            "pulse_time": 1002 * 10 ** 9,
-            "tofs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-            "det_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-            "source": "simulator",
-        },
+        EventData(
+            "simulator",
+            0,
+            1002 * 10 ** 9,
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            None,
+        ),
     ),
 ]
 
@@ -137,53 +118,34 @@ UNORDERED_EVENT_DATA = [
     (
         1000 * 10 ** 3,
         0,
-        {
-            "pulse_time": 1000 * 10 ** 9,
-            "tofs": [1, 2, 3, 4],
-            "det_ids": None,
-            "source": "simulator",
-        },
+        EventData("simulator", 0, 1000 * 10 ** 9, [1, 2, 3, 4], [1, 2, 3, 4], None),
     ),
     (
         1001 * 10 ** 3,
         1,
-        {
-            "pulse_time": 1001 * 10 ** 9,
-            "tofs": [1, 2, 3, 4, 5, 6, 7, 8],
-            "det_ids": None,
-            "source": "simulator",
-        },
+        EventData(
+            "simulator",
+            0,
+            1001 * 10 ** 9,
+            [1, 2, 3, 4, 5, 6, 7, 8],
+            [1, 2, 3, 4, 5, 6, 7, 8],
+            None,
+        ),
     ),
     (
         1002 * 10 ** 3,
         2,
-        {
-            "pulse_time": 1002 * 10 ** 9,
-            "tofs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-            "det_ids": None,
-            "source": "simulator",
-        },
+        EventData(
+            "simulator",
+            0,
+            1002 * 10 ** 9,
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            None,
+        ),
     ),
-    (
-        998 * 10 ** 3,
-        3,
-        {
-            "pulse_time": 998 * 10 ** 9,
-            "tofs": [1],
-            "det_ids": None,
-            "source": "simulator",
-        },
-    ),
-    (
-        999 * 10 ** 3,
-        4,
-        {
-            "pulse_time": 999 * 10 ** 9,
-            "tofs": [1, 2],
-            "det_ids": None,
-            "source": "simulator",
-        },
-    ),
+    (998 * 10 ** 3, 3, EventData("simulator", 0, 998 * 10 ** 9, [1], [1], None)),
+    (999 * 10 ** 3, 4, EventData("simulator", 0, 999 * 10 ** 9, [1, 2], [1, 2], None)),
 ]
 
 

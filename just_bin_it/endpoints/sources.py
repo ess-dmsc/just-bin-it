@@ -4,7 +4,11 @@ import logging
 import math
 import time
 from typing import Optional
-from just_bin_it.endpoints.serialisation import deserialise_ev42, deserialise_hs00
+from just_bin_it.endpoints.serialisation import (
+    deserialise_ev42,
+    deserialise_hs00,
+    EventData,
+)
 from just_bin_it.exceptions import SourceException, TooOldTimeRequestedException
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
@@ -176,12 +180,9 @@ class SimulatedEventSource:
 
     def _generate_data(self):
         tofs, dets = generate_fake_data(self.tof_range, self.det_range, self.num_events)
-        data = {
-            "pulse_time": math.floor(time.time() * 10 ** 9),
-            "tofs": tofs,
-            "det_ids": dets,
-            "source": "simulator",
-        }
+        data = EventData(
+            "simulator", 0, math.floor(time.time() * 10 ** 9), tofs, dets, None
+        )
         return [(int(time.time() * self.num_events), 0, data)]
 
     def _generate_dethist_data(self):
@@ -193,13 +194,9 @@ class SimulatedEventSource:
             )
             for det in new_dets:
                 dets.append(h * self.width + det)
-
-        data = {
-            "pulse_time": math.floor(time.time() * 10 ** 9),
-            "det_ids": dets,
-            "tofs": [],
-            "source": "simulator",
-        }
+        data = EventData(
+            "simulator", 0, math.floor(time.time() * 10 ** 9), [], dets, None
+        )
         return [(int(time.time() * self.num_events), 0, data)]
 
     def seek_to_start_time(self):

@@ -1,8 +1,8 @@
 black
 confluent-kafka
+ess-streaming-data-types
 fast-histogram
 flake8
-flatbuffers
 graphyte
 kafka-python
 matplotlib
@@ -15,4 +15,3 @@ PyQt5
 pytest
 pytest-cov
 tox
-ess-streaming-data-types
