@@ -139,7 +139,7 @@ class Processor:
 
         :return: True, if a stop has been requested.
         """
-        msg = self.msg_queue.get(True)
+        msg = self.msg_queue.get(block=True, timeout=0.05)
         if msg == "stop":
             logging.info("Stopping histogramming process")
             return True
@@ -246,6 +246,11 @@ class HistogramProcess:
     def stop(self):
         if self._process.is_alive():
             self._msg_queue.put("stop")
+            # Must empty the stats queue otherwise it could potentially stop
+            # the process from closing.
+            while not self._stats_queue.empty():
+                self._stats_queue.get()
+
             self._process.join()
 
     def clear(self):
