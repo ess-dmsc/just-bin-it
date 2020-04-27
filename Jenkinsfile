@@ -90,10 +90,11 @@ def get_system_tests_pipeline() {
           stage("System tests: Install requirements") {
             sh """
             ${python} -m venv test_env
-//            source test_env/bin/activate
-            python -m pip install --user --upgrade pip
-            python -m pip install --user -r requirements.txt
-            python -m pip install --user -r system-tests/requirements.txt
+            source test_env/bin/activate
+            which python
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install -r system-tests/requirements.txt
             """
           }  // stage
           stage("System tests: Run") {
