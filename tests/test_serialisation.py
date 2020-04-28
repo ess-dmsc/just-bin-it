@@ -112,10 +112,10 @@ class TestSerialisationEv42:
         buf = serialise_ev42(source, message_id, pulse_time, tofs, dets)
 
         info = deserialise_ev42(buf)
-        assert info["source"] == source
-        assert info["message_id"] == message_id
-        assert info["pulse_time"] == pulse_time
-        assert len(info["tofs"]) == len(tofs)
-        assert len(info["det_ids"]) == len(dets)
-        assert np.array_equal(info["tofs"], tofs)
-        assert np.array_equal(info["det_ids"], dets)
+        assert info.source_name == source
+        assert info.message_id == message_id
+        assert info.pulse_time == pulse_time
+        assert len(info.time_of_flight) == len(tofs)
+        assert len(info.detector_id) == len(dets)
+        assert np.array_equal(info.time_of_flight, tofs)
+        assert np.array_equal(info.detector_id, dets)

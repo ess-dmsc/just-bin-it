@@ -1,10 +1,55 @@
+import numpy as np
 import pytest
 from just_bin_it.endpoints.sources import (
     EventSource,
     StopTimeStatus,
     TooOldTimeRequestedException,
 )
+from just_bin_it.endpoints.serialisation import deserialise_ev42, serialise_ev42
 from just_bin_it.utilities.mock_consumer import MockConsumer, get_fake_event_messages
+
+
+def compare_two_messages(sent, received):
+    sent_timestamp, sent_offset, sent_event_data = sent
+    rec_timestamp, rec_offset, rec_event_data = received
+    if sent_timestamp != rec_timestamp:
+        return False
+    if sent_offset != rec_offset:
+        return False
+
+    if sent_event_data.source_name != rec_event_data.source_name:
+        return False
+    if sent_event_data.pulse_time != rec_event_data.pulse_time:
+        return False
+    if sent_event_data.message_id != rec_event_data.message_id:
+        return False
+    if not np.array_equal(
+        sent_event_data.time_of_flight, rec_event_data.time_of_flight
+    ):
+        return False
+    if not np.array_equal(sent_event_data.detector_id, rec_event_data.detector_id):
+        return False
+
+    return True
+
+
+def serialise_messages(messages):
+    result = []
+    for ts, offset, event_data in messages:
+        result.append(
+            (
+                ts,  # Represents the Kafka timestamp
+                offset,  # Represents the Kafka offset.
+                serialise_ev42(
+                    event_data.source_name,
+                    event_data.message_id,
+                    event_data.pulse_time,
+                    event_data.time_of_flight,
+                    event_data.detector_id,
+                ),
+            )
+        )
+    return result
 
 
 class TestEventSourceSinglePartition:
@@ -12,9 +57,10 @@ class TestEventSourceSinglePartition:
     def prepare(self):
         self.consumer = MockConsumer(["broker"], ["topic"])
         self.messages = get_fake_event_messages(100)
-        self.consumer.add_messages(self.messages)
+        self.serialised_messages = serialise_messages(self.messages)
+        self.consumer.add_messages(self.serialised_messages)
         self.event_source = EventSource(
-            self.consumer, 0, deserialise_function=lambda x: x
+            self.consumer, 0, deserialise_function=deserialise_ev42
         )
 
     def test_if_no_consumer_supplied_then_raises(self):
@@ -23,7 +69,7 @@ class TestEventSourceSinglePartition:
 
     def test_if_no_new_messages_then_no_data(self):
         consumer = MockConsumer(["broker"], ["topic"])
-        event_source = EventSource(consumer, 0, deserialise_function=lambda x: x)
+        event_source = EventSource(consumer, 0)
 
         data = event_source.get_new_data()
         assert len(data) == 0
@@ -33,31 +79,25 @@ class TestEventSourceSinglePartition:
 
         assert len(data) == len(self.messages)
         for i, m in enumerate(self.messages):
-            assert data[i] == m
+            assert compare_two_messages(m, data[i])
 
     def test_given_exact_time_finds_start_message(self):
-        expected_timestamp, expected_offset, expected_message = self.messages[45]
-        self.event_source.start_time = expected_message["pulse_time"]
+        _, _, expected_event_data = self.messages[45]
+        self.event_source.start_time = expected_event_data.pulse_time
 
         self.event_source.seek_to_start_time()
         new_data = self.event_source.get_new_data()
-        timestamp, offset, message = new_data[0]
 
-        assert timestamp == expected_timestamp
-        assert offset == expected_offset
-        assert message == expected_message
+        assert compare_two_messages(self.messages[45], new_data[0])
 
     def test_given_approximate_time_finds_start_pulse(self):
-        expected_timestamp, expected_offset, expected_message = self.messages[45]
-        self.event_source.start_time = expected_message["pulse_time"] - 5
+        _, _, expected_message = self.messages[45]
+        self.event_source.start_time = expected_message.pulse_time - 5
 
         self.event_source.seek_to_start_time()
         new_data = self.event_source.get_new_data()
-        timestamp, offset, message = new_data[0]
 
-        assert timestamp == expected_timestamp
-        assert offset == expected_offset
-        assert message == expected_message
+        assert compare_two_messages(self.messages[45], new_data[0])
 
     def test_given_too_old_time_then_throws(self):
         self.event_source.start_time = -1
@@ -145,14 +185,13 @@ class TestEventSourceMultiplePartitions:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.consumer = MockConsumer(["broker"], ["topic"], num_partitions=3)
-        self.event_source = EventSource(
-            self.consumer, 0, deserialise_function=lambda x: x
-        )
+        self.event_source = EventSource(self.consumer, 0)
 
         self.messages = get_fake_event_messages(150, 3)
-        self.consumer.add_messages(self.messages[0::3], 0)
-        self.consumer.add_messages(self.messages[1::3], 1)
-        self.consumer.add_messages(self.messages[2::3], 2)
+        self.serialised_messages = serialise_messages(self.messages)
+        self.consumer.add_messages(self.serialised_messages[0::3], 0)
+        self.consumer.add_messages(self.serialised_messages[1::3], 1)
+        self.consumer.add_messages(self.serialised_messages[2::3], 2)
 
     def test_if_no_consumer_supplied_then_raises(self):
         with pytest.raises(Exception):
@@ -160,22 +199,22 @@ class TestEventSourceMultiplePartitions:
 
     def test_if_no_new_messages_then_no_data(self):
         consumer = MockConsumer(["broker"], ["topic"], num_partitions=3)
-        event_source = EventSource(consumer, 0, deserialise_function=lambda x: x)
+        event_source = EventSource(consumer, 0)
 
         data = event_source.get_new_data()
         assert len(data) == 0
 
     def test_if_x_new_messages_on_only_one_partition_then_data_has_x_items(self):
         consumer = MockConsumer(["broker"], ["topic"], num_partitions=3)
-        event_source = EventSource(consumer, 0, deserialise_function=lambda x: x)
+        event_source = EventSource(consumer, 0)
         messages = get_fake_event_messages(5)
-        consumer.add_messages(messages)
+        consumer.add_messages(serialise_messages(messages))
 
         data = event_source.get_new_data()
 
         assert len(data) == len(messages)
         for i, m in enumerate(messages):
-            assert data[i] == m
+            assert compare_two_messages(m, data[i])
 
     def test_if_x_new_messages_spread_across_partition_then_data_has_x_items(self):
         data = self.event_source.get_new_data()
@@ -183,28 +222,22 @@ class TestEventSourceMultiplePartitions:
         assert len(data) == len(self.messages)
 
     def test_given_exact_time_finds_start_of_newer_messages_across_all_partitions(self):
-        expected_timestamp, expected_offset, expected_message = self.messages[45]
-        self.event_source.start_time = expected_message["pulse_time"]
+        _, _, expected_message = self.messages[45]
+        self.event_source.start_time = expected_message.pulse_time
 
         self.event_source.seek_to_start_time()
         new_data = self.event_source.get_new_data()
-        timestamp, offset, message = new_data[0]
 
-        assert timestamp == expected_timestamp
-        assert offset == expected_offset
-        assert message == expected_message
+        assert compare_two_messages(self.messages[45], new_data[0])
 
     def test_given_approximate_time_finds_start_pulse_across_all_partitions(self):
-        expected_timestamp, expected_offset, expected_message = self.messages[45]
-        self.event_source.start_time = expected_message["pulse_time"] - 5
+        _, _, expected_message = self.messages[45]
+        self.event_source.start_time = expected_message.pulse_time - 5
 
         self.event_source.seek_to_start_time()
         new_data = self.event_source.get_new_data()
-        timestamp, offset, message = new_data[0]
 
-        assert timestamp == expected_timestamp
-        assert offset == expected_offset
-        assert message == expected_message
+        assert compare_two_messages(self.messages[45], new_data[0])
 
     def test_given_time_more_recent_than_last_message_then_seeks_to_last_message_on_all_partitions(
         self

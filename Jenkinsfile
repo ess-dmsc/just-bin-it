@@ -89,9 +89,12 @@ def get_system_tests_pipeline() {
           }  // stage
           stage("System tests: Install requirements") {
             sh """
-            ${python} -m pip install --user --upgrade pip
-            ${python} -m pip install --user -r requirements.txt
-            ${python} -m pip install --user -r system-tests/requirements.txt
+            ${python} -m venv test_env
+            source test_env/bin/activate
+            which python
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install -r system-tests/requirements.txt
             """
           }  // stage
           stage("System tests: Run") {
@@ -100,8 +103,9 @@ def get_system_tests_pipeline() {
             sh "docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true"
             timeout(time: 30, activity: true){
               sh """
+              source test_env/bin/activate
               cd system-tests/
-              ${python} -m pytest -s --junitxml=./SystemTestsOutput.xml .
+              python -m pytest -s --junitxml=./SystemTestsOutput.xml .
               """
             }
           }  // stage
@@ -111,6 +115,7 @@ def get_system_tests_pipeline() {
             // even if there are no docker containers or output files to be
             // removed.
             sh """
+            rm -rf test_env
             rm -rf system-tests/output-files/* || true
             docker stop \$(docker ps -a -q) && docker rm \$(docker ps -a -q) || true
             """
