@@ -173,8 +173,8 @@ def run_processing(
     The target to run in a multi-processing instance for histogramming.
 
     Note: passing objects into a process requires the classes to be pickleable.
-    The histogrammer and event source classes are not pickleable, so need to be created
-    within the process.
+    The histogrammer and event source classes are not pickleable, so need to be
+    created within the process.
 
     In effect, this is the 'main' for a process so all the dependencies etc. are
     set up here.

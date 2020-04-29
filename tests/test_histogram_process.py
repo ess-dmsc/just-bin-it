@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from multiprocessing import Queue
 import pytest
 from just_bin_it.histograms.histogram_process import StopTimeStatus, Processor
@@ -212,6 +213,7 @@ class TestHistogramProcessLowLevel:
         assert self.histogrammer.data_received
 
 
+@contextmanager
 def _create_mocked_histogram_process(monkeypatch, publish_interval=1):
     import just_bin_it.histograms.histogram_process as jbi
 
@@ -225,46 +227,40 @@ def _create_mocked_histogram_process(monkeypatch, publish_interval=1):
     monkeypatch.setattr(jbi, "create_event_source", mock_create_event_source)
 
     process = jbi.HistogramProcess(VALID_CONFIG, None, None, publish_interval)
-    return process
+    yield process
+    process.stop()
 
 
 def test_if_stats_message_waiting_then_can_be_retrieved(monkeypatch):
-    process = _create_mocked_histogram_process(monkeypatch)
+    with _create_mocked_histogram_process(monkeypatch) as process:
+        # Give initial stats message time to arrive.
+        time.sleep(0.1)
 
-    # Give initial stats message time to arrive.
-    time.sleep(0.1)
-
-    assert len(process.get_stats()) > 0
-
-    process.stop()
+        assert len(process.get_stats()) > 0
 
 
 def test_no_stats_message_waiting_then_get_none(monkeypatch):
-    process = _create_mocked_histogram_process(monkeypatch, publish_interval=10000)
+    with _create_mocked_histogram_process(
+        monkeypatch, publish_interval=10000
+    ) as process:
+        # Give initial stats message time to arrive.
+        time.sleep(0.1)
 
-    # Give initial stats message time to arrive.
-    time.sleep(0.1)
+        # There will be at least one message as initialisation always sends one.
+        _ = process.get_stats()
 
-    # There will be at least one message as initialisation always sends one.
-    _ = process.get_stats()
-
-    # Immediate request for another message should return  None
-    assert process.get_stats() is None
-
-    process.stop()
+        # Immediate request for another message should return  None
+        assert process.get_stats() is None
 
 
 def test_on_clear_message_histograms_are_cleared(monkeypatch):
-    process = _create_mocked_histogram_process(monkeypatch)
+    with _create_mocked_histogram_process(monkeypatch) as process:
+        # Give it time to get going.
+        time.sleep(0.1)
 
-    # Give it time to get going.
-    time.sleep(0.1)
+        process.clear()
+        time.sleep(0.1)
 
-    process.clear()
-    time.sleep(0.1)
-
-    # Hacky way to get whether the histogrammer has been cleared
-    stats = process.get_stats()
-    assert stats["cleared"]
-
-    process.stop()
+        # Hacky way to get whether the histogrammer has been cleared
+        stats = process.get_stats()
+        assert stats["cleared"]
