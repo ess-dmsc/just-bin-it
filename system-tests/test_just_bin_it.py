@@ -59,11 +59,11 @@ class TestJustBinIt:
         # Create unique topics for each test
         conf = {"bootstrap.servers": BROKERS[0], "api.version.request": True}
         admin_client = AdminClient(conf)
-        uid = time_in_ns()
+        uid = time_in_ns() // 1000
         self.hist_topic_name = f"hist_{uid}"
         self.data_topic_name = f"data_{uid}"
         hist_topic = NewTopic(self.hist_topic_name, 1, 1)
-        data_topic = NewTopic(self.data_topic_name, 1, 1)
+        data_topic = NewTopic(self.data_topic_name, 2, 1)
         admin_client.create_topics([hist_topic, data_topic])
 
         self.producer = KafkaProducer(bootstrap_servers=BROKERS)
@@ -117,7 +117,9 @@ class TestJustBinIt:
 
     def ensure_topic_is_not_empty_on_startup(self):
         #  Put some data in it, so jbi doesn't complain about an empty topic
-        self.generate_and_send_data(0)
+        for i in range(10):
+            self.generate_and_send_data(i)
+        time.sleep(1)
 
     def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(
         self, just_bin_it
