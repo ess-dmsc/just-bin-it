@@ -1,7 +1,7 @@
 from kafka.errors import KafkaError
 
 
-class MockProducer:
+class SpyProducer:
     def __init__(self, brokers=None):
         self.messages = []
 
@@ -9,6 +9,6 @@ class MockProducer:
         self.messages.append((topic, message))
 
 
-class MockThrowsProducer:
+class StubProducerThatThrows:
     def publish_message(self, topic, message):
-        raise KafkaError("Kafka error")
+        raise KafkaError("Some Kafka error")

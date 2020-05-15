@@ -1,6 +1,6 @@
 import pytest
 from just_bin_it.endpoints.histogram_sink import HistogramSink
-from just_bin_it.utilities.mock_producer import MockProducer, MockThrowsProducer
+from tests.doubles.producers import SpyProducer, StubProducerThatThrows
 
 
 TEST_MESSAGE = "this is a message"
@@ -12,7 +12,7 @@ TIMESTAMP = 1234567890
 class TestHistogramSink:
     @pytest.fixture(autouse=True)
     def prepare(self):
-        self.producer = MockProducer()
+        self.producer = SpyProducer()
         self.sink = HistogramSink(self.producer, lambda x, y, z: (x, y, z))
 
     def test_if_no_producer_supplied_then_raises(self):
@@ -39,5 +39,5 @@ class TestHistogramSink:
 
     def test_failure_to_send_raises(self):
         with pytest.raises(Exception):
-            sink = HistogramSink(MockThrowsProducer())
+            sink = HistogramSink(StubProducerThatThrows())
             sink.send_histogram(TEST_TOPIC, TEST_MESSAGE)

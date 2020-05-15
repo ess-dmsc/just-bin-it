@@ -1,7 +1,7 @@
 from unittest.mock import patch
 import pytest
 from just_bin_it.endpoints.sources import HistogramSource
-from just_bin_it.utilities.mock_consumer import MockConsumer
+from tests.doubles.consumer import StubConsumer
 
 
 TEST_MESSAGE = b"this is a byte message"
@@ -18,7 +18,7 @@ class TestHistogramSource:
             HistogramSource(None)
 
     def test_if_no_new_messages_then_no_data(self):
-        mock_consumer = MockConsumer(["broker1"], ["topic1"])
+        mock_consumer = StubConsumer(["broker1"], ["topic1"])
         mock_consumer.add_messages([])
         hs = HistogramSource(mock_consumer)
         data = hs.get_new_data()
@@ -28,7 +28,7 @@ class TestHistogramSource:
     def test_if_five_new_messages_on_one_topic_then_data_has_five_items(
         self, mock_method
     ):
-        mock_consumer = MockConsumer(["broker1"], ["topic1"])
+        mock_consumer = StubConsumer(["broker1"], ["topic1"])
         mock_consumer.add_messages([TEST_MESSAGE] * 5)
         hs = HistogramSource(mock_consumer)
 
@@ -39,7 +39,7 @@ class TestHistogramSource:
         assert message == TEST_MESSAGE
 
     def test_deserialising_invalid_fb_does_not_throw(self):
-        mock_consumer = MockConsumer(["broker1"], ["topic1"])
+        mock_consumer = StubConsumer(["broker1"], ["topic1"])
         mock_consumer.add_messages([INVALID_FB])
         hs = HistogramSource(mock_consumer)
 

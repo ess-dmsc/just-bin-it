@@ -6,7 +6,7 @@ from just_bin_it.endpoints.sources import (
     TooOldTimeRequestedException,
 )
 from just_bin_it.endpoints.serialisation import deserialise_ev42, serialise_ev42
-from just_bin_it.utilities.mock_consumer import MockConsumer, get_fake_event_messages
+from tests.doubles.consumer import StubConsumer, get_fake_event_messages
 
 
 def compare_two_messages(sent, received):
@@ -55,7 +55,7 @@ def serialise_messages(messages):
 class TestEventSourceSinglePartition:
     @pytest.fixture(autouse=True)
     def prepare(self):
-        self.consumer = MockConsumer(["broker"], ["topic"])
+        self.consumer = StubConsumer(["broker"], ["topic"])
         self.messages = get_fake_event_messages(100)
         self.serialised_messages = serialise_messages(self.messages)
         self.consumer.add_messages(self.serialised_messages)
@@ -68,7 +68,7 @@ class TestEventSourceSinglePartition:
             EventSource(None)
 
     def test_if_no_new_messages_then_no_data(self):
-        consumer = MockConsumer(["broker"], ["topic"])
+        consumer = StubConsumer(["broker"], ["topic"])
         event_source = EventSource(consumer, 0)
 
         data = event_source.get_new_data()
@@ -184,7 +184,7 @@ class TestEventSourceSinglePartition:
 class TestEventSourceMultiplePartitions:
     @pytest.fixture(autouse=True)
     def prepare(self):
-        self.consumer = MockConsumer(["broker"], ["topic"], num_partitions=3)
+        self.consumer = StubConsumer(["broker"], ["topic"], num_partitions=3)
         self.event_source = EventSource(self.consumer, 0)
 
         self.messages = get_fake_event_messages(150, 3)
@@ -198,14 +198,14 @@ class TestEventSourceMultiplePartitions:
             EventSource(None)
 
     def test_if_no_new_messages_then_no_data(self):
-        consumer = MockConsumer(["broker"], ["topic"], num_partitions=3)
+        consumer = StubConsumer(["broker"], ["topic"], num_partitions=3)
         event_source = EventSource(consumer, 0)
 
         data = event_source.get_new_data()
         assert len(data) == 0
 
     def test_if_x_new_messages_on_only_one_partition_then_data_has_x_items(self):
-        consumer = MockConsumer(["broker"], ["topic"], num_partitions=3)
+        consumer = StubConsumer(["broker"], ["topic"], num_partitions=3)
         event_source = EventSource(consumer, 0)
         messages = get_fake_event_messages(5)
         consumer.add_messages(serialise_messages(messages))

@@ -2,14 +2,14 @@ from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.serialisation import EventData
 
 
-class MockConsumerRecord:
+class StubConsumerRecord:
     def __init__(self, timestamp, offset, value):
         self.timestamp = timestamp
         self.offset = offset
         self.value = value
 
 
-class MockConsumer(Consumer):
+class StubConsumer(Consumer):
     def __init__(self, brokers, topics, num_partitions=1):
         super().__init__(brokers, topics)
         self.topic_names = topics
@@ -39,7 +39,7 @@ class MockConsumer(Consumer):
             records = []
             while v["offset"] < len(v["messages"]):
                 msg = v["messages"][v["offset"]]
-                records.append(MockConsumerRecord(msg[0], v["offset"], msg[2]))
+                records.append(StubConsumerRecord(msg[0], v["offset"], msg[2]))
                 v["offset"] += 1
             data[k] = records
         return data
