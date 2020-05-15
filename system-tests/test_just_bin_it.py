@@ -41,11 +41,17 @@ STOP_CMD = {"cmd": "stop"}
 
 def create_consumer(topic):
     consumer = KafkaConsumer(bootstrap_servers=BROKERS)
-    tp = TopicPartition(topic, 0)
-    consumer.assign([tp])
+    topic_partitions = []
+
+    partition_numbers = consumer.partitions_for_topic(topic)
+
+    for pn in partition_numbers:
+        topic_partitions.append(TopicPartition(topic, pn))
+
+    consumer.assign(topic_partitions)
     # Move to end
-    consumer.seek_to_end(tp)
-    return consumer, tp
+    consumer.seek_to_end()
+    return consumer, topic_partitions
 
 
 def generate_data(msg_id, time_stamp, num_events):
@@ -67,7 +73,10 @@ class TestJustBinIt:
         admin_client.create_topics([hist_topic, data_topic])
 
         self.producer = KafkaProducer(bootstrap_servers=BROKERS)
-        self.consumer, self.topic_part = create_consumer(self.hist_topic_name)
+        time.sleep(1)
+        self.consumer, topic_partitions = create_consumer(self.hist_topic_name)
+        # Only one partition for histogram topic
+        self.topic_part = topic_partitions[0]
         self.initial_offset = self.consumer.position(self.topic_part)
         self.time_stamps = []
         self.num_events_per_msg = []
