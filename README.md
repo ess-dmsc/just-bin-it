@@ -203,7 +203,7 @@ To restarting the histograms counting from zero, send the `reset_counts` command
 This will start all the histograms counting from zero but will not change any other
 settings, such as bin edges etc.
 
-### Stoping counting
+### Stopping counting
 In order to stop counting send the stop command:
 ```json
 {
@@ -356,6 +356,13 @@ tox
 
 ### System tests
 There are system tests that tests the whole system with a real instance of Kafka.
+See the system-tests folder for more information on how to run them.
+
+They should be run before modified code is pushed to the code repository.
+
+### Integrated tests
+There are some integrated tests in the system-tests folder that check our code for
+talking to Kafka works as expected.
 See the system-tests folder for more information on how to run them.
 
 They should be run before modified code is pushed to the code repository.
