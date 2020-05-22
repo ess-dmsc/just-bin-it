@@ -10,14 +10,14 @@ def are_kafka_settings_valid(brokers, topics):
     :param brokers: The broker names.
     :return: True if they exist.
     """
-    consumer = are_brokers_present(brokers)
+    consumer = _are_brokers_present(brokers)
     if consumer is None:
         return False
 
-    return are_topics_present(consumer, topics)
+    return _are_topics_present(consumer, topics)
 
 
-def are_brokers_present(brokers):
+def _are_brokers_present(brokers):
     try:
         return KafkaConsumer(bootstrap_servers=brokers)
     except KafkaError as error:
@@ -25,7 +25,7 @@ def are_brokers_present(brokers):
         return None
 
 
-def are_topics_present(consumer, topics):
+def _are_topics_present(consumer, topics):
     result = True
     try:
         existing_topics = consumer.topics()
