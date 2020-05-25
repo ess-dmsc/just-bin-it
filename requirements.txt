@@ -1,6 +1,6 @@
 black
 confluent-kafka
-ess-streaming-data-types
+ess-streaming-data-types>=0.5
 fast-histogram
 flake8
 graphyte
