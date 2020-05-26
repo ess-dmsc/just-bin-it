@@ -1,29 +1,29 @@
 import json
 import logging
-from just_bin_it.endpoints.histogram_sink import HistogramSink
 
 
 HISTOGRAM_STATES = {
     "COUNTING": "COUNTING",
     "FINISHED": "FINISHED",
     "INITIALISED": "INITIALISED",
+    "ERROR": "ERROR",
 }
 
 
 class Histogrammer:
-    def __init__(self, producer, histograms, start=None, stop=None):
+    def __init__(self, histogram_sink, histograms, start=None, stop=None):
         """
         Constructor.
 
         All times are given in ns since the Unix epoch.
 
-        :param producer: The producer for the sink.
+        :param histogram_sink: The producer for the sink.
         :param histograms: The histograms.
         :param start: When to start histogramming from.
         :param stop: When to histogram until.
         """
         self.histograms = histograms
-        self.hist_sink = HistogramSink(producer)
+        self.hist_sink = histogram_sink
         self.start = start
         self.stop = stop
         self._stop_time_exceeded = False
@@ -143,3 +143,10 @@ class Histogrammer:
 
     def set_finished(self):
         self._stop_time_exceeded = True
+
+    def send_failure_message(self, timestamp, message):
+        for h in self.histograms:
+            info = self._generate_info(h)
+            info["state"] = HISTOGRAM_STATES["ERROR"]
+            info["error_message"] = message
+            self.hist_sink.send_histogram(h.topic, h, timestamp, json.dumps(info))
