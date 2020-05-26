@@ -82,7 +82,7 @@ producer.flush()
 This will start histogramming data from the `TEST_events` topic and publish the
 histogrammed data to `output_topic` using the hs00 schema.
 
-To see what the data looks like see Viewing the histogram data below:
+To see what the data looks like see "Viewing the histogram data" below:
 
 ### Configuring histogramming
 Note: sending a new configuration replace the existing configuration meaning that

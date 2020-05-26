@@ -63,7 +63,7 @@ class Main:
         self.config_listener = None
         self.stats_publisher = stats_publisher
         self.heartbeat_publisher = None
-        self.hist_process = []
+        self.hist_processes = []
         self.stats_interval_ms = 1000
         self.time_to_publish_stats = 0
         self.heartbeat_interval_ms = 1000
@@ -145,9 +145,9 @@ class Main:
         :param current_time: The current time.
         """
         if self.stats_publisher:
-            for i, process in enumerate(self.hist_process):
+            for i, process in enumerate(self.hist_processes):
                 try:
-                    stats = self.hist_process[i].get_stats()
+                    stats = self.hist_processes[i].get_stats()
                     if stats:
                         self.stats_publisher.send_histogram_stats(stats, i)
                 except Exception as error:
@@ -178,13 +178,13 @@ class Main:
         Request the processes to stop.
         """
         logging.info("Stopping any existing histogram processes")
-        for process in self.hist_process:
+        for process in self.hist_processes:
             try:
                 process.stop()
             except Exception as error:
                 # Process might have killed itself already
                 logging.info("Stopping process failed %s", error)
-        self.hist_process.clear()
+        self.hist_processes.clear()
 
     def handle_command_message(self, message):
         """
@@ -194,7 +194,7 @@ class Main:
         """
         if message["cmd"] == "reset_counts":
             logging.info("Reset command received")
-            for process in self.hist_process:
+            for process in self.hist_processes:
                 process.clear()
         elif message["cmd"] == "stop":
             logging.info("Stop command received")
@@ -216,7 +216,7 @@ class Main:
                     process = HistogramProcess(
                         config, start, stop, simulation=self.simulation
                     )
-                    self.hist_process.append(process)
+                    self.hist_processes.append(process)
             except Exception as error:
                 # If one fails then close any that were started then rethrow
                 self.stop_processes()
