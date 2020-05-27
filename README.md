@@ -90,6 +90,8 @@ existing histograms will no longer be updated.
 
 A JSON histogramming configuration has the following parameters:
 
+* "cmd" (string): the command type (config, stop, etc.)
+* "msg_id" (string): a unique identifier for the message
 * "data_brokers" (string array): the addresses of the Kafka brokers
 * "data_topics" (string array): the topics to listen for event data on
 * "start" (seconds since epoch in ms): only histogram data after this UTC time (optional)
@@ -104,7 +106,7 @@ A JSON histogramming configuration has the following parameters:
     * "num_bins" (int): the number of histogram bins (hist1d and hist2d only)
     * "topic" (string): the topic to write histogram data to
     * "source" (string): the name of the source to accept data from
-    * "id" (string): an identifier for the histogram which will be contained in the published histogram data (optional)
+    * "id" (string): a unique identifier for the histogram which will be contained in the published histogram data (optional but recommended)
 
 For example:
 ```json
@@ -203,7 +205,7 @@ To restarting the histograms counting from zero, send the `reset_counts` command
 This will start all the histograms counting from zero but will not change any other
 settings, such as bin edges etc.
 
-### Stoping counting
+### Stopping counting
 In order to stop counting send the stop command:
 ```json
 {
@@ -214,7 +216,7 @@ This will cause histogramming to stop and the final histogram to be published.
 
 ### Simulation mode
 When in simulation mode just-bin-it will try to provide simulated data matching
-the requested configuration. For example: if the config specifies a 2-D
+the requested configuration. For example: if the configuration specifies a 2-D
 histogram then the simulated data will be 2-D.
 
 ### Enabling a heartbeat

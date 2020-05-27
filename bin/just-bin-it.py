@@ -90,9 +90,10 @@ class Main:
                 else:
                     msg = self.config_listener.consume_message()
 
+                logging.warning("New command received")
+                logging.warning("%s", msg)
+
                 try:
-                    logging.warning("New command received")
-                    logging.warning("%s", msg)
                     self.handle_command_message(msg)
                 except Exception as error:
                     logging.error("Could not handle configuration: %s", error)
@@ -187,6 +188,25 @@ class Main:
         self.hist_processes.clear()
 
     def handle_command_message(self, message):
+        msg_id = None
+        try:
+            msg_id = message["msg_id"] if "msg_id" in message else None
+            self._handle_command_message(message)
+            # TODO: Acknowledge message
+            if msg_id:
+                producer = Producer(self.config_brokers)
+                response = {"msg_id": msg_id, "response": "ACK"}
+                producer.publish_message(
+                    "hist_responses", json.dumps(response).encode()
+                )
+        except Exception as error:
+            logging.error("Could not handle configuration: %s", error)
+            # TODO: Send
+            producer = Producer(self.config_brokers)
+            response = {"msg_id": msg_id, "response": "ERR", "message": str(error)}
+            producer.publish_message("hist_responses", json.dumps(response).encode())
+
+    def _handle_command_message(self, message):
         """
         Handle the message received.
 
@@ -203,7 +223,7 @@ class Main:
             logging.info("Config command received")
             self.stop_processes()
 
-            start, stop, hist_configs = parse_config(message)
+            start, stop, hist_configs, msg_id = parse_config(message)
 
             try:
                 for config in hist_configs:
