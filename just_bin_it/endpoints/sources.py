@@ -94,14 +94,16 @@ class EventSource(BaseSource):
         for i, (lowest, highest) in enumerate(offset_ranges):
             if offsets[i] is None:
                 logging.warning(
-                    "Could not find corresponding offset for requested time, so set position to latest message"
+                    "Could not find corresponding offset for start time, so set "
+                    "position to latest message"
                 )
                 offsets[i] = highest
 
             if offsets[i] == lowest:
                 # We've gone back as far as we can.
                 raise TooOldTimeRequestedException(
-                    "Cannot find message time in data as supplied time is too old"
+                    "Cannot find start time in the data, either the supplied "
+                    "time is too old or there is no data available"
                 )  # pragma: no mutate
 
         self.consumer.seek_by_offsets(offsets)

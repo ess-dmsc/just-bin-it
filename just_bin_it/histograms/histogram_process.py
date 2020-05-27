@@ -53,7 +53,6 @@ def create_histogrammer(configuration, start, stop):
     :param stop: The stop time.
     :return: The created histogrammer.
     """
-    # TODO: hist_sink?
     producer = Producer(configuration["data_brokers"])
     hist_sink = HistogramSink(producer)
     histograms = HistogramFactory.generate([configuration])
