@@ -65,10 +65,6 @@ class Main:
         self.stats_publisher = stats_publisher
         self.heartbeat_publisher = None
         self.hist_processes = []
-        self.stats_interval_ms = 1000
-        self.time_to_publish_stats = 0
-        self.heartbeat_interval_ms = 1000
-        self.time_to_publish_heartbeat = 0
 
     def run(self):
         """
@@ -99,10 +95,12 @@ class Main:
                 except Exception as error:
                     logging.error("Could not handle configuration: %s", error)
 
-            # Handle publishing of statistics
+            # Handle publishing of statistics and heartbeat
             curr_time = time_in_ns()
-            if curr_time // 1_000_000 > self.time_to_publish_stats:
-                self.publish_stats(curr_time)
+            if self.stats_publisher:
+                self.stats_publisher.publish_histogram_stats(
+                    self.hist_processes, curr_time
+                )
 
             if self.heartbeat_publisher:
                 self.heartbeat_publisher.publish(curr_time)
@@ -115,29 +113,8 @@ class Main:
         """
         if self.heartbeat_topic:
             self.heartbeat_publisher = HeartbeatPublisher(
-                Producer(self.config_brokers),
-                self.heartbeat_topic,
-                self.heartbeat_interval_ms,
+                Producer(self.config_brokers), self.heartbeat_topic
             )
-
-    def publish_stats(self, current_time):
-        """
-        Publish the statistics from the histogram processes.
-
-        :param current_time: The current time.
-        """
-        if self.stats_publisher:
-            for i, process in enumerate(self.hist_processes):
-                try:
-                    stats = self.hist_processes[i].get_stats()
-                    if stats:
-                        self.stats_publisher.send_histogram_stats(stats, i)
-                except Exception as error:
-                    logging.error("Could not publish statistics: %s", error)
-        self.time_to_publish_stats = current_time // 1_000_000 + self.stats_interval_ms
-        self.time_to_publish_stats -= (
-            self.time_to_publish_stats % self.stats_interval_ms
-        )
 
     def create_config_listener(self):
         """

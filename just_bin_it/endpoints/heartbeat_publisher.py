@@ -5,7 +5,7 @@ from just_bin_it.exceptions import KafkaException
 
 # TODO: tests!
 class HeartbeatPublisher:
-    def __init__(self, producer, topic, heartbeat_interval_ms):
+    def __init__(self, producer, topic, heartbeat_interval_ms=1000):
         self.producer = producer
         self.topic = topic
         self.heartbeat_interval_ms = heartbeat_interval_ms
