@@ -54,15 +54,13 @@ class Main:
         :param initial_config: A histogram configuration to start with.
         :param stats_publisher: Publisher for the histograms statistics.
         """
-        self.event_source = None
-        self.histogrammer = None
+        self.config_topic = config_topic
         self.simulation = simulation
+        self.heartbeat_topic = heartbeat_topic
         self.initial_config = initial_config
         self.config_brokers = config_brokers
-        self.config_topic = config_topic
-        self.heartbeat_topic = heartbeat_topic
-        self.config_listener = None
         self.stats_publisher = stats_publisher
+        self.config_listener = None
         self.heartbeat_publisher = None
         self.hist_processes = []
 
