@@ -7,6 +7,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.config_listener import ConfigListener
+from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
@@ -78,7 +79,7 @@ class Main:
 
         # Blocks until can connect to the config topic.
         self.create_config_listener()
-        self.create_heartbeat_producer()
+        self.create_heartbeat_publisher()
 
         while True:
             # Handle configuration messages
@@ -103,40 +104,20 @@ class Main:
             if curr_time // 1_000_000 > self.time_to_publish_stats:
                 self.publish_stats(curr_time)
 
-            if curr_time // 1_000_000 > self.time_to_publish_heartbeat:
-                self.publish_heartbeat(curr_time)
+            if self.heartbeat_publisher:
+                self.heartbeat_publisher.publish(curr_time)
 
             time.sleep(0.1)
 
-    def create_heartbeat_producer(self):
+    def create_heartbeat_publisher(self):
         """
         Create the Kafka producer for publishing heart-beat messages.
         """
         if self.heartbeat_topic:
-            self.heartbeat_publisher = Producer(self.config_brokers)
-
-    def publish_heartbeat(self, current_time):
-        """
-        Publish heart-beat messages.
-
-        :param current_time: The current time.
-        """
-        if self.heartbeat_publisher:
-            msg = {
-                "message": current_time // 1_000_000,
-                "message_interval": self.heartbeat_interval_ms,
-            }
-            try:
-                self.heartbeat_publisher.publish_message(
-                    self.heartbeat_topic, bytes(json.dumps(msg), "utf-8")
-                )
-            except KafkaException as error:
-                logging.error("Could not publish heartbeat: %s", error)
-            self.time_to_publish_heartbeat = (
-                current_time // 1_000_000 + self.heartbeat_interval_ms
-            )
-            self.time_to_publish_heartbeat -= (
-                self.time_to_publish_heartbeat % self.heartbeat_interval_ms
+            self.heartbeat_publisher = HeartbeatPublisher(
+                Producer(self.config_brokers),
+                self.heartbeat_topic,
+                self.heartbeat_interval_ms,
             )
 
     def publish_stats(self, current_time):
@@ -192,7 +173,6 @@ class Main:
         try:
             msg_id = message["msg_id"] if "msg_id" in message else None
             self._handle_command_message(message)
-            # TODO: Acknowledge message
             if msg_id:
                 producer = Producer(self.config_brokers)
                 response = {"msg_id": msg_id, "response": "ACK"}
@@ -201,7 +181,6 @@ class Main:
                 )
         except Exception as error:
             logging.error("Could not handle configuration: %s", error)
-            # TODO: Send
             producer = Producer(self.config_brokers)
             response = {"msg_id": msg_id, "response": "ERR", "message": str(error)}
             producer.publish_message("hist_responses", json.dumps(response).encode())

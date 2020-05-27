@@ -1,5 +1,6 @@
 {
     "cmd": "config",
+    "msg_id": "some_unique_id",
     "data_brokers": ["localhost:9092"],
     "data_topics": ["LOQ_events"],
     "histograms": [
@@ -10,7 +11,7 @@
             "width": 32,
             "height": 192,
             "topic": "hist-topic",
-            "id": "some_id"
+            "id": "some_unique_id"
         }
     ]
 }
