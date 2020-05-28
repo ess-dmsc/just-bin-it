@@ -6,16 +6,14 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from just_bin_it.core.command_actioner import CommandActioner
 from just_bin_it.endpoints.config_listener import ConfigListener
 from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
-from just_bin_it.exceptions import KafkaException
-from just_bin_it.histograms.histogram_factory import parse_config
-from just_bin_it.histograms.histogram_process import HistogramProcess
+from just_bin_it.endpoints.statistics_publisher import StatisticsPublisher
 from just_bin_it.utilities import time_in_ns
-from just_bin_it.utilities.statistics_publisher import StatisticsPublisher
 
 
 def load_json_config_file(file):
@@ -63,6 +61,8 @@ class Main:
         self.config_listener = None
         self.heartbeat_publisher = None
         self.hist_processes = []
+        self.producer = None
+        self.command_actioner = None
 
     def run(self):
         """
@@ -73,7 +73,7 @@ class Main:
 
         # Blocks until can connect to the config topic.
         self.create_config_listener()
-        self.create_heartbeat_publisher()
+        self.create_publishers()
 
         while True:
             # Handle configuration messages
@@ -87,13 +87,9 @@ class Main:
 
                 logging.warning("New command received")
                 logging.warning("%s", msg)
+                self.command_actioner.handle_command_message(msg, self.hist_processes)
 
-                try:
-                    self.handle_command_message(msg)
-                except Exception as error:
-                    logging.error("Could not handle configuration: %s", error)
-
-            # Handle publishing of statistics and heartbeat
+            # Publishing of statistics and heartbeat
             curr_time = time_in_ns()
             if self.stats_publisher:
                 self.stats_publisher.publish_histogram_stats(
@@ -105,13 +101,18 @@ class Main:
 
             time.sleep(0.1)
 
-    def create_heartbeat_publisher(self):
+    def create_publishers(self):
         """
-        Create the Kafka producer for publishing heart-beat messages.
+        Create the publishers.
         """
+        self.producer = Producer(self.config_brokers)
+        self.command_actioner = CommandActioner(
+            self.producer, "hist_responses", self.simulation
+        )
+
         if self.heartbeat_topic:
             self.heartbeat_publisher = HeartbeatPublisher(
-                Producer(self.config_brokers), self.heartbeat_topic
+                self.producer, self.heartbeat_topic
             )
 
     def create_config_listener(self):
@@ -129,74 +130,6 @@ class Main:
         self.config_listener = ConfigListener(
             Consumer(self.config_brokers, [self.config_topic])
         )
-
-    def stop_processes(self):
-        """
-        Request the processes to stop.
-        """
-        logging.info("Stopping any existing histogram processes")
-        for process in self.hist_processes:
-            try:
-                process.stop()
-            except Exception as error:
-                # Process might have killed itself already
-                logging.info("Stopping process failed %s", error)
-        self.hist_processes.clear()
-
-    def handle_command_message(self, message):
-        msg_id = None
-        try:
-            msg_id = message["msg_id"] if "msg_id" in message else None
-            self._handle_command_message(message)
-            if msg_id:
-                producer = Producer(self.config_brokers)
-                response = {"msg_id": msg_id, "response": "ACK"}
-                producer.publish_message(
-                    "hist_responses", json.dumps(response).encode()
-                )
-        except Exception as error:
-            logging.error("Could not handle configuration: %s", error)
-            producer = Producer(self.config_brokers)
-            response = {"msg_id": msg_id, "response": "ERR", "message": str(error)}
-            producer.publish_message("hist_responses", json.dumps(response).encode())
-
-    def _handle_command_message(self, message):
-        """
-        Handle the message received.
-
-        :param message: The message.
-        """
-        if message["cmd"] == "reset_counts":
-            logging.info("Reset command received")
-            for process in self.hist_processes:
-                process.clear()
-        elif message["cmd"] == "stop":
-            logging.info("Stop command received")
-            self.stop_processes()
-        elif message["cmd"] == "config":
-            logging.info("Config command received")
-            self.stop_processes()
-
-            start, stop, hist_configs, msg_id = parse_config(message)
-
-            try:
-                for config in hist_configs:
-                    # Check brokers and data topics exist (skip in simulation)
-                    if not self.simulation and not are_kafka_settings_valid(
-                        config["data_brokers"], config["data_topics"]
-                    ):
-                        raise KafkaException("Invalid Kafka settings")
-
-                    process = HistogramProcess(
-                        config, start, stop, simulation=self.simulation
-                    )
-                    self.hist_processes.append(process)
-            except Exception as error:
-                # If one fails then close any that were started then rethrow
-                self.stop_processes()
-                raise error
-        else:
-            raise Exception(f"Unknown command type '{message['cmd']}'")
 
 
 if __name__ == "__main__":
