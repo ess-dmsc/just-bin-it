@@ -70,6 +70,9 @@ class TestCommandActioner:
 
         assert len(self.producer.messages) == 1
         assert json.loads(self.producer.messages[0][1])["response"] == "ERR"
+        assert (
+            json.loads(self.producer.messages[0][1])["msg_id"] == invalid_cmd["msg_id"]
+        )
 
     def test_on_valid_command_without_id_response_not_sent(self):
         self.actioner.handle_command_message(CONFIG_CMD, self.hist_processes)
@@ -83,6 +86,7 @@ class TestCommandActioner:
 
         assert len(self.producer.messages) == 1
         assert json.loads(self.producer.messages[0][1])["response"] == "ACK"
+        assert json.loads(self.producer.messages[0][1])["msg_id"] == cmd["msg_id"]
 
     def test_on_config_command_existing_processes_stopped(self):
         self.actioner.handle_command_message(CONFIG_CMD, self.hist_processes)
