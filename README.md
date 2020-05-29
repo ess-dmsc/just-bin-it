@@ -12,20 +12,23 @@ Python 3.6+ only.
 ## Usage
 
 ```
-usage: just-bin-it.py [-h] -b BROKERS [BROKERS ...] -t CONF_TOPIC
-                      [-hb HB_TOPIC] [-c CONFIG_FILE]
+usage: just-bin-it.py [-h] -b BROKERS [BROKERS ...] -t CONFIG_TOPIC
+                      [-hb HB_TOPIC] [-rt RESPONSE_TOPIC] [-c CONFIG_FILE]
                       [-g GRAPHITE_CONFIG_FILE] [-s] [-l LOG_LEVEL]
 
 optional arguments:
   -h, --help            show this help message and exit
   -hb HB_TOPIC, --hb-topic HB_TOPIC
                         the topic where the heartbeat is published
+  -rt RESPONSE_TOPIC, --response-topic RESPONSE_TOPIC
+                        the topic where the response messages to commands are
+                        published
   -c CONFIG_FILE, --config-file CONFIG_FILE
                         configure an initial histogram from a file
   -g GRAPHITE_CONFIG_FILE, --graphite-config-file GRAPHITE_CONFIG_FILE
                         configuration file for publishing to Graphite
   -s, --simulation-mode
-                        runs the program in simulation mode.
+                        runs the program in simulation mode
   -l LOG_LEVEL, --log-level LOG_LEVEL
                         sets the logging level: debug=1, info=2, warning=3,
                         error=4, critical=5.
@@ -33,10 +36,9 @@ optional arguments:
 required arguments:
   -b BROKERS [BROKERS ...], --brokers BROKERS [BROKERS ...]
                         the broker addresses
-  -t CONF_TOPIC, --config-topic CONF_TOPIC
+  -t CONFIG_TOPIC, --config-topic CONFIG_TOPIC
                         the configuration topic
 ```
-
 
 ## How to run just-bin-it
 This assumes you have Kafka running somewhere with an incoming stream of event
@@ -228,6 +230,51 @@ Note: no histogram data is written to the output topic in Kafka with this mode.
 ```
 python bin/just-bin-it.py --brokers localhost:9092 --config-topic hist_commands --hb-topic heartbeat
 ```
+
+### Enabling a response topic and getting messages from just-bin-it
+If a response topic is supplied then just-bin-it will supply a response when it
+receives a command via Kafka, if, and only if, the command contains a message ID
+(the `msg_id` field).
+For example:
+```json
+{
+  "cmd": "config",
+  "msg_id": "unique_id_123",
+  "data_brokers": ["localhost:9092"],
+  "data_topics": ["TEST_events"],
+  ...
+}
+```
+It is recommended that the message ID is unique to avoid collisions with other
+messages.
+If the command is successful then an acknowledgement message like the following
+will be sent to the response topic:
+```json
+{"msg_id": "unique_id_123", "response": "ACK"}
+```
+The message ID in the response will be the same as in the original command.
+
+If the command is refused for some reason (invalid command name, missing paramters,
+etc.) then an error message like the following will be sent to the response topic:
+```json
+{"msg_id": "unique_id_123", "response": "ERR", "message": "Unknown command type 'conf'"}
+```
+The `message` field will contain the reason for the error.
+
+If the command is valid but for some reason histogramming is stopped prematurely
+, e.g. the start time supplied is older than the data in Kafka, then just-bin-it
+will try to send the last known status of the histogram plus information about the
+error in the `hs00` schema's `info` field, for example:
+```json
+{
+    "id": "some_id1",
+    "start": 1590758218000,
+    "state": "ERROR",
+    "error_message": "Cannot find start time in the data, either the supplied time is too old or there is no data available"
+}
+```
+The key points are that the `state` will be set to "ERROR" and there is an `error_message`
+field.
 
 ### Supplying a configuration file
 An initial histogramming configuration can be supplied via the `config-file`
