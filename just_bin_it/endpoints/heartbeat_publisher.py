@@ -3,7 +3,6 @@ import logging
 from just_bin_it.exceptions import KafkaException
 
 
-# TODO: tests!
 class HeartbeatPublisher:
     def __init__(self, producer, topic, heartbeat_interval_ms=1000):
         self.producer = producer
@@ -11,22 +10,25 @@ class HeartbeatPublisher:
         self.heartbeat_interval_ms = heartbeat_interval_ms
         self.next_time_to_publish = 0
 
-    def publish(self, current_time):
-        if current_time // 1_000_000 > self.next_time_to_publish:
-            self._publish(current_time)
-            self._update_publish_time(current_time)
+    def publish(self, current_time_ms):
+        """
+        Publish the heartbeat if enought time has elapsed.
 
-    def _update_publish_time(self, current_time):
-        self.next_time_to_publish = (
-            current_time // 1_000_000 + self.heartbeat_interval_ms
-        )
+        :param current_time_ms: milliseconds since UNIX epoch.
+        """
+        if current_time_ms > self.next_time_to_publish:
+            self._publish(current_time_ms)
+            self._update_publish_time(current_time_ms)
+
+    def _update_publish_time(self, current_time_ms):
+        self.next_time_to_publish = current_time_ms + self.heartbeat_interval_ms
         self.next_time_to_publish -= (
             self.next_time_to_publish % self.heartbeat_interval_ms
         )
 
-    def _publish(self, current_time):
+    def _publish(self, current_time_ms):
         msg = {
-            "message": current_time // 1_000_000,
+            "message": current_time_ms,
             "message_interval": self.heartbeat_interval_ms,
         }
         try:

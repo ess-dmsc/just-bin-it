@@ -6,12 +6,22 @@ from just_bin_it.histograms.histogram_factory import parse_config
 from just_bin_it.histograms.histogram_process import HistogramProcess
 
 
-# TODO: tests
+def create_histogram_process(config, start, stop, simulation):
+    return HistogramProcess(config, start, stop, simulation=simulation)
+
+
 class CommandActioner:
-    def __init__(self, response_producer, response_topic, simulation):
+    def __init__(
+        self,
+        response_producer,
+        response_topic,
+        simulation=False,
+        process_creator=create_histogram_process,
+    ):
         self.response_producer = response_producer
         self.response_topic = response_topic
         self.simulation = simulation
+        self.process_creator = process_creator
 
     def handle_command_message(self, message, hist_processes):
         """
@@ -25,17 +35,17 @@ class CommandActioner:
             msg_id = message["msg_id"] if "msg_id" in message else None
             self._handle_command_message(message, hist_processes)
             if msg_id:
-                self.send_ack_response(msg_id)
+                self._send_ack_response(msg_id)
         except Exception as error:
             logging.error("Could not handle configuration: %s", error)
             if msg_id:
-                self.send_error_response(msg_id, error)
+                self._send_error_response(msg_id, error)
 
-    def send_ack_response(self, msg_id):
+    def _send_ack_response(self, msg_id):
         response = {"msg_id": msg_id, "response": "ACK"}
         self._publish_response(response)
 
-    def send_error_response(self, msg_id, error):
+    def _send_error_response(self, msg_id, error):
         response = {"msg_id": msg_id, "response": "ERR", "message": str(error)}
         self._publish_response(response)
 
@@ -70,9 +80,7 @@ class CommandActioner:
                     ):
                         raise KafkaException("Invalid Kafka settings")
 
-                    process = HistogramProcess(
-                        config, start, stop, simulation=self.simulation
-                    )
+                    process = self.process_creator(config, start, stop)
                     hist_processes.append(process)
             except Exception as error:
                 # If one fails then close any that were started then rethrow

@@ -41,7 +41,7 @@ class Main:
         heartbeat_topic=None,
         initial_config=None,
         stats_publisher=None,
-        response_topic="hist_responses",
+        response_topic=None,
     ):
         """
         Constructor.
@@ -99,7 +99,7 @@ class Main:
                 )
 
             if self.heartbeat_publisher:
-                self.heartbeat_publisher.publish(curr_time)
+                self.heartbeat_publisher.publish(curr_time // 1_000_000)
 
             time.sleep(0.1)
 
@@ -153,6 +153,13 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "-hb", "--hb-topic", type=str, help="the topic where the heartbeat is published"
+    )
+
+    parser.add_argument(
+        "-rt",
+        "--response-topic",
+        type=str,
+        help="the topic where the response messages to commands are published",
     )
 
     parser.add_argument(
@@ -214,5 +221,6 @@ if __name__ == "__main__":
         args.hb_topic,
         init_hist_json,
         stats_publisher,
+        args.response_topic,
     )
     main.run()
