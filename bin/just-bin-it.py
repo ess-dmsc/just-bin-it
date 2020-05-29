@@ -6,7 +6,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from just_bin_it.core.command_actioner import CommandActioner
+from just_bin_it.command_actioner import CommandActioner
 from just_bin_it.endpoints.config_listener import ConfigListener
 from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
 from just_bin_it.endpoints.kafka_consumer import Consumer
@@ -41,6 +41,7 @@ class Main:
         heartbeat_topic=None,
         initial_config=None,
         stats_publisher=None,
+        response_topic="hist_responses",
     ):
         """
         Constructor.
@@ -58,6 +59,7 @@ class Main:
         self.initial_config = initial_config
         self.config_brokers = config_brokers
         self.stats_publisher = stats_publisher
+        self.response_topic = response_topic
         self.config_listener = None
         self.heartbeat_publisher = None
         self.hist_processes = []
@@ -107,7 +109,7 @@ class Main:
         """
         self.producer = Producer(self.config_brokers)
         self.command_actioner = CommandActioner(
-            self.producer, "hist_responses", self.simulation
+            self.producer, self.response_topic, self.simulation
         )
 
         if self.heartbeat_topic:

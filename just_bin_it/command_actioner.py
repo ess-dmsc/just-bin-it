@@ -25,20 +25,28 @@ class CommandActioner:
             msg_id = message["msg_id"] if "msg_id" in message else None
             self._handle_command_message(message, hist_processes)
             if msg_id:
-                # TODO: have an error response method
-                response = {"msg_id": msg_id, "response": "ACK"}
-                self._publish_response(response)
+                self.send_ack_response(msg_id)
         except Exception as error:
             logging.error("Could not handle configuration: %s", error)
             if msg_id:
-                # TODO: have an error response method
-                response = {"msg_id": msg_id, "response": "ERR", "message": str(error)}
-                self._publish_response(response)
+                self.send_error_response(msg_id, error)
+
+    def send_ack_response(self, msg_id):
+        response = {"msg_id": msg_id, "response": "ACK"}
+        self._publish_response(response)
+
+    def send_error_response(self, msg_id, error):
+        response = {"msg_id": msg_id, "response": "ERR", "message": str(error)}
+        self._publish_response(response)
 
     def _publish_response(self, response):
-        self.response_producer.publish_message(
-            self.response_topic, json.dumps(response).encode()
-        )
+        if self.response_topic:
+            try:
+                self.response_producer.publish_message(
+                    self.response_topic, json.dumps(response).encode()
+                )
+            except KafkaException as error:
+                logging.error("Exception when publishing response: %s", error)
 
     def _handle_command_message(self, message, hist_processes):
         if message["cmd"] == "reset_counts":
