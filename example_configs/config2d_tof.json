@@ -1,5 +1,6 @@
 {
     "cmd": "config",
+    "msg_id": "some_unique_id",
     "data_brokers": ["localhost:9092"],
     "data_topics": ["fake_events"],
     "histograms": [
@@ -9,7 +10,7 @@
             "det_range": [0, 100],
             "num_bins": 50,
             "topic": "hist-topic",
-            "id": "some_id"
+            "id": "some_unique_id"
         }
     ]
 }

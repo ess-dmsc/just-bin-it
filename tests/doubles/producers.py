@@ -1,4 +1,4 @@
-from kafka.errors import KafkaError
+from just_bin_it.exceptions import KafkaException
 
 
 class SpyProducer:
@@ -11,4 +11,4 @@ class SpyProducer:
 
 class StubProducerThatThrows:
     def publish_message(self, topic, message):
-        raise KafkaError("Some Kafka error")
+        raise KafkaException("Some Kafka error")

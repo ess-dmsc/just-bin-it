@@ -14,7 +14,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_MESSAGE_MAX_BYTES: 10000000
       KAFKA_BROKER_ID: 0
-      KAFKA_CREATE_TOPICS: "hist_commands:1:1,event_data:2:1,hist_topic:1:1"
+      KAFKA_CREATE_TOPICS: "hist_commands:1:1,event_data:2:1,hist_topic:1:1,hist_responses:1:1"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 

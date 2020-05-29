@@ -121,6 +121,8 @@ def just_bin_it(request):
             "localhost:9092",
             "-t",
             "hist_commands",
+            "-rt",
+            "hist_responses",
         ]
     )
 

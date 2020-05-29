@@ -18,6 +18,7 @@ DET_RANGE = (1, 512)
 NUM_BINS = 50
 BROKERS = ["localhost:9092"]
 CMD_TOPIC = "hist_commands"
+RESPONSE_TOPIC = "hist_responses"
 
 CONFIG_CMD = {
     "cmd": "config",
@@ -123,6 +124,21 @@ class TestJustBinIt:
 
         msg = data[self.topic_part][-1]
         return deserialise_hs00(msg.value)
+
+    def get_response_message_from_kafka(self):
+        data = []
+        consumer, topic_partitions = create_consumer(RESPONSE_TOPIC)
+        topic_part = topic_partitions[0]
+        # Move it to one from the end so we can read the final message
+        consumer.seek_to_end(topic_part)
+        end_pos = consumer.position(topic_part)
+        consumer.seek(topic_part, end_pos - 1)
+
+        while not data:
+            data = consumer.poll(5)
+
+        msg = data[topic_part][-1]
+        return msg.value
 
     def ensure_topic_is_not_empty_on_startup(self):
         #  Put some data in it, so jbi doesn't complain about an empty topic
@@ -351,3 +367,35 @@ class TestJustBinIt:
 
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "FINISHED"
+
+    def test_supplying_msg_id_get_acknowledgement_response(self, just_bin_it):
+        # Configure just-bin-it
+        config = self.create_basic_config()
+        config["msg_id"] = f"{time_in_ns() // 1000}"
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it some time before stopping it
+        time.sleep(5)
+        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
+        time.sleep(1)
+
+        msg = self.get_response_message_from_kafka()
+
+        assert json.loads(msg)["msg_id"] == config["msg_id"]
+        assert json.loads(msg)["response"] == "ACK"
+
+    def test_supplying_msg_id_get_error_response(self, just_bin_it):
+        # Configure just-bin-it
+        config = self.create_basic_config()
+        config["cmd"] = "not a valid command"
+        config["msg_id"] = f"{time_in_ns() // 1000}"
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        time.sleep(2)
+
+        msg = self.get_response_message_from_kafka()
+        msg = json.loads(msg)
+
+        assert msg["msg_id"] == config["msg_id"]
+        assert msg["response"] == "ERR"
+        assert "message" in msg

@@ -6,15 +6,14 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from just_bin_it.command_actioner import CommandActioner
 from just_bin_it.endpoints.config_listener import ConfigListener
+from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
-from just_bin_it.exceptions import KafkaException
-from just_bin_it.histograms.histogram_factory import parse_config
-from just_bin_it.histograms.histogram_process import HistogramProcess
+from just_bin_it.endpoints.statistics_publisher import StatisticsPublisher
 from just_bin_it.utilities import time_in_ns
-from just_bin_it.utilities.statistics_publisher import StatisticsPublisher
 
 
 def load_json_config_file(file):
@@ -42,6 +41,7 @@ class Main:
         heartbeat_topic=None,
         initial_config=None,
         stats_publisher=None,
+        response_topic=None,
     ):
         """
         Constructor.
@@ -53,21 +53,18 @@ class Main:
         :param initial_config: A histogram configuration to start with.
         :param stats_publisher: Publisher for the histograms statistics.
         """
-        self.event_source = None
-        self.histogrammer = None
+        self.config_topic = config_topic
         self.simulation = simulation
+        self.heartbeat_topic = heartbeat_topic
         self.initial_config = initial_config
         self.config_brokers = config_brokers
-        self.config_topic = config_topic
-        self.heartbeat_topic = heartbeat_topic
-        self.config_listener = None
         self.stats_publisher = stats_publisher
+        self.response_topic = response_topic
+        self.config_listener = None
         self.heartbeat_publisher = None
-        self.hist_process = []
-        self.stats_interval_ms = 1000
-        self.time_to_publish_stats = 0
-        self.heartbeat_interval_ms = 1000
-        self.time_to_publish_heartbeat = 0
+        self.hist_processes = []
+        self.producer = None
+        self.command_actioner = None
 
     def run(self):
         """
@@ -78,7 +75,7 @@ class Main:
 
         # Blocks until can connect to the config topic.
         self.create_config_listener()
-        self.create_heartbeat_producer()
+        self.create_publishers()
 
         while True:
             # Handle configuration messages
@@ -90,72 +87,35 @@ class Main:
                 else:
                     msg = self.config_listener.consume_message()
 
-                try:
-                    logging.warning("New command received")
-                    logging.warning("%s", msg)
-                    self.handle_command_message(msg)
-                except Exception as error:
-                    logging.error("Could not handle configuration: %s", error)
+                logging.warning("New command received")
+                logging.warning("%s", msg)
+                self.command_actioner.handle_command_message(msg, self.hist_processes)
 
-            # Handle publishing of statistics
+            # Publishing of statistics and heartbeat
             curr_time = time_in_ns()
-            if curr_time // 1_000_000 > self.time_to_publish_stats:
-                self.publish_stats(curr_time)
+            if self.stats_publisher:
+                self.stats_publisher.publish_histogram_stats(
+                    self.hist_processes, curr_time
+                )
 
-            if curr_time // 1_000_000 > self.time_to_publish_heartbeat:
-                self.publish_heartbeat(curr_time)
+            if self.heartbeat_publisher:
+                self.heartbeat_publisher.publish(curr_time // 1_000_000)
 
             time.sleep(0.1)
 
-    def create_heartbeat_producer(self):
+    def create_publishers(self):
         """
-        Create the Kafka producer for publishing heart-beat messages.
+        Create the publishers.
         """
-        if self.heartbeat_topic:
-            self.heartbeat_publisher = Producer(self.config_brokers)
-
-    def publish_heartbeat(self, current_time):
-        """
-        Publish heart-beat messages.
-
-        :param current_time: The current time.
-        """
-        if self.heartbeat_publisher:
-            msg = {
-                "message": current_time // 1_000_000,
-                "message_interval": self.heartbeat_interval_ms,
-            }
-            try:
-                self.heartbeat_publisher.publish_message(
-                    self.heartbeat_topic, bytes(json.dumps(msg), "utf-8")
-                )
-            except KafkaException as error:
-                logging.error("Could not publish heartbeat: %s", error)
-            self.time_to_publish_heartbeat = (
-                current_time // 1_000_000 + self.heartbeat_interval_ms
-            )
-            self.time_to_publish_heartbeat -= (
-                self.time_to_publish_heartbeat % self.heartbeat_interval_ms
-            )
-
-    def publish_stats(self, current_time):
-        """
-        Publish the statistics from the histogram processes.
-
-        :param current_time: The current time.
-        """
-        if self.stats_publisher:
-            for i, process in enumerate(self.hist_process):
-                try:
-                    stats = self.hist_process[i].get_stats()
-                    if stats:
-                        self.stats_publisher.send_histogram_stats(stats, i)
-                except Exception as error:
-                    logging.error("Could not publish statistics: %s", error)
-        self.time_to_publish_stats = current_time // 1_000_000 + self.stats_interval_ms
-        self.time_to_publish_stats -= (
-            self.time_to_publish_stats % self.stats_interval_ms
+        self.producer = Producer(self.config_brokers)
+        self.command_actioner = CommandActioner(
+            self.producer, self.response_topic, self.simulation
         )
+
+        if self.heartbeat_topic:
+            self.heartbeat_publisher = HeartbeatPublisher(
+                self.producer, self.heartbeat_topic
+            )
 
     def create_config_listener(self):
         """
@@ -172,57 +132,6 @@ class Main:
         self.config_listener = ConfigListener(
             Consumer(self.config_brokers, [self.config_topic])
         )
-
-    def stop_processes(self):
-        """
-        Request the processes to stop.
-        """
-        logging.info("Stopping any existing histogram processes")
-        for process in self.hist_process:
-            try:
-                process.stop()
-            except Exception as error:
-                # Process might have killed itself already
-                logging.info("Stopping process failed %s", error)
-        self.hist_process.clear()
-
-    def handle_command_message(self, message):
-        """
-        Handle the message received.
-
-        :param message: The message.
-        """
-        if message["cmd"] == "reset_counts":
-            logging.info("Reset command received")
-            for process in self.hist_process:
-                process.clear()
-        elif message["cmd"] == "stop":
-            logging.info("Stop command received")
-            self.stop_processes()
-        elif message["cmd"] == "config":
-            logging.info("Config command received")
-            self.stop_processes()
-
-            start, stop, hist_configs = parse_config(message)
-
-            try:
-                for config in hist_configs:
-                    # Check brokers and data topics exist (skip in simulation)
-                    if not self.simulation and not are_kafka_settings_valid(
-                        config["data_brokers"], config["data_topics"]
-                    ):
-                        raise KafkaException("Invalid Kafka settings")
-
-                    process = HistogramProcess(
-                        config, start, stop, simulation=self.simulation
-                    )
-                    self.hist_process.append(process)
-            except Exception as error:
-                # If one fails then close any that were started then rethrow
-                self.stop_processes()
-                raise error
-        else:
-            raise Exception(f"Unknown command type '{message['cmd']}'")
 
 
 if __name__ == "__main__":
@@ -244,6 +153,13 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "-hb", "--hb-topic", type=str, help="the topic where the heartbeat is published"
+    )
+
+    parser.add_argument(
+        "-rt",
+        "--response-topic",
+        type=str,
+        help="the topic where the response messages to commands are published",
     )
 
     parser.add_argument(
@@ -305,5 +221,6 @@ if __name__ == "__main__":
         args.hb_topic,
         init_hist_json,
         stats_publisher,
+        args.response_topic,
     )
     main.run()

@@ -11,6 +11,7 @@ from just_bin_it.endpoints.sources import (
 )
 from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.histograms.histogram_factory import HistogramFactory
+from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.utilities import time_in_ns
 
 
@@ -53,8 +54,9 @@ def create_histogrammer(configuration, start, stop):
     :return: The created histogrammer.
     """
     producer = Producer(configuration["data_brokers"])
+    hist_sink = HistogramSink(producer)
     histograms = HistogramFactory.generate([configuration])
-    return Histogrammer(producer, histograms, start, stop)
+    return Histogrammer(hist_sink, histograms, start, stop)
 
 
 class Processor:
@@ -187,6 +189,7 @@ def run_processing(
     :param publish_interval: How often to publish histograms and stats in milliseconds.
     :param simulation: Whether to run in simulation.
     """
+    histogrammer = None
     try:
         # Setting up
         histogrammer = create_histogrammer(configuration, start, stop)
@@ -206,6 +209,12 @@ def run_processing(
             time.sleep(0.01)
     except Exception as error:
         logging.error("Histogram process failed: %s", error)
+        if histogrammer:
+            try:
+                # Try to send failure message
+                histogrammer.send_failure_message(time_in_ns(), str(error))
+            except Exception as send_error:
+                logging.error("Could not send failure message: %s", send_error)
 
 
 class HistogramProcess:
