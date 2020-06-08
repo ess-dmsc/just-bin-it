@@ -40,6 +40,10 @@ required arguments:
                         the configuration topic
 ```
 
+IMPORTANT NOTE: The Kafka topics for `config-topic`, `hb-topic` and `response-topic`
+must have only one partition.
+
+
 ## How to run just-bin-it
 This assumes you have Kafka running somewhere with an incoming stream of event
 data (ev42 schema).
