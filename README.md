@@ -413,6 +413,13 @@ See the system-tests folder for more information on how to run them.
 
 They should be run before modified code is pushed to the code repository.
 
+### Integrated tests
+There are some integrated tests in the system-tests folder that check our code for
+talking to Kafka works as expected.
+See the system-tests folder for more information on how to run them.
+
+They should be run before modified code is pushed to the code repository.
+
 ### Formatting
 Formatting is handled by [Black](https://black.readthedocs.io/en/stable/).
 
