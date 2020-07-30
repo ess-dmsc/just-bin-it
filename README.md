@@ -428,9 +428,11 @@ It should be added as a commit hook (see above).
 ### mutmut
 Occasionally run mutmut to check that mutating the code causes tests to fail.
 
+Note: can take a long time to run.
+
 To run:
 ```
-mutmut run --use-coverage  --paths-to-mutate .
+mutmut run --paths-to-mutate just_bin_it
 ```
 
 To see the ID of the mutations that survived the tests run:
@@ -444,4 +446,29 @@ mutmut show 56
 ```
 where 56 can be replaced with the appropriate ID.
 
-Note: there will be a number of false-positives.
+Note: there will be a significant number of false-positives.
+
+## Architectural overview
+
+### Core
+
+The core of just-bin-it consists of three main areas:
+* The main loop - primarily listens for configuration commands from clients (e.g. NICOS)
+* Command handling - based on the configuration command type starts or stops the histogram processes
+* Histogram processing - converts event data into histograms and publishes them
+
+If configured, responses to command messages will be published on a Kafka topic.
+These messages can be used to check whether a command was accepted or rejected.
+
+The histogramming is performed in separate self-contained processes (using Python's multiprocessing module)
+as this enables higher throughput of event data. Each histogram process has its own Kafka consumer and producer.
+The events are read by the consumer and histogrammed; the resulting histogram is published via the producer.
+Communication to and from the "main" program is via queues.
+
+### Additional outputs
+
+just-bin-it can be configured to output other supplemental data:
+* A heartbeat on a specified Kafka topic
+* Raw statistics to Graphite, if required
+
+These are published via the main loop on a regular interval.
