@@ -1,5 +1,6 @@
 import logging
 import time
+
 from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.det_histogram import DetHistogram
 from just_bin_it.histograms.histogram1d import Histogram1d

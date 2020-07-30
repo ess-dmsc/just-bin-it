@@ -1,5 +1,7 @@
 import os
+
 import pytest
+
 import tests
 from just_bin_it.endpoints.serialisation import (
     deserialise_ev42,

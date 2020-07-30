@@ -1,6 +1,7 @@
-import streaming_data_types.histogram_hs00 as hs00
 import streaming_data_types.eventdata_ev42 as ev42
+import streaming_data_types.histogram_hs00 as hs00
 from streaming_data_types.eventdata_ev42 import EventData
+
 from just_bin_it.exceptions import JustBinItException
 
 

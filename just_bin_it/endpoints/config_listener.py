@@ -1,4 +1,5 @@
 import logging
+
 from just_bin_it.endpoints.sources import ConfigSource
 
 

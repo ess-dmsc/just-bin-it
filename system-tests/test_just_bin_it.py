@@ -4,12 +4,13 @@ import os
 import random
 import sys
 import time
-from kafka import KafkaProducer, KafkaConsumer, TopicPartition
-from confluent_kafka.admin import AdminClient, NewTopic
+
 import pytest
+from confluent_kafka.admin import AdminClient, NewTopic
+from kafka import KafkaConsumer, KafkaProducer, TopicPartition
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from just_bin_it.endpoints.serialisation import serialise_ev42, deserialise_hs00
+from just_bin_it.endpoints.serialisation import deserialise_hs00, serialise_ev42
 from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 

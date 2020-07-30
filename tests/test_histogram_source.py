@@ -1,8 +1,9 @@
 from unittest.mock import patch
+
 import pytest
+
 from just_bin_it.endpoints.sources import HistogramSource
 from tests.doubles.consumer import StubConsumer
-
 
 TEST_MESSAGE = b"this is a byte message"
 INVALID_FB = b"this is an invalid fb message"

@@ -1,4 +1,5 @@
 import logging
+
 import numpy as np
 from fast_histogram import histogram1d
 

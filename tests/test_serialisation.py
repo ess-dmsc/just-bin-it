@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
+
 from just_bin_it.endpoints.serialisation import (
-    deserialise_hs00,
-    serialise_hs00,
     deserialise_ev42,
+    deserialise_hs00,
     serialise_ev42,
+    serialise_hs00,
 )
 from just_bin_it.histograms.histogram1d import Histogram1d
 from just_bin_it.histograms.histogram2d import Histogram2d
-
 
 NUM_BINS = 5
 X_RANGE = (0, 5)

@@ -1,9 +1,10 @@
-from copy import deepcopy
 import json
+from copy import deepcopy
+
 import pytest
+
 from just_bin_it.command_actioner import CommandActioner
 from tests.doubles.producers import SpyProducer
-
 
 TEST_TOPIC = "topic1"
 CONFIG_CMD = {

@@ -1,5 +1,6 @@
 import json
 import logging
+
 from just_bin_it.exceptions import KafkaException
 
 

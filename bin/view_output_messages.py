@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+
 from kafka import KafkaConsumer, TopicPartition
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))

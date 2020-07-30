@@ -1,12 +1,13 @@
 import copy
 import json
-import pytest
-from just_bin_it.endpoints.serialisation import deserialise_hs00, EventData
-from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
-from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
-from just_bin_it.endpoints.histogram_sink import HistogramSink
-from tests.doubles.producers import SpyProducer
 
+import pytest
+
+from just_bin_it.endpoints.histogram_sink import HistogramSink
+from just_bin_it.endpoints.serialisation import EventData, deserialise_hs00
+from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
+from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
+from tests.doubles.producers import SpyProducer
 
 START_CONFIG = {
     "cmd": "config",

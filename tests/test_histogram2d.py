@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 from just_bin_it.histograms.histogram2d import Histogram2d
 
 

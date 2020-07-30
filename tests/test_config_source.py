@@ -1,7 +1,7 @@
 import pytest
+
 from just_bin_it.endpoints.sources import ConfigSource
 from tests.doubles.consumer import StubConsumer
-
 
 CONFIG_BASIC_1 = """
 {

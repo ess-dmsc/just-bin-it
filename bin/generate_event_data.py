@@ -4,11 +4,10 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from just_bin_it.endpoints.serialisation import serialise_ev42
 from just_bin_it.endpoints.kafka_producer import Producer
+from just_bin_it.endpoints.serialisation import serialise_ev42
 from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
-
 
 TOF_RANGE = (0, 100_000_000)
 DET_RANGE = (1, 10000)

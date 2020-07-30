@@ -1,7 +1,7 @@
 import pytest
+
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 from tests.doubles.producers import SpyProducer, StubProducerThatThrows
-
 
 TEST_MESSAGE = "this is a message"
 TEST_TOPIC = "topic1"

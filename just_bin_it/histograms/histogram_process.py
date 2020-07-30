@@ -1,7 +1,9 @@
 import json
 import logging
-from multiprocessing import Process, Queue
 import time
+from multiprocessing import Process, Queue
+
+from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.sources import (
@@ -9,9 +11,8 @@ from just_bin_it.endpoints.sources import (
     SimulatedEventSource,
     StopTimeStatus,
 )
-from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.histograms.histogram_factory import HistogramFactory
-from just_bin_it.endpoints.histogram_sink import HistogramSink
+from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.utilities import time_in_ns
 
 

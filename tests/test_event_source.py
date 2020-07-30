@@ -1,11 +1,12 @@
 import numpy as np
 import pytest
+
+from just_bin_it.endpoints.serialisation import deserialise_ev42, serialise_ev42
 from just_bin_it.endpoints.sources import (
     EventSource,
     StopTimeStatus,
     TooOldTimeRequestedException,
 )
-from just_bin_it.endpoints.serialisation import deserialise_ev42, serialise_ev42
 from tests.doubles.consumer import StubConsumer, get_fake_event_messages
 
 

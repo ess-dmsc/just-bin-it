@@ -1,5 +1,6 @@
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
+
 from just_bin_it.exceptions import KafkaException
 
 

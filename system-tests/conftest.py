@@ -1,13 +1,13 @@
 import os.path
+import signal
+import sys
+from subprocess import Popen
+from time import sleep
+
 import pytest
 from compose.cli.main import TopLevelCommand, project_from_options
 from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient
-from time import sleep
-from subprocess import Popen
-import signal
-import sys
-
 
 common_options = {
     "--no-deps": False,

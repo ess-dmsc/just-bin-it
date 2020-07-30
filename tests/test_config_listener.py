@@ -1,4 +1,5 @@
 import pytest
+
 from just_bin_it.endpoints.config_listener import ConfigListener
 from tests.doubles.consumer import StubConsumer
 

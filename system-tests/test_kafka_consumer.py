@@ -1,14 +1,14 @@
 import os
 import sys
-from kafka import KafkaProducer
-from confluent_kafka.admin import AdminClient, NewTopic
+
 import pytest
+from confluent_kafka.admin import AdminClient, NewTopic
+from kafka import KafkaProducer
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.utilities import time_in_ns
-
 
 BROKERS = ["localhost:9092"]
 

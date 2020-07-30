@@ -1,9 +1,10 @@
+import time
 from contextlib import contextmanager
 from multiprocessing import Queue
-import pytest
-from just_bin_it.histograms.histogram_process import StopTimeStatus, Processor
-import time
 
+import pytest
+
+from just_bin_it.histograms.histogram_process import Processor, StopTimeStatus
 
 VALID_CONFIG = {
     "data_brokers": ["localhost:9092", "someserver:9092"],

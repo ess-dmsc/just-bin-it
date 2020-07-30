@@ -1,7 +1,8 @@
 import copy
-import pytest
-from just_bin_it.histograms.histogram_factory import parse_config
 
+import pytest
+
+from just_bin_it.histograms.histogram_factory import parse_config
 
 CONFIG_FULL = {
     "cmd": "config",

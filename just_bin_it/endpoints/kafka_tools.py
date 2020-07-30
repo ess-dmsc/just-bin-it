@@ -1,4 +1,5 @@
 import logging
+
 from kafka import KafkaConsumer
 from kafka.errors import KafkaError
 

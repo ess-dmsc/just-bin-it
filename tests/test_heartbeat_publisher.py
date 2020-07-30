@@ -1,8 +1,8 @@
 import pytest
+
 from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
 from just_bin_it.utilities import time_in_ns
 from tests.doubles.producers import SpyProducer, StubProducerThatThrows
-
 
 TEST_TOPIC = "topic1"
 

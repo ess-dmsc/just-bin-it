@@ -1,7 +1,6 @@
 import json
 import logging
 
-
 HISTOGRAM_STATES = {
     "COUNTING": "COUNTING",
     "FINISHED": "FINISHED",

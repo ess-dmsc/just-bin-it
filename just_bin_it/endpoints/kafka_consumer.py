@@ -1,7 +1,9 @@
 import logging
 from typing import List
+
 from kafka import KafkaConsumer, TopicPartition
 from kafka.errors import KafkaError
+
 from just_bin_it.exceptions import KafkaException
 
 

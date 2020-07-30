@@ -1,5 +1,6 @@
 import json
 import logging
+
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.exceptions import KafkaException
 from just_bin_it.histograms.histogram_factory import parse_config

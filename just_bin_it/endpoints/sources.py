@@ -1,13 +1,14 @@
-from enum import Enum
 import json
 import logging
 import math
 import time
+from enum import Enum
 from typing import Optional
+
 from just_bin_it.endpoints.serialisation import (
+    EventData,
     deserialise_ev42,
     deserialise_hs00,
-    EventData,
 )
 from just_bin_it.exceptions import SourceException, TooOldTimeRequestedException
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
