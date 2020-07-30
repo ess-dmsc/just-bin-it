@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
+from streaming_data_types.eventdata_ev42 import EventData
 
-from just_bin_it.endpoints.serialisation import deserialise_ev42, serialise_ev42
 from just_bin_it.endpoints.sources import (
     EventSource,
     StopTimeStatus,
@@ -41,12 +41,13 @@ def serialise_messages(messages):
             (
                 ts,  # Represents the Kafka timestamp
                 offset,  # Represents the Kafka offset.
-                serialise_ev42(
+                EventData(
                     event_data.source_name,
                     event_data.message_id,
                     event_data.pulse_time,
                     event_data.time_of_flight,
                     event_data.detector_id,
+                    None,
                 ),
             )
         )
@@ -54,19 +55,23 @@ def serialise_messages(messages):
 
 
 class TestEventSourceSinglePartition:
+    @classmethod
+    def setup_class(cls):
+        # Only need to create the messages once
+        cls.messages = get_fake_event_messages(100)
+        cls.serialised_messages = serialise_messages(cls.messages)
+
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.consumer = StubConsumer(["broker"], ["topic"])
-        self.messages = get_fake_event_messages(100)
-        self.serialised_messages = serialise_messages(self.messages)
         self.consumer.add_messages(self.serialised_messages)
         self.event_source = EventSource(
-            self.consumer, 0, deserialise_function=deserialise_ev42
+            self.consumer, 0, deserialise_function=lambda x: x
         )
 
     def test_if_no_consumer_supplied_then_raises(self):
         with pytest.raises(Exception):
-            EventSource(None)
+            EventSource(None, 10)
 
     def test_if_no_new_messages_then_no_data(self):
         consumer = StubConsumer(["broker"], ["topic"])
@@ -183,20 +188,26 @@ class TestEventSourceSinglePartition:
 
 
 class TestEventSourceMultiplePartitions:
+    @classmethod
+    def setup_class(cls):
+        # Only need to create the messages once
+        cls.messages = get_fake_event_messages(150, 3)
+        cls.serialised_messages = serialise_messages(cls.messages)
+
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.consumer = StubConsumer(["broker"], ["topic"], num_partitions=3)
-        self.event_source = EventSource(self.consumer, 0)
+        self.event_source = EventSource(
+            self.consumer, 0, deserialise_function=lambda x: x
+        )
 
-        self.messages = get_fake_event_messages(150, 3)
-        self.serialised_messages = serialise_messages(self.messages)
         self.consumer.add_messages(self.serialised_messages[0::3], 0)
         self.consumer.add_messages(self.serialised_messages[1::3], 1)
         self.consumer.add_messages(self.serialised_messages[2::3], 2)
 
     def test_if_no_consumer_supplied_then_raises(self):
         with pytest.raises(Exception):
-            EventSource(None)
+            EventSource(None, 10)
 
     def test_if_no_new_messages_then_no_data(self):
         consumer = StubConsumer(["broker"], ["topic"], num_partitions=3)
@@ -207,7 +218,7 @@ class TestEventSourceMultiplePartitions:
 
     def test_if_x_new_messages_on_only_one_partition_then_data_has_x_items(self):
         consumer = StubConsumer(["broker"], ["topic"], num_partitions=3)
-        event_source = EventSource(consumer, 0)
+        event_source = EventSource(consumer, 0, deserialise_function=lambda x: x)
         messages = get_fake_event_messages(5)
         consumer.add_messages(serialise_messages(messages))
 
