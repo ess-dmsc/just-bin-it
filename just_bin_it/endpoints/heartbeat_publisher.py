@@ -13,10 +13,12 @@ class HeartbeatPublisher:
 
     def publish(self, current_time_ms):
         """
-        Publish the heartbeat if enought time has elapsed.
+        Publish the heartbeat if enough time has elapsed.
 
         :param current_time_ms: milliseconds since UNIX epoch.
         """
+        assert current_time_ms >= 0
+
         if current_time_ms > self.next_time_to_publish:
             self._publish(current_time_ms)
             self._update_publish_time(current_time_ms)
