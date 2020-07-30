@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
@@ -31,6 +33,16 @@ class TestHeartbeatPublisher:
         self.publisher.publish(current_time)
 
         assert len(self.producer.messages) == 1
+
+    def test_message_contents_are_correct(self):
+        current_time = time_in_ns()
+
+        self.publisher.publish(current_time)
+
+        _, msg = self.producer.messages[0]
+        msg = json.loads(msg)
+        assert msg["message"] == current_time
+        assert msg["message_interval"] == self.update_interval
 
     def test_after_first_message_publish_if_interval_has_passed(self):
         current_time = time_in_ns()
