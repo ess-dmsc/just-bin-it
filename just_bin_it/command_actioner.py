@@ -11,6 +11,29 @@ def create_histogram_process(config, start, stop, simulation):
     return HistogramProcess(config, start, stop, simulation=simulation)
 
 
+class ResponsePublisher:
+    def __init__(self, response_producer, response_topic):
+        self.response_producer = response_producer
+        self.response_topic = response_topic
+
+    def send_ack_response(self, msg_id):
+        response = {"msg_id": msg_id, "response": "ACK"}
+        self._publish_response(response)
+
+    def send_error_response(self, msg_id, error):
+        response = {"msg_id": msg_id, "response": "ERR", "message": str(error)}
+        self._publish_response(response)
+
+    def _publish_response(self, response):
+        if self.response_topic:
+            try:
+                self.response_producer.publish_message(
+                    self.response_topic, json.dumps(response).encode()
+                )
+            except KafkaException as error:
+                logging.error("Exception when publishing response: %s", error)
+
+
 class CommandActioner:
     def __init__(
         self,
