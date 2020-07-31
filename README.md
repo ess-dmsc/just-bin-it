@@ -472,3 +472,38 @@ just-bin-it can be configured to output other supplemental data:
 * Raw statistics to Graphite, if required
 
 These are published via the main loop on a regular interval.
+
+### Message formats
+
+#### Heartbeat
+
+JSON
+```
+{
+    "message": "some message",
+    "message_interval": heartbeat_interval_ms,
+}
+```
+As the message, it currently return the message time.
+
+#### Command responses
+
+*Acknowledged (successful)*
+
+JSON
+```
+{
+    "msg_id": some_unique_msg_id,
+    "response": "ACK"
+}
+```
+
+*Error*
+
+JSON
+```
+{
+    "msg_id": some_unique_msg_id,
+    "response": "ERR",
+    "message": "some error description"}
+```

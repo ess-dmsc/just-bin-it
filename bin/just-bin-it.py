@@ -6,7 +6,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from just_bin_it.command_actioner import CommandActioner
+from just_bin_it.command_actioner import CommandActioner, ResponsePublisher
 from just_bin_it.endpoints.config_listener import ConfigListener
 from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
 from just_bin_it.endpoints.kafka_consumer import Consumer
@@ -108,8 +108,9 @@ class Main:
         Create the publishers.
         """
         self.producer = Producer(self.config_brokers)
+
         self.command_actioner = CommandActioner(
-            self.producer, self.response_topic, self.simulation
+            ResponsePublisher(self.producer, self.response_topic), self.simulation
         )
 
         if self.heartbeat_topic:

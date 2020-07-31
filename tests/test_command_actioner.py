@@ -1,10 +1,9 @@
-import json
 from copy import deepcopy
 
+import mock
 import pytest
 
-from just_bin_it.command_actioner import CommandActioner
-from tests.doubles.producers import SpyProducer
+from just_bin_it.command_actioner import CommandActioner, ResponsePublisher
 
 TEST_TOPIC = "topic1"
 CONFIG_CMD = {
@@ -47,21 +46,21 @@ def create_spy_process(*args, **kwargs):
 class TestCommandActioner:
     @pytest.fixture(autouse=True)
     def prepare(self):
-        self.producer = SpyProducer()
+        self.response_publisher = mock.create_autospec(ResponsePublisher)
         # Put into simulation to avoid kafka checks
         self.actioner = CommandActioner(
-            self.producer, TEST_TOPIC, True, create_spy_process
+            self.response_publisher, True, create_spy_process
         )
         self.spy_process = SpyProcess()
 
         self.hist_processes = [self.spy_process]
 
-    def test_on_invalid_command_without_id_error_response_not_sent(self):
+    def test_on_invalid_command_without_id_then_error_response_not_sent(self):
         invalid_cmd = deepcopy(CONFIG_CMD)
         invalid_cmd["cmd"] = "not a recognised command"
         self.actioner.handle_command_message(invalid_cmd, self.hist_processes)
 
-        assert len(self.producer.messages) == 0
+        self.response_publisher.send_error_response.assert_not_called()
 
     def test_on_invalid_command_with_id_error_then_response_sent(self):
         invalid_cmd = deepcopy(CONFIG_CMD)
@@ -69,25 +68,19 @@ class TestCommandActioner:
         invalid_cmd["msg_id"] = "hello"
         self.actioner.handle_command_message(invalid_cmd, self.hist_processes)
 
-        assert len(self.producer.messages) == 1
-        assert json.loads(self.producer.messages[0][1])["response"] == "ERR"
-        assert (
-            json.loads(self.producer.messages[0][1])["msg_id"] == invalid_cmd["msg_id"]
-        )
+        self.response_publisher.send_error_response.assert_called_once()
 
     def test_on_valid_command_without_id_response_not_sent(self):
         self.actioner.handle_command_message(CONFIG_CMD, self.hist_processes)
 
-        assert len(self.producer.messages) == 0
+        self.response_publisher.send_ack_response.assert_not_called()
 
     def test_on_valid_command_with_id_response_sent(self):
         cmd = deepcopy(CONFIG_CMD)
         cmd["msg_id"] = "hello"
         self.actioner.handle_command_message(cmd, self.hist_processes)
 
-        assert len(self.producer.messages) == 1
-        assert json.loads(self.producer.messages[0][1])["response"] == "ACK"
-        assert json.loads(self.producer.messages[0][1])["msg_id"] == cmd["msg_id"]
+        self.response_publisher.send_ack_response.assert_called_once()
 
     def test_on_config_command_existing_processes_stopped(self):
         self.actioner.handle_command_message(CONFIG_CMD, self.hist_processes)
