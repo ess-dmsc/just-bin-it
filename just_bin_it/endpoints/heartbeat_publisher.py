@@ -25,6 +25,7 @@ class HeartbeatPublisher:
 
     def _update_publish_time(self, current_time_ms):
         self.next_time_to_publish = current_time_ms + self.heartbeat_interval_ms
+        # Round to nearest whole interval
         self.next_time_to_publish -= (
             self.next_time_to_publish % self.heartbeat_interval_ms
         )

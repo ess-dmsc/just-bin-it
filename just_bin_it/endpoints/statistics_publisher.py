@@ -42,6 +42,7 @@ class StatisticsPublisher:
 
     def _update_publish_time(self, current_time):
         self.next_publish_time_ms = current_time + self.stats_interval_ms
+        # Round to nearest whole interval
         self.next_publish_time_ms -= self.next_publish_time_ms % self.stats_interval_ms
 
     def _send_stats(self, hist_stats, process_index):

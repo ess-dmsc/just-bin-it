@@ -30,7 +30,7 @@ class TestHeartbeatPublisher:
         # Ignore first message
         self.publisher.publish(current_time)
 
-        self.publisher.publish(current_time)
+        self.publisher.publish(current_time + self.update_interval // 10)
 
         assert len(self.producer.messages) == 1
 

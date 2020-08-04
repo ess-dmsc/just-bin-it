@@ -8,9 +8,11 @@ from just_bin_it.endpoints.statistics_publisher import (
     StatisticsPublisher,
 )
 from just_bin_it.histograms.histogram_process import HistogramProcess
+from just_bin_it.utilities import time_in_ns
 
 # The message send to Graphite is of the form:
 # (stat name, value, timestamp)
+
 
 STATISTICS_TEMPLATE = {
     "last_pulse_time": 123 * 10 ** 9,  # in ns
@@ -119,13 +121,13 @@ class TestStatisticsPublisher:
         histogram_processes = [mock_process]
 
         # First message is always published
-        current_time_ms = 1234
+        current_time_ms = time_in_ns() // 1_000_000
         self.publisher.publish_histogram_stats(
             histogram_processes, current_time_ms=current_time_ms
         )
 
         # Increase time by less than a full interval
-        current_time_ms += self.stats_interval // 2
+        current_time_ms += self.stats_interval // 10
         self.publisher.publish_histogram_stats(
             histogram_processes, current_time_ms=current_time_ms
         )
@@ -146,7 +148,7 @@ class TestStatisticsPublisher:
         histogram_processes = [mock_process]
 
         # First message is always published
-        current_time_ms = 1234
+        current_time_ms = time_in_ns() // 1_000_000
         self.publisher.publish_histogram_stats(
             histogram_processes, current_time_ms=current_time_ms
         )
