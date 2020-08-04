@@ -127,7 +127,7 @@ class TestStatisticsPublisher:
         )
 
         # Increase time by less than a full interval
-        current_time_ms += self.stats_interval // 10
+        current_time_ms = self.publisher.next_publish_time_ms - self.stats_interval // 2
         self.publisher.publish_histogram_stats(
             histogram_processes, current_time_ms=current_time_ms
         )
@@ -154,7 +154,7 @@ class TestStatisticsPublisher:
         )
 
         # Increase time by a full interval
-        current_time_ms += self.stats_interval
+        current_time_ms = self.publisher.next_publish_time_ms
         self.publisher.publish_histogram_stats(
             histogram_processes, current_time_ms=current_time_ms
         )

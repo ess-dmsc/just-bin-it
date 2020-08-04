@@ -26,30 +26,34 @@ class TestHeartbeatPublisher:
         assert len(self.producer.messages) == 1
 
     def test_after_first_message_do_not_publish_if_interval_has_not_passed(self):
-        current_time = time_in_ns()
+        current_time_ms = time_in_ns() // 1_000_000
         # Ignore first message
-        self.publisher.publish(current_time)
+        self.publisher.publish(current_time_ms)
 
-        self.publisher.publish(current_time + self.update_interval // 10)
+        current_time_ms = (
+            self.publisher.next_time_to_publish - self.update_interval // 10
+        )
+        self.publisher.publish(current_time_ms)
 
         assert len(self.producer.messages) == 1
 
     def test_message_contents_are_correct(self):
-        current_time = time_in_ns()
+        current_time_ms = time_in_ns() // 1_000_000
 
-        self.publisher.publish(current_time)
+        self.publisher.publish(current_time_ms)
 
         _, msg = self.producer.messages[0]
         msg = json.loads(msg)
-        assert msg["message"] == current_time
+        assert msg["message"] == current_time_ms
         assert msg["message_interval"] == self.update_interval
 
     def test_after_first_message_publish_if_interval_has_passed(self):
-        current_time = time_in_ns()
+        current_time_ms = time_in_ns() // 1_000_000
         # Ignore first message
-        self.publisher.publish(current_time)
+        self.publisher.publish(current_time_ms)
 
-        self.publisher.publish(current_time + self.update_interval + 1)
+        current_time_ms = self.publisher.next_time_to_publish
+        self.publisher.publish(current_time_ms)
 
         assert len(self.producer.messages) == 2
 
@@ -58,4 +62,4 @@ class TestHeartbeatPublisher:
             StubProducerThatThrows(), TEST_TOPIC, self.update_interval
         )
 
-        publisher.publish(1234567890)
+        publisher.publish(1_234_567_890)
