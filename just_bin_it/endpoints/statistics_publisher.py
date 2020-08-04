@@ -3,29 +3,30 @@ import logging
 import graphyte
 
 
+class GraphiteSender:
+    def __init__(self, server, port, prefix):
+        self.sender = graphyte.Sender(server, port=port, prefix=prefix)
+
+    def send(self, name, value, timestamp):
+        self.sender.send(name, value, timestamp)
+
+
 class StatisticsPublisher:
-    def __init__(self, server, port, prefix, metric, stats_interval_ms=1000):
+    def __init__(self, sender, metric, stats_interval_ms=1000):
         """
         Constructor.
 
-        :param server: The Graphite server to send to.
-        :param port: The Graphite port to send to.
-        :param prefix: The data prefix in Graphite.
+        :param sender: The object which sends stats to Graphite
         :param metric: The name to serve data in Graphite as.
         :param stats_interval_ms: How often to publish.
         """
-        self.server = server
-        self.port = port
-        self.prefix = prefix
+        self.sender = sender
         self.metric = metric
         self.stats_interval_ms = stats_interval_ms
-        self.time_to_publish_stats = 0
+        self.next_publish_time_ms = 0
 
-        # Initialise the connection
-        graphyte.init(server, port=port, prefix=prefix)
-
-    def publish_histogram_stats(self, histogram_processes, current_time):
-        if current_time // 1_000_000 < self.time_to_publish_stats:
+    def publish_histogram_stats(self, histogram_processes, current_time_ms):
+        if current_time_ms < self.next_publish_time_ms:
             return
 
         for i, process in enumerate(histogram_processes):
@@ -37,23 +38,25 @@ class StatisticsPublisher:
                 logging.error(
                     "Could not publish statistics for process %s: %s", i, error
                 )
-        self._update_publish_time(current_time)
+        self._update_publish_time(current_time_ms)
 
     def _update_publish_time(self, current_time):
-        self.time_to_publish_stats = current_time // 1_000_000 + self.stats_interval_ms
-        self.time_to_publish_stats -= (
-            self.time_to_publish_stats % self.stats_interval_ms
-        )
+        self.next_publish_time_ms = current_time + self.stats_interval_ms
+        # Round to nearest whole interval
+        self.next_publish_time_ms -= self.next_publish_time_ms % self.stats_interval_ms
 
     def _send_stats(self, hist_stats, process_index):
         for i, stat in enumerate(hist_stats):
-            graphyte.send(
+            # Convert stats from ns to s
+            time_stamp = stat["last_pulse_time"] / 10 ** 9
+
+            self.sender.send(
                 f"{self.metric}{process_index}-{i}-sum",
                 stat["sum"],
-                timestamp=stat["last_pulse_time"] / 10 ** 9,
+                timestamp=time_stamp,
             )
-            graphyte.send(
+            self.sender.send(
                 f"{self.metric}{process_index}-{i}-diff",
                 stat["diff"],
-                timestamp=stat["last_pulse_time"] / 10 ** 9,
+                timestamp=time_stamp,
             )

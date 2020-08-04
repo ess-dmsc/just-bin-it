@@ -92,14 +92,14 @@ class Main:
                 self.command_actioner.handle_command_message(msg, self.hist_processes)
 
             # Publishing of statistics and heartbeat
-            curr_time = time_in_ns()
+            curr_time_ms = time_in_ns() // 1_000_000
             if self.stats_publisher:
                 self.stats_publisher.publish_histogram_stats(
-                    self.hist_processes, curr_time
+                    self.hist_processes, curr_time_ms
                 )
 
             if self.heartbeat_publisher:
-                self.heartbeat_publisher.publish(curr_time // 1_000_000)
+                self.heartbeat_publisher.publish(curr_time_ms)
 
             time.sleep(0.1)
 
