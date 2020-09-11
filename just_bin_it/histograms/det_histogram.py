@@ -72,11 +72,11 @@ class DetHistogram:
         dets_x = []
         dets_y = []
 
-        for d in det_ids:
-            if d <= 0 or d < self.det_range[0] or d > self.det_range[1]:
+        for id in det_ids:
+            if id <= 0 or id < self.det_range[0] or id > self.det_range[1]:
                 continue
-            x = (d - 1) % self.width
-            y = ((d - 1) // self.width) % self.height
+            x = (id - 1) % self.width
+            y = ((id - 1) // self.width) % self.height
             dets_x.append(x)
             dets_y.append(y)
 

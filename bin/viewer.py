@@ -10,29 +10,29 @@ from just_bin_it.endpoints.sources import HistogramSource
 from just_bin_it.utilities.plotter import plot_histograms
 
 
-def convert_for_plotting(histogram):
+def convert_for_plotting(histogram_data):
     """
     Convert histogram data to a form for plotting.
 
-    :param histogram: The histogram to convert.
+    :param histogram_data: The histogram to convert.
     """
 
     class Histogram:
         pass
 
-    h = Histogram()
+    hist = Histogram()
 
-    if len(histogram["dim_metadata"]) == 1:
+    if len(histogram_data["dim_metadata"]) == 1:
         # 1-D
-        h.x_edges = np.array(histogram["dim_metadata"][0]["bin_boundaries"])
+        hist.x_edges = np.array(histogram_data["dim_metadata"][0]["bin_boundaries"])
     else:
         # 2-D
-        h.x_edges = np.array(histogram["dim_metadata"][0]["bin_boundaries"])
-        h.y_edges = np.array(histogram["dim_metadata"][1]["bin_boundaries"])
+        hist.x_edges = np.array(histogram_data["dim_metadata"][0]["bin_boundaries"])
+        hist.y_edges = np.array(histogram_data["dim_metadata"][1]["bin_boundaries"])
 
-    h.data = np.array(histogram["data"])
+    hist.data = np.array(histogram_data["data"])
 
-    return [h]
+    return [hist]
 
 
 def main(brokers, topic):
