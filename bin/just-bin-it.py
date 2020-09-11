@@ -12,7 +12,10 @@ from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
-from just_bin_it.endpoints.statistics_publisher import StatisticsPublisher
+from just_bin_it.endpoints.statistics_publisher import (
+    GraphiteSender,
+    StatisticsPublisher,
+)
 from just_bin_it.utilities import time_in_ns
 
 
@@ -127,7 +130,8 @@ class Main:
         logging.info("Creating configuration consumer")
         while not are_kafka_settings_valid(self.config_brokers, [self.config_topic]):
             logging.error(
-                "Could not connect to Kafka brokers or topic for configuration - will retry shortly"
+                "Could not connect to Kafka brokers or topic for configuration "
+                "- will retry shortly"
             )
             time.sleep(5)
         self.config_listener = ConfigListener(
@@ -198,13 +202,15 @@ if __name__ == "__main__":
     if args.config_file:
         init_hist_json = load_json_config_file(args.config_file)
 
-    stats_publisher = None
+    statistics_publisher = None
     if args.graphite_config_file:
         graphite_config = load_json_config_file(args.graphite_config_file)
-        stats_publisher = StatisticsPublisher(
-            graphite_config["address"],
-            graphite_config["port"],
-            graphite_config["prefix"],
+        statistics_publisher = StatisticsPublisher(
+            GraphiteSender(
+                graphite_config["address"],
+                graphite_config["port"],
+                graphite_config["prefix"],
+            ),
             graphite_config["metric"],
         )
 
@@ -221,7 +227,7 @@ if __name__ == "__main__":
         args.simulation_mode,
         args.hb_topic,
         init_hist_json,
-        stats_publisher,
+        statistics_publisher,
         args.response_topic,
     )
     main.run()
