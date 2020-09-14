@@ -97,8 +97,11 @@ class TestJustBinIt:
         if final_offset <= self.initial_offset:
             raise Exception("No new data found on the topic - is just-bin-it running?")
 
-    def send_message(self, topic, message):
-        self.producer.send(topic, message)
+    def send_message(self, topic, message, timestamp=None):
+        if timestamp:
+            self.producer.send(topic, message, timestamp_ms=timestamp)
+        else:
+            self.producer.send(topic, message)
         self.producer.flush()
 
     def generate_and_send_data(self, msg_id):
@@ -107,11 +110,12 @@ class TestJustBinIt:
         # up at the end.
         num_events = random.randint(500, 1500)
         data = generate_data(msg_id, time_stamp, num_events)
-        self.send_message(self.data_topic_name, data)
 
         # Need timestamp in ms
         self.time_stamps.append(time_stamp // 1_000_000)
         self.num_events_per_msg.append(num_events)
+        # Set the message timestamps explicitly so kafka latency effects are minimised.
+        self.send_message(self.data_topic_name, data, self.time_stamps[~0])
 
     def get_hist_data_from_kafka(self):
         data = []
@@ -176,6 +180,7 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "COUNTING"
 
+    @pytest.mark.flaky(reruns=5)
     def test_number_events_histogrammed_correspond_to_start_and_stop_times(
         self, just_bin_it
     ):
@@ -188,8 +193,8 @@ class TestJustBinIt:
 
         # Configure just-bin-it with start and stop times
         # Include only 5 messages in the interval
-        start = self.time_stamps[3]
-        stop = self.time_stamps[8]
+        start = self.time_stamps[3] - 1
+        stop = self.time_stamps[7] + 1
         total_events = sum(self.num_events_per_msg[3:8])
 
         config = self.create_basic_config()
