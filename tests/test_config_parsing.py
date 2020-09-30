@@ -72,7 +72,7 @@ CONFIG_NO_DET_RANGE = {
 }
 
 
-class TestConfigHandler:
+class TestConfigParser:
     @pytest.fixture(autouse=True)
     def prepare(self):
         pass
