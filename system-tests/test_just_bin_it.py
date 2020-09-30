@@ -23,11 +23,11 @@ RESPONSE_TOPIC = "hist_responses"
 
 CONFIG_CMD = {
     "cmd": "config",
-    "data_brokers": BROKERS,
-    "data_topics": ["your topic goes here"],
     "histograms": [
         {
             "type": "hist1d",
+            "data_brokers": BROKERS,
+            "data_topics": ["your topic goes here"],
             "tof_range": TOF_RANGE,
             "det_range": DET_RANGE,
             "num_bins": NUM_BINS,
@@ -85,8 +85,8 @@ class TestJustBinIt:
 
     def create_basic_config(self):
         config = copy.deepcopy(CONFIG_CMD)
-        config["data_topics"] = [self.data_topic_name]
         config["histograms"][0]["topic"] = self.hist_topic_name
+        config["histograms"][0]["data_topics"] = [self.data_topic_name]
         return config
 
     def check_offsets_have_advanced(self):
