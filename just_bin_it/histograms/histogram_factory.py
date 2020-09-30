@@ -44,16 +44,23 @@ def parse_config(configuration, current_time=None):
     if "histograms" in configuration:
         for hist in configuration["histograms"]:
             # Check for old style syntax
-            if "data_brokers" not in hist or "data_topics" not in hist:
-                if not brokers or not topics:
-                    raise Exception(
-                        "Either the data brokers or data topics were not supplied"
-                    )
-                hist["data_brokers"] = brokers
-                hist["data_topics"] = topics
+            if _is_old_style_config(hist):
+                _handle_old_style_config(brokers, hist, topics)
             hist_configs.append(hist)
 
     return start, stop, hist_configs
+
+
+def _handle_old_style_config(brokers, hist, topics):
+    # Old style configs have the brokers and topics defined at the top-level.
+    if not brokers or not topics:
+        raise Exception("Either the data brokers or data topics were not supplied")
+    hist["data_brokers"] = brokers
+    hist["data_topics"] = topics
+
+
+def _is_old_style_config(hist):
+    return "data_brokers" not in hist or "data_topics" not in hist
 
 
 class HistogramFactory:
