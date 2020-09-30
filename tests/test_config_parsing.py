@@ -6,13 +6,13 @@ from just_bin_it.histograms.histogram_factory import parse_config
 
 CONFIG_FULL = {
     "cmd": "config",
-    "data_brokers": ["localhost:9092"],
-    "data_topics": ["junk_data_2"],
     "start": 1571831082207,
     "stop": 1571831125940,
     "histograms": [
         {
             "type": "hist1d",
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
@@ -21,6 +21,8 @@ CONFIG_FULL = {
         },
         {
             "type": "hist1d",
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
@@ -32,12 +34,12 @@ CONFIG_FULL = {
 
 CONFIG_INTERVAL = {
     "cmd": "config",
-    "data_brokers": ["localhost:9092"],
-    "data_topics": ["junk_data_2"],
     "interval": 5,
     "histograms": [
         {
             "type": "hist1d",
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
@@ -46,6 +48,8 @@ CONFIG_INTERVAL = {
         },
         {
             "type": "hist1d",
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
@@ -57,12 +61,12 @@ CONFIG_INTERVAL = {
 
 CONFIG_NO_DET_RANGE = {
     "cmd": "config",
-    "data_brokers": ["localhost:9092"],
-    "data_topics": ["junk_data_2"],
     "interval": 5,
     "histograms": [
         {
             "type": "hist1d",
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "hist-topic1",
@@ -85,14 +89,28 @@ class TestConfigParser:
         assert stop == CONFIG_FULL["stop"]
 
         for i, h in enumerate(hists):
-            assert h["data_brokers"] == CONFIG_FULL["data_brokers"]
-            assert h["data_topics"] == CONFIG_FULL["data_topics"]
+            assert h["data_brokers"] == CONFIG_FULL["histograms"][i]["data_brokers"]
+            assert h["data_topics"] == CONFIG_FULL["histograms"][i]["data_topics"]
             assert h["type"] == CONFIG_FULL["histograms"][i]["type"]
             assert h["tof_range"] == CONFIG_FULL["histograms"][i]["tof_range"]
             assert h["det_range"] == CONFIG_FULL["histograms"][i]["det_range"]
             assert h["num_bins"] == CONFIG_FULL["histograms"][i]["num_bins"]
             assert h["topic"] == CONFIG_FULL["histograms"][i]["topic"]
             assert h["id"] == CONFIG_FULL["histograms"][i]["id"]
+
+    def test_raises_if_no_data_brokers_supplied_for_a_hist(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        del config["histograms"][0]["data_brokers"]
+
+        with pytest.raises(Exception):
+            parse_config(config)
+
+    def test_raises_if_no_data_topics_supplied_for_a_hist(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        del config["histograms"][0]["data_topics"]
+
+        with pytest.raises(Exception):
+            parse_config(config)
 
     def test_if_no_start_and_stop_then_they_are_not_set(self):
         config = copy.deepcopy(CONFIG_FULL)
