@@ -1,11 +1,11 @@
 {
     "cmd": "config",
     "msg_id": "some_unique_id",
-    "data_brokers": ["localhost:9092"],
-    "data_topics": ["fake_events"],
     "histograms": [
         {
             "type": "hist1d",
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["fake_events"],
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "hist-topic",
