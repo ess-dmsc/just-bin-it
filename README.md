@@ -158,6 +158,10 @@ For example:
 }
 ```
 
+##### A note about the old style configuration syntax
+The previous configuration style had the `data_brokers` and `data_topics` defined globally rather per histogram.
+For the short-term, that style of configuration will continue to work but may disappear without warning.
+
 #### Counting for a specified time
 By default just-bin-it will start counting from when it receives the configuration
 command and continue indefinitely.
