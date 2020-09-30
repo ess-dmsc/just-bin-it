@@ -67,11 +67,11 @@ from kafka import KafkaProducer
 CONFIG_JSON = b"""
 {
   "cmd": "config",
-  "data_brokers": ["localhost:9092"],
-  "data_topics": ["fake_events"],
   "histograms": [
     {
       "type": "hist1d",
+      "data_brokers": ["localhost:9092"],
+      "data_topics": ["fake_events"],
       "tof_range": [0, 100000000],
       "num_bins": 50,
       "topic": "output_topic"
@@ -98,13 +98,13 @@ A JSON histogramming configuration has the following parameters:
 
 * "cmd" (string): the command type (config, stop, etc.)
 * "msg_id" (string): a unique identifier for the message
-* "data_brokers" (string array): the addresses of the Kafka brokers
-* "data_topics" (string array): the topics to listen for event data on
 * "start" (seconds since epoch in ms): only histogram data after this UTC time (optional)
 * "stop" (seconds since epoch in ms): only histogram data up to this UTC time (optional)
 * "interval" (seconds): only histogram for this interval (optional)
 * "histograms" (array of dicts): the histograms to create, contains the following:
     * "type" (string): the histogram type (hist1d, hist2d or dethist)
+    * "data_brokers" (string array): the addresses of the Kafka brokers
+    * "data_topics" (string array): the topics to listen for event data on
     * "tof_range" (array of ints): the time-of-flight range to histogram (hist1d and hist2d only)
     * "det_range" (array of ints): the range of detectors to histogram (optional for hist1d)
     * "width" (int): the width of the detector (dethist only)
@@ -118,13 +118,13 @@ For example:
 ```json
 {
   "cmd": "config",
-  "data_brokers": ["localhost:9092"],
-  "data_topics": ["TEST_events"],
   "start": 1564727596867,
   "stop":  1564727668779,
   "histograms": [
     {
       "type": "hist1d",
+      "data_brokers": ["localhost:9092"],
+      "data_topics": ["TEST_events"],
       "tof_range": [0, 100000000],
       "num_bins": 50,
       "topic": "output_topic_for_1d",
@@ -133,6 +133,8 @@ For example:
     },
     {
       "type": "hist2d",
+      "data_brokers": ["localhost:9092"],
+      "data_topics": ["TEST_events"],
       "tof_range": [0, 100000000],
       "det_range": [100, 1000],
       "num_bins": 50,
@@ -142,6 +144,8 @@ For example:
     },
     {
       "type": "dethist",
+      "data_brokers": ["localhost:9092"],
+      "data_topics": ["TEST_events"],
       "tof_range":[0, 100000000],
       "det_range":[1, 6144],
       "width":32,
@@ -244,8 +248,6 @@ For example:
 {
   "cmd": "config",
   "msg_id": "unique_id_123",
-  "data_brokers": ["localhost:9092"],
-  "data_topics": ["TEST_events"],
   ...
 }
 ```
