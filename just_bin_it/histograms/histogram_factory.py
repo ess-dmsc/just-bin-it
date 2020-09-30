@@ -43,7 +43,6 @@ def parse_config(configuration, current_time=None):
 
     if "histograms" in configuration:
         for hist in configuration["histograms"]:
-            # Check for old style syntax
             if _is_old_style_config(hist):
                 _handle_old_style_config(brokers, hist, topics)
             hist_configs.append(hist)
