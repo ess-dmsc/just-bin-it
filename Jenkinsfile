@@ -42,7 +42,7 @@ builders = pipeline_builder.createBuilders { container ->
       /opt/miniconda/bin/conda init bash
       export PATH=/opt/miniconda/bin:$PATH
       python --version
-      python -m pip install --user -r ${project}/requirements.txt
+      python -m pip install --user -r ${project}/requirements-dev.txt
     """
   } // stage
 
@@ -93,7 +93,7 @@ def get_system_tests_pipeline() {
             source test_env/bin/activate
             which python
             pip install --upgrade pip
-            pip install -r requirements.txt
+            pip install -r requirements-dev.txt
             pip install -r system-tests/requirements.txt
             """
           }  // stage
