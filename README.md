@@ -355,17 +355,23 @@ The command line parameters are:
 The messages are sent periodically and contain data that is roughly Gaussian.
 
 ### Viewing the histogram data
-There are two simple ways to view the data being produced by just-bin-it:
+There are two simple diagnostic tools for viewing the data being produced by just-bin-it:
 bin/viewer.py and bin/view_output_messages.py.
 
-viewer.py will produce a matplotlib plot of the histogram data. Example usage:
+viewer.py will produce a matplotlib plot of the histogram data.
+To use this, some additional requirements must be installed:
+```
+>>> pip install -r requirements-gui.txt
+```
+
+Example usage:
 ```
 python bin/viewer.py --brokers localhost:9092 --config-topic output_topic
 ```
 This will plot a graph of the most recent histogram. Note: the plot does not update,
 so it will be necessary to re-run it to get fresh data.
 
-view_output_messages.py will continously print a textual representation of the
+view_output_messages.py will continuously print a textual representation of the
 data being outputted. Example usage:
 ```
 python bin/view_output_messages.py --brokers localhost:9092 --config-topic output_topic
@@ -377,6 +383,11 @@ Input data: [ev42](https://github.com/ess-dmsc/streaming-data-types) only.
 Output data: [hs00](https://github.com/ess-dmsc/streaming-data-types) only.
 
 ## For developers
+
+### Install the developer requirements
+```
+>>> pip install -r requirements-dev.txt
+```
 
 ### Install the commit hooks (important)
 There are commit hooks for Black and Flake8.
