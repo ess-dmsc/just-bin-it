@@ -24,6 +24,8 @@ def plot_histograms(histograms):
             ax = fig.add_subplot(plot_num_base + i)
             # Need to transpose the data for display
             ax.pcolormesh(x, y, hist.data.T)
+            # And flip the y-axis to match ESS geometry definition
+            ax.invert_yaxis()
         else:
             # Is 1-D
             width = 0.8 * (hist.x_edges[1] - hist.x_edges[0])
