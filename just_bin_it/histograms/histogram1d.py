@@ -3,6 +3,37 @@ import logging
 import numpy as np
 from fast_histogram import histogram1d
 
+from just_bin_it.histograms.input_validators import (
+    check_bins,
+    check_det_range,
+    check_tof,
+    generate_exception,
+)
+
+
+def _validate_parameters(num_bins, tof_range, det_range):
+    """
+    Checks that the parameters are defined correctly, if not throw.
+
+    Note: probably not entirely bullet-proof but a good first defence.
+
+    :param num_bins: The number of histogram bins.
+    :param tof_range: The time-of-flight range.
+    :param det_range: The detector range (optional).
+    """
+    missing = []
+    invalid = []
+
+    check_tof(tof_range, missing, invalid)
+    check_bins(num_bins, missing, invalid)
+
+    # det_range is optional
+    if det_range:
+        check_det_range(det_range, missing, invalid)
+
+    if missing or invalid:
+        generate_exception(missing, invalid, "1D")
+
 
 class Histogram1d:
     """One dimensional histogram for time-of-flight."""
@@ -23,6 +54,8 @@ class Histogram1d:
         :param source: The data source to histogram.
         :param identifier: An optional identifier for the histogram.
         """
+        _validate_parameters(num_bins, tof_range, det_range)
+
         self._histogram = None
         self.x_edges = None
         self.tof_range = tof_range
