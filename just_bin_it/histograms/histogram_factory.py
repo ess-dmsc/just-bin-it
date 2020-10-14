@@ -88,10 +88,8 @@ class HistogramFactory:
 
             try:
                 if hist_type == "hist1d":
-                    # HistogramFactory._check_1d_info(num_bins, tof_range, det_range)
                     hist = Histogram1d(topic, num_bins, tof_range, det_range, source)
                 elif hist_type == "hist2d":
-                    HistogramFactory._check_2d_info(num_bins, tof_range, det_range)
                     hist = Histogram2d(topic, num_bins, tof_range, det_range, source)
                 elif hist_type == "dethist":
                     HistogramFactory._check_2d_map_info(

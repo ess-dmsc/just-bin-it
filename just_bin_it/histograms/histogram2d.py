@@ -3,6 +3,26 @@ import logging
 import numpy as np
 
 
+def _validate_parameters(num_bins, tof_range, det_range):
+    """
+    Checks that the required parameters are defined, if not throw.
+
+    :param num_bins: The number of histogram bins.
+    :param tof_range: The time-of-flight range.
+    :param det_range: The detector range.
+    """
+    from just_bin_it.histograms.histogram_factory import HistogramFactory
+
+    missing = []
+    invalid = []
+
+    HistogramFactory._check_tof(tof_range, missing, invalid)
+    HistogramFactory._check_det_range(det_range, missing, invalid)
+    HistogramFactory._check_bins(num_bins, missing, invalid)
+    if missing or invalid:
+        HistogramFactory._generate_exception(missing, invalid, "2D")
+
+
 class Histogram2d:
     """Two dimensional histogram for time-of-flight."""
 
@@ -17,6 +37,7 @@ class Histogram2d:
         :param source: The data source to histogram.
         :param identifier: An optional identifier for the histogram.
         """
+        _validate_parameters(num_bins, tof_range, det_range)
         self._histogram = None
         self.x_edges = None
         self.y_edges = None
