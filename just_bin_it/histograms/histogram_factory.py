@@ -72,27 +72,31 @@ class HistogramFactory:
         """
         histograms = []
 
-        for h in configuration:
-            hist = None
+        for config in configuration:
+            histogram = None
 
-            hist_type = h["type"]
-            topic = h["topic"]
-            num_bins = h["num_bins"] if "num_bins" in h else None
-            tof_range = tuple(h["tof_range"]) if "tof_range" in h else None
-            det_range = tuple(h["det_range"]) if "det_range" in h else None
-            source = h["source"] if "source" in h else ""
-            identifier = h["id"] if "id" in h else ""
-            width = h["width"] if "width" in h else 512
-            height = h["height"] if "height" in h else 512
+            hist_type = config["type"]
+            topic = config["topic"]
+            num_bins = config["num_bins"] if "num_bins" in config else None
+            tof_range = tuple(config["tof_range"]) if "tof_range" in config else None
+            det_range = tuple(config["det_range"]) if "det_range" in config else None
+            source = config["source"] if "source" in config else ""
+            identifier = config["id"] if "id" in config else ""
 
             try:
                 if hist_type == "hist1d":
-                    hist = Histogram1d(topic, num_bins, tof_range, det_range, source)
+                    histogram = Histogram1d(
+                        topic, num_bins, tof_range, det_range, source, identifier
+                    )
                 elif hist_type == "hist2d":
-                    hist = Histogram2d(topic, num_bins, tof_range, det_range, source)
+                    histogram = Histogram2d(
+                        topic, num_bins, tof_range, det_range, source, identifier
+                    )
                 elif hist_type == "dethist":
-                    hist = DetHistogram(
-                        topic, tof_range, det_range, width, height, source
+                    width = config["width"] if "width" in config else 512
+                    height = config["height"] if "height" in config else 512
+                    histogram = DetHistogram(
+                        topic, tof_range, det_range, width, height, source, identifier
                     )
                 else:
                     # Log but do nothing
@@ -104,8 +108,8 @@ class HistogramFactory:
                     "Could not create histogram. %s", error
                 )  # pragma: no mutate
 
-            if hist is not None:
-                hist.identifier = identifier
-                histograms.append(hist)
+            if histogram is not None:
+                histogram.identifier = identifier
+                histograms.append(histogram)
 
         return histograms
