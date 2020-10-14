@@ -112,66 +112,6 @@ class HistogramFactory:
         return histograms
 
     @staticmethod
-    def _check_1d_info(num_bins, tof_range, det_range):
-        """
-        Checks that the required parameters are defined, if not throw.
-
-        :param num_bins: The number of histogram bins.
-        :param tof_range: The time-of-flight range.
-        :param det_range: The detector range.
-        """
-        missing = []
-        invalid = []
-
-        HistogramFactory._check_tof(tof_range, missing, invalid)
-        HistogramFactory._check_bins(num_bins, missing, invalid)
-
-        # det_range is optional
-        if det_range:
-            HistogramFactory._check_det_range(det_range, missing, invalid)
-
-        if missing or invalid:
-            HistogramFactory._generate_exception(missing, invalid, "1D")
-
-    @staticmethod
-    def _check_2d_info(num_bins, tof_range, det_range):
-        """
-        Checks that the required parameters are defined, if not throw.
-
-        :param num_bins: The number of histogram bins.
-        :param tof_range: The time-of-flight range.
-        :param det_range: The detector range.
-        """
-        missing = []
-        invalid = []
-
-        HistogramFactory._check_tof(tof_range, missing, invalid)
-        HistogramFactory._check_det_range(det_range, missing, invalid)
-        HistogramFactory._check_bins(num_bins, missing, invalid)
-        if missing or invalid:
-            HistogramFactory._generate_exception(missing, invalid, "2D")
-
-    @staticmethod
-    def _check_2d_map_info(tof_range, det_range, width, height):
-        """
-        Checks that the required parameters are defined, if not throw.
-
-        :param tof_range: The time-of-flight range.
-        :param det_range: The detector range.
-        :param width: The detector width.
-        :param height: The detector height.
-        """
-        missing = []
-        invalid = []
-
-        HistogramFactory._check_tof(tof_range, missing, invalid)
-        HistogramFactory._check_det_range(det_range, missing, invalid)
-        HistogramFactory._check_int(width, "width", invalid)
-        HistogramFactory._check_int(height, "height", invalid)
-        if missing or invalid:
-            HistogramFactory._generate_exception(missing, invalid, "2D Map")
-
-    @staticmethod
     def _check_tof(tof_range, missing, invalid):
         if tof_range is None:
             missing.append("TOF range")  # pragma: no mutate
