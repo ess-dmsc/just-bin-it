@@ -1,17 +1,22 @@
 import numpy as np
 import pytest
 
+from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.histogram1d import Histogram1d
 
+IRRELEVANT_TOPIC = "some-topic"
+IRRELEVANT_NUM_BINS = 123
+IRRELEVANT_TOF_RANGE = (0, 100)
 
-class TestHistogram1d:
+
+class TestHistogram1dFunctionality:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.pulse_time = 1234
         self.num_bins = 5
         self.range = (0, 5)
         self.data = np.array([x for x in range(self.num_bins)])
-        self.hist = Histogram1d("topic1", self.num_bins, self.range)
+        self.hist = Histogram1d(IRRELEVANT_TOPIC, self.num_bins, self.range)
 
     def test_on_construction_histogram_is_initialised_empty(self):
         assert self.hist.x_edges is not None
@@ -45,7 +50,9 @@ class TestHistogram1d:
         assert np.array_equal(self.hist.x_edges, x_edges)
 
     def test_only_data_with_correct_source_is_added(self):
-        hist = Histogram1d("topic1", self.num_bins, self.range, source="source1")
+        hist = Histogram1d(
+            IRRELEVANT_TOPIC, self.num_bins, self.range, source="source1"
+        )
 
         hist.add_data(self.pulse_time, self.data, source="source1")
         hist.add_data(self.pulse_time, self.data, source="source1")
@@ -86,11 +93,13 @@ class TestHistogram1d:
 
     def test_id_supplied_then_is_set(self):
         example_id = "abcdef"
-        hist = Histogram1d("topic1", self.num_bins, self.range, identifier=example_id)
+        hist = Histogram1d(
+            IRRELEVANT_TOPIC, self.num_bins, self.range, identifier=example_id
+        )
         assert hist.identifier == example_id
 
     def test_if_det_id_is_out_of_range_then_it_is_ignored(self):
-        hist = Histogram1d("topic1", self.num_bins, self.range, (10, 20))
+        hist = Histogram1d(IRRELEVANT_TOPIC, self.num_bins, self.range, (10, 20))
         tof_data = [0, 1, 2, 3, 4]
         det_data = [0, 10, 20, 30, 40]
 
@@ -98,3 +107,44 @@ class TestHistogram1d:
 
         assert hist.data.sum() == 2
         assert np.array_equal(hist.data, [0, 1, 1, 0, 0])
+
+
+class TestHistogram1dConstruction:
+    def test_if_tof_missing_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            Histogram1d(IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, None)
+
+    def test_if_tof_is_not_two_values_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            Histogram1d(IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, (1,))
+
+    def test_if_bins_not_numeric_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            Histogram1d(IRRELEVANT_TOPIC, None, IRRELEVANT_TOF_RANGE)
+
+    def test_if_bins_not_greater_than_zero_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            Histogram1d(IRRELEVANT_TOPIC, 0, IRRELEVANT_TOF_RANGE)
+
+    def test_if_det_range_is_not_two_values_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            Histogram1d(
+                IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, IRRELEVANT_TOF_RANGE, (1,)
+            )
+
+    def test_if_no_id_specified_then_empty_string(self):
+        histogram = Histogram1d(
+            IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, IRRELEVANT_TOF_RANGE
+        )
+
+        assert histogram.identifier == ""
+
+    def test_config_with_id_specified_sets_id(self):
+        histogram = Histogram1d(
+            IRRELEVANT_TOPIC,
+            IRRELEVANT_NUM_BINS,
+            IRRELEVANT_TOF_RANGE,
+            identifier="123456",
+        )
+
+        assert histogram.identifier == "123456"

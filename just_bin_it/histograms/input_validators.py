@@ -15,12 +15,14 @@ def check_tof(tof_range, missing, invalid):
 def check_bins(num_bins, missing, invalid):
     if num_bins is None:
         missing.append("number of bins")  # pragma: no mutate
-    elif not isinstance(num_bins, int):
-        check_int(num_bins, "number of bins", invalid)
+        return
+    check_int(num_bins, "number of bins", invalid)
 
 
 def check_int(value, field, invalid):
     if not isinstance(value, int):
+        invalid.append(field)  # pragma: no mutate
+    if value < 1:
         invalid.append(field)  # pragma: no mutate
 
 
