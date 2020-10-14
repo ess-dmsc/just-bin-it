@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from just_bin_it.exceptions import JustBinItException
-from just_bin_it.histograms.det_histogram import DetHistogram
+from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 IRRELEVANT_TOPIC = "some-topic"
 IRRELEVANT_TOF_RANGE = (0, 100)
