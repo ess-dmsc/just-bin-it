@@ -92,9 +92,6 @@ class HistogramFactory:
                 elif hist_type == "hist2d":
                     hist = Histogram2d(topic, num_bins, tof_range, det_range, source)
                 elif hist_type == "dethist":
-                    HistogramFactory._check_2d_map_info(
-                        tof_range, det_range, width, height
-                    )
                     hist = DetHistogram(
                         topic, tof_range, det_range, width, height, source
                     )

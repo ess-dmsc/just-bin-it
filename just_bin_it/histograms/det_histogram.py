@@ -3,6 +3,28 @@ import logging
 import numpy as np
 
 
+def _validate_parameters(tof_range, det_range, width, height):
+    """
+    Checks that the required parameters are defined, if not throw.
+
+    :param tof_range: The time-of-flight range.
+    :param det_range: The detector range.
+    :param width: The detector width.
+    :param height: The detector height.
+    """
+    from just_bin_it.histograms.histogram_factory import HistogramFactory
+
+    missing = []
+    invalid = []
+
+    HistogramFactory._check_tof(tof_range, missing, invalid)
+    HistogramFactory._check_det_range(det_range, missing, invalid)
+    HistogramFactory._check_int(width, "width", invalid)
+    HistogramFactory._check_int(height, "height", invalid)
+    if missing or invalid:
+        HistogramFactory._generate_exception(missing, invalid, "2D Map")
+
+
 class DetHistogram:
     """Two dimensional histogram for detectors."""
 
@@ -20,6 +42,7 @@ class DetHistogram:
         :param height:
         :param identifier: An optional identifier for the histogram.
         """
+        _validate_parameters(tof_range, det_range, width, height)
         self._histogram = None
         self.x_edges = None
         self.tof_range = tof_range
