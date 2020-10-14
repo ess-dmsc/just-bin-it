@@ -172,7 +172,7 @@ class HistogramFactory:
         HistogramFactory._check_tof(tof_range, missing, invalid)
         HistogramFactory._check_det_range(det_range, missing, invalid)
         HistogramFactory._check_int(width, "width", invalid)
-        HistogramFactory._check_int(width, "height", invalid)
+        HistogramFactory._check_int(height, "height", invalid)
         if missing or invalid:
             HistogramFactory._generate_exception(missing, invalid, "2D Map")
 
