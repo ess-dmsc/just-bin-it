@@ -88,14 +88,8 @@ class TestHistogramFactory:
 
         assert len(histograms) == 0
 
-
-class TestHistogramFactory2D:
-    @pytest.fixture(autouse=True)
-    def prepare(self):
-        self.config = deepcopy(CONFIG_2D)
-
-    def test_creates_histogram_correctly(self):
-        histograms = HistogramFactory.generate(self.config)
+    def test_creates_2d_histogram_correctly(self):
+        histograms = HistogramFactory.generate(CONFIG_2D)
 
         assert isinstance(histograms[0], Histogram2d)
         assert histograms[0].tof_range == (20, 2000)
@@ -104,58 +98,13 @@ class TestHistogramFactory2D:
         assert histograms[0].topic == "topic0"
         assert histograms[0].source == "source1"
 
-    def test_if_tof_missing_then_histogram_not_created(self):
-        config = deepcopy(self.config)
-        del config[0]["tof_range"]
+    def test_does_not_creates_2d_histogram_on_invalid_inputs(self):
+        config = deepcopy(CONFIG_2D)
+        config[0]["num_bins"] = "NONSENSE"
 
         histograms = HistogramFactory.generate(config)
 
         assert len(histograms) == 0
-
-    def test_if_tof_is_not_two_values_then_histogram_not_created(self):
-        config = deepcopy(self.config)
-        config[0]["tof_range"] = (1,)
-
-        histograms = HistogramFactory.generate(config)
-
-        assert len(histograms) == 0
-
-    def test_if_bins_missing_then_histogram_not_created(self):
-        config = deepcopy(self.config)
-        del config[0]["num_bins"]
-
-        histograms = HistogramFactory.generate(config)
-
-        assert len(histograms) == 0
-
-    def test_if_bins_not_numeric_then_histogram_not_created(self):
-        config = deepcopy(self.config)
-        config[0]["num_bins"] = "hello"
-
-        histograms = HistogramFactory.generate(config)
-
-        assert len(histograms) == 0
-
-    def test_if_det_range_is_not_two_values_then_histogram_not_created(self):
-        config = deepcopy(self.config)
-        config[0]["det_range"] = (1,)
-
-        histograms = HistogramFactory.generate(config)
-
-        assert len(histograms) == 0
-
-    def test_if_no_id_specified_then_empty_string(self):
-        config = deepcopy(self.config)
-        del config[0]["id"]
-
-        histograms = HistogramFactory.generate(config)
-
-        assert histograms[0].identifier == ""
-
-    def test_config_with_id_specified_sets_id(self):
-        histograms = HistogramFactory.generate(self.config)
-
-        assert histograms[0].identifier == "123456"
 
 
 class TestHistogramFactory2DMap:
