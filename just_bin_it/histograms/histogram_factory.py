@@ -1,7 +1,6 @@
 import logging
 import time
 
-from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.det_histogram import DetHistogram
 from just_bin_it.histograms.histogram1d import Histogram1d
 from just_bin_it.histograms.histogram2d import Histogram2d
@@ -110,52 +109,3 @@ class HistogramFactory:
                 histograms.append(hist)
 
         return histograms
-
-    @staticmethod
-    def _check_tof(tof_range, missing, invalid):
-        if tof_range is None:
-            missing.append("TOF range")  # pragma: no mutate
-        elif (
-            not isinstance(tof_range, list)
-            and not isinstance(tof_range, tuple)
-            or len(tof_range) != 2
-        ):
-            invalid.append("TOF range")  # pragma: no mutate
-
-    @staticmethod
-    def _check_bins(num_bins, missing, invalid):
-        if num_bins is None:
-            missing.append("number of bins")  # pragma: no mutate
-        elif not isinstance(num_bins, int):
-            HistogramFactory._check_int(num_bins, "number of bins", invalid)
-
-    @staticmethod
-    def _check_int(value, field, invalid):
-        if not isinstance(value, int):
-            invalid.append(field)  # pragma: no mutate
-
-    @staticmethod
-    def _check_det_range(det_range, missing, invalid):
-        if det_range is None:
-            missing.append("Detector range")  # pragma: no mutate
-        elif (
-            not isinstance(det_range, list)
-            and not isinstance(det_range, tuple)
-            or len(det_range) != 2
-        ):
-            invalid.append("Detector range")  # pragma: no mutate
-
-    @staticmethod
-    def _generate_exception(missing, invalid, hist_type):
-        error_msg = ""
-
-        if missing:
-            error_msg += (
-                f"Missing information for {hist_type} histogram: {', '.join(missing)}"
-            )  # pragma: no mutate
-        if invalid:
-            error_msg += (
-                f"Invalid information for {hist_type} histogram:  {', '.join(missing)}"
-            )  # pragma: no mutate
-        if error_msg:
-            raise JustBinItException(error_msg)
