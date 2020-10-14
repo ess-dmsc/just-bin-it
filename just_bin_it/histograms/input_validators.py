@@ -22,6 +22,7 @@ def check_bins(num_bins, missing, invalid):
 def check_int(value, field, invalid):
     if not isinstance(value, int):
         invalid.append(field)  # pragma: no mutate
+        return
     if value < 1:
         invalid.append(field)  # pragma: no mutate
 

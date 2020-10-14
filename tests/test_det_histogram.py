@@ -1,14 +1,21 @@
 import numpy as np
 import pytest
 
+from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.det_histogram import DetHistogram
+
+IRRELEVANT_TOPIC = "some-topic"
+IRRELEVANT_TOF_RANGE = (0, 100)
+IRRELEVANT_DET_RANGE = (0, 100)
+IRRELEVANT_WIDTH = 100
+IRRELEVANT_HEIGHT = 100
 
 
 def generate_pixel_id(x, y, width):
     return y * width + x + 1
 
 
-class TestDetHistogram:
+class TestHistogram2dMapFunctionality:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.pulse_time = 1234
@@ -25,7 +32,9 @@ class TestDetHistogram:
         )
 
     def test_adding_data_to_offset_detector_range_is_okay(self):
-        hist = DetHistogram("topic", self.tof_range, (3, 27), self.width, self.height)
+        hist = DetHistogram(
+            IRRELEVANT_TOPIC, self.tof_range, (3, 27), self.width, self.height
+        )
 
         hist.add_data(self.pulse_time, [], self.data)
 
@@ -85,7 +94,7 @@ class TestDetHistogram:
     def test_id_supplied_then_is_set(self):
         example_id = "abcdef"
         hist = DetHistogram(
-            "topic1",
+            IRRELEVANT_TOPIC,
             self.tof_range,
             self.det_range,
             self.width,
@@ -96,7 +105,7 @@ class TestDetHistogram:
 
     def test_only_data_with_correct_source_is_added(self):
         hist = DetHistogram(
-            "topic",
+            IRRELEVANT_TOPIC,
             self.tof_range,
             self.det_range,
             self.width,
@@ -137,3 +146,108 @@ class TestDetHistogram:
         self.hist.add_data(1236, [], self.data)
 
         assert self.hist.last_pulse_time == 1236
+
+
+class TestHistogram2dMapConstruction:
+    def test_if_tof_missing_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            DetHistogram(
+                IRRELEVANT_TOPIC,
+                None,
+                IRRELEVANT_DET_RANGE,
+                IRRELEVANT_WIDTH,
+                IRRELEVANT_HEIGHT,
+            )
+
+    def test_if_tof_is_not_two_values_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            DetHistogram(
+                IRRELEVANT_TOPIC,
+                (1,),
+                IRRELEVANT_DET_RANGE,
+                IRRELEVANT_WIDTH,
+                IRRELEVANT_HEIGHT,
+            )
+
+    def test_if_width_not_numeric_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            DetHistogram(
+                IRRELEVANT_TOPIC,
+                IRRELEVANT_TOF_RANGE,
+                IRRELEVANT_DET_RANGE,
+                None,
+                IRRELEVANT_HEIGHT,
+            )
+
+    def test_if_width_not_greater_than_0_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            DetHistogram(
+                IRRELEVANT_TOPIC,
+                IRRELEVANT_TOF_RANGE,
+                IRRELEVANT_DET_RANGE,
+                0,
+                IRRELEVANT_HEIGHT,
+            )
+
+    def test_if_height_not_numeric_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            DetHistogram(
+                IRRELEVANT_TOPIC,
+                IRRELEVANT_TOF_RANGE,
+                IRRELEVANT_DET_RANGE,
+                IRRELEVANT_WIDTH,
+                None,
+            )
+
+    def test_if_height_not_greater_than_0_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            DetHistogram(
+                IRRELEVANT_TOPIC,
+                IRRELEVANT_TOF_RANGE,
+                IRRELEVANT_DET_RANGE,
+                IRRELEVANT_WIDTH,
+                0,
+            )
+
+    def test_if_det_range_is_missing_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            DetHistogram(
+                IRRELEVANT_TOPIC,
+                IRRELEVANT_TOF_RANGE,
+                None,
+                IRRELEVANT_WIDTH,
+                IRRELEVANT_HEIGHT,
+            )
+
+    def test_if_det_range_is_not_two_values_then_histogram_not_created(self):
+        with pytest.raises(JustBinItException):
+            DetHistogram(
+                IRRELEVANT_TOPIC,
+                IRRELEVANT_TOF_RANGE,
+                (1,),
+                IRRELEVANT_WIDTH,
+                IRRELEVANT_HEIGHT,
+            )
+
+    def test_if_no_id_specified_then_empty_string(self):
+        histogram = DetHistogram(
+            IRRELEVANT_TOPIC,
+            IRRELEVANT_TOF_RANGE,
+            IRRELEVANT_DET_RANGE,
+            IRRELEVANT_WIDTH,
+            IRRELEVANT_HEIGHT,
+        )
+
+        assert histogram.identifier == ""
+
+    def test_config_with_id_specified_sets_id(self):
+        histogram = DetHistogram(
+            IRRELEVANT_TOPIC,
+            IRRELEVANT_TOF_RANGE,
+            IRRELEVANT_DET_RANGE,
+            IRRELEVANT_WIDTH,
+            IRRELEVANT_HEIGHT,
+            identifier="123456",
+        )
+
+        assert histogram.identifier == "123456"
