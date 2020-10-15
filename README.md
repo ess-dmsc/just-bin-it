@@ -41,7 +41,7 @@ required arguments:
 ```
 
 IMPORTANT NOTE: The Kafka topics for `config-topic`, `hb-topic` and `response-topic`
-must have only one partition.
+must be separate and all must have only one partition.
 
 
 ## How to run just-bin-it
