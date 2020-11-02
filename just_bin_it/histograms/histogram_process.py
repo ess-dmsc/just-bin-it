@@ -120,7 +120,7 @@ class Processor:
         If Kafka has no opinion (due to a lack of event messages) then the
         histogrammer makes a decision based on the wall-clock time.
 
-        :param wall_clock:
+        :param wall_clock: current time in ns
         :return: True, if stop time has been exceeded.
         """
         event_source_status = self.event_source.stop_time_exceeded()

@@ -28,7 +28,7 @@ class Histogrammer:
         self._stop_time_exceeded = False
         self._stop_publishing = False
         self._started = False
-        self._stop_leeway = 5000
+        self._stop_leeway_ms = 5000
         self._previous_sum = [0 for _ in self.histograms]
 
     def add_data(self, event_buffer, simulation=False):
@@ -119,7 +119,7 @@ class Histogrammer:
         Checks whether the stop time has been exceeded, if so
         then stop histogramming.
 
-        :param timestamp: The timestamp to check against.
+        :param timestamp: The timestamp to check against in ms.
         :return: True, if exceeded.
         """
         # Do nothing if there is no stop time
@@ -131,7 +131,7 @@ class Histogrammer:
             return True
 
         # Give it some leeway
-        if timestamp > self.stop + self._stop_leeway:
+        if timestamp > self.stop + self._stop_leeway_ms:
             self._stop_time_exceeded = True
 
         return self._stop_time_exceeded
