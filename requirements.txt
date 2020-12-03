@@ -1,5 +1,5 @@
 confluent-kafka
-ess-streaming-data-types==0.9.5
+ess-streaming-data-types==0.9.6
 fast-histogram
 graphyte
 kafka-python
