@@ -5,5 +5,4 @@ graphyte
 kafka-python
 mock
 numpy
-pyepics
 pytest
