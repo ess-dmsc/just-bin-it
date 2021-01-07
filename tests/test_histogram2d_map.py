@@ -15,6 +15,18 @@ def generate_pixel_id(x, y, width):
     return y * width + x + 1
 
 
+def generate_image(width, height):
+    # First pixel gets one hit, second gets two, third get three and so on.
+    det_ids = []
+    count = 1
+    for h in range(height):
+        for w in range(width):
+            for i in range(count):
+                det_ids.append(count)
+            count += 1
+    return det_ids
+
+
 class TestHistogram2dMapFunctionality:
     @pytest.fixture(autouse=True)
     def prepare(self):
@@ -23,22 +35,21 @@ class TestHistogram2dMapFunctionality:
         self.det_range = (1, 25)
         self.width = 5
         self.height = 5
-        self.data = []
-        for x in range(self.width):
-            for y in range(self.height):
-                self.data.append(generate_pixel_id(x, y, self.width))
+        self.data = generate_image(self.width, self.height)
+
         self.hist = DetHistogram(
             "topic", self.tof_range, self.det_range, self.width, self.height
         )
 
-    def test_adding_data_to_offset_detector_range_is_okay(self):
+    def test_adding_data_to_detector_range_which_does_not_start_at_zero_is_okay(self):
         hist = DetHistogram(
             IRRELEVANT_TOPIC, self.tof_range, (3, 27), self.width, self.height
         )
 
         hist.add_data(self.pulse_time, [], self.data)
 
-        assert hist.data.sum() == 23
+        # The data for det_ids 1 and 2 are discarded.
+        assert hist.data.sum() == 322
 
     def test_on_construction_histogram_is_uninitialised(self):
         assert self.hist.x_edges is not None

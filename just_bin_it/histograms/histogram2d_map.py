@@ -63,33 +63,54 @@ class DetHistogram:
         self.identifier = identifier
         self.source = source if source.strip() != "" else None
 
-        self._intialise_histogram()
+        self._initialise_histogram()
 
-    def _intialise_histogram(self):
+    def _initialise_histogram(self):
         """
-        Create a zeroed histogram with the correct shape.
+        Create a zeroed histogram.
         """
-        self._histogram, self.x_edges, self.y_edges = np.histogram2d(
+        # Work out the edges for the 2d histogram.
+        _, self.x_edges, self.y_edges = np.histogram2d(
             [],
             [],
             range=((0, self.width), (0, self.height)),
             bins=(self.width, self.height),
         )
 
+        # The data is actually stored as a 1d histogram, it is converted to 2d
+        # when read - this speeds things up significantly.
+        self._histogram, self._edges = np.histogram(
+            [], range=self.det_range, bins=(self.det_range[1] - self.det_range[0])
+        )
+
     @property
     def data(self):
-        return self._histogram
+        # Create an empty 2d histogram
+        hist2d, _, _ = np.histogram2d(
+            [],
+            [],
+            range=((0, self.width), (0, self.height)),
+            bins=(self.width, self.height),
+        )
+
+        # Copy the data over
+        for det_id in range(self.det_range[0], self.det_range[1]):
+            x = (det_id - 1) % self.width
+            y = ((det_id - 1) // self.width) % self.height
+            hist2d[x][y] = self._histogram[det_id - self.det_range[0]]
+
+        return hist2d
 
     @property
     def shape(self):
-        return self._histogram.shape
+        return self.width, self.height
 
-    def add_data(self, pulse_time, tof, det_ids, source=""):
+    def add_data(self, pulse_time, tofs, det_ids, source=""):
         """
         Add data to the histogram.
 
         :param pulse_time: The pulse time.
-        :param tof: The time-of-flight data.
+        :param tofs: The time-of-flight data.
         :param det_ids: The detector data.
         :param source: The source of the event.
         """
@@ -99,22 +120,8 @@ class DetHistogram:
 
         self.last_pulse_time = pulse_time
 
-        dets_x = []
-        dets_y = []
-
-        for id in det_ids:
-            if id <= 0 or id < self.det_range[0] or id > self.det_range[1]:
-                continue
-            x = (id - 1) % self.width
-            y = ((id - 1) // self.width) % self.height
-            dets_x.append(x)
-            dets_y.append(y)
-
-        self._histogram += np.histogram2d(
-            dets_x,
-            dets_y,
-            range=((0, self.width), (0, self.height)),
-            bins=(self.width, self.height),
+        self._histogram += np.histogram(
+            det_ids, range=self.det_range, bins=(self.det_range[1] - self.det_range[0])
         )[0]
 
     def clear_data(self):
@@ -122,4 +129,4 @@ class DetHistogram:
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self._intialise_histogram()
+        self._initialise_histogram()
