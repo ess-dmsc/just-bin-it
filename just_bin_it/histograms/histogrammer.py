@@ -101,7 +101,7 @@ class Histogrammer:
         results = []
 
         for i, hist in enumerate(self.histograms):
-            total_counts = hist.data.sum()
+            total_counts = int(hist.data.sum())
             diff = total_counts - self._previous_sum[i]
             self._previous_sum[i] = total_counts
             results.append(

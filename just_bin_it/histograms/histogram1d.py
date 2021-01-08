@@ -1,7 +1,6 @@
 import logging
 
 import numpy as np
-from fast_histogram import histogram1d
 
 from just_bin_it.histograms.input_validators import (
     check_bins,
@@ -72,8 +71,9 @@ class Histogram1d:
         """
         Create a zeroed histogram with the correct shape.
         """
-        self.x_edges = np.histogram_bin_edges([], self.num_bins, self.tof_range)
-        self._histogram = histogram1d([], range=self.tof_range, bins=self.num_bins)
+        self._histogram, self.x_edges = np.histogram(
+            [], range=self.tof_range, bins=self.num_bins
+        )
 
     def add_data(self, pulse_time, tofs, det_ids=None, source=""):
         """
@@ -99,11 +99,11 @@ class Histogram1d:
                 range=(self.tof_range, self.det_range),
                 bins=self.num_bins,
             )
-            self._histogram += histogram.sum(1)
+            self._histogram = self._histogram + histogram.sum(1)
         else:
-            self._histogram += histogram1d(
+            self._histogram += np.histogram(
                 tofs, range=self.tof_range, bins=self.num_bins
-            )
+            )[0]
 
     @property
     def data(self):
