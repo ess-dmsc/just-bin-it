@@ -64,7 +64,7 @@ class EventSource(BaseSource):
     def __init__(
         self,
         consumer,
-        start_time: int,
+        start_time: Optional[int],
         stop_time: Optional[int] = None,
         deserialise_function=deserialise_ev42,
     ):
@@ -152,11 +152,8 @@ class SimulatedEventSource:
         self.is_dethist = False
         self.width = 0
         self.height = 0
-        self.start = start / 1000
-        if stop:
-            self.stop = stop / 1000
-        else:
-            self.stop = None
+        self.start = start if start else int(time.time() * 1000)
+        self.stop = stop
 
         if config["type"] == "dethist":
             # Different behaviour for this type of histogram
@@ -214,7 +211,8 @@ class SimulatedEventSource:
         return 0
 
     def stop_time_exceeded(self):
-        if self.stop and time.time() > self.stop:
+        current_time_ms = int(time.time() * 1000)
+        if self.stop and current_time_ms > self.stop:
             return StopTimeStatus.EXCEEDED
 
         return StopTimeStatus.NOT_EXCEEDED
