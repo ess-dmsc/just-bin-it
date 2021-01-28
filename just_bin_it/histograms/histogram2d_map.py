@@ -10,13 +10,12 @@ from just_bin_it.histograms.input_validators import (
 )
 
 
-def _validate_parameters(tof_range, det_range, width, height):
+def _validate_parameters(det_range, width, height):
     """
     Checks that the required parameters are defined, if not throw.
 
     Note: probably not entirely bullet-proof but a good first defence.
 
-    :param tof_range: The time-of-flight range.
     :param det_range: The detector range.
     :param width: The detector width.
     :param height: The detector height.
@@ -24,7 +23,6 @@ def _validate_parameters(tof_range, det_range, width, height):
     missing = []
     invalid = []
 
-    check_tof(tof_range, missing, invalid)
     check_det_range(det_range, missing, invalid)
     check_int(width, "width", invalid)
     check_int(height, "height", invalid)
@@ -36,23 +34,20 @@ class DetHistogram:
     """Two dimensional histogram for detectors."""
 
     def __init__(
-        self, topic, tof_range, det_range, width, height, source="", identifier=""
+        self, topic, det_range, width, height, source="", identifier=""
     ):
         """
         Constructor.
-
         :param topic: The name of the Kafka topic to publish to.
-        :param tof_range: The range of time-of-flights to histogram over [NOT USED].
         :param source: The data source to histogram.
         :param det_range: The range of sequential detectors to histogram over.
         :param width: How many detectors in a row.
         :param height:
         :param identifier: An optional identifier for the histogram.
         """
-        _validate_parameters(tof_range, det_range, width, height)
+        _validate_parameters(det_range, width, height)
         self._histogram = None
         self.x_edges = None
-        self.tof_range = tof_range
         self.det_range = det_range
         # The number of bins is the number of detectors.
         self.num_bins = det_range[1] - det_range[0] + 1
@@ -105,12 +100,11 @@ class DetHistogram:
     def shape(self):
         return self.width, self.height
 
-    def add_data(self, pulse_time, tofs, det_ids, source=""):
+    def add_data(self, pulse_time, det_ids, source=""):
         """
         Add data to the histogram.
 
         :param pulse_time: The pulse time.
-        :param tofs: The time-of-flight data.
         :param det_ids: The detector data.
         :param source: The source of the event.
         """

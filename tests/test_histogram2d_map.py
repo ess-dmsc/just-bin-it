@@ -5,7 +5,6 @@ from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 IRRELEVANT_TOPIC = "some-topic"
-IRRELEVANT_TOF_RANGE = (0, 100)
 IRRELEVANT_DET_RANGE = (0, 100)
 IRRELEVANT_WIDTH = 100
 IRRELEVANT_HEIGHT = 100
@@ -31,22 +30,21 @@ class TestHistogram2dMapFunctionality:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.pulse_time = 1234
-        self.tof_range = (0, 10)
         self.det_range = (1, 25)
         self.width = 5
         self.height = 5
         self.data = generate_image(self.width, self.height)
 
         self.hist = DetHistogram(
-            "topic", self.tof_range, self.det_range, self.width, self.height
+            "topic", self.det_range, self.width, self.height
         )
 
     def test_adding_data_to_detector_range_which_does_not_start_at_zero_is_okay(self):
         hist = DetHistogram(
-            IRRELEVANT_TOPIC, self.tof_range, (3, 27), self.width, self.height
+            IRRELEVANT_TOPIC, (3, 27), self.width, self.height
         )
 
-        hist.add_data(self.pulse_time, [], self.data)
+        hist.add_data(self.pulse_time, self.data)
 
         # The data for det_ids 1 and 2 are discarded.
         assert hist.data.sum() == 322
@@ -92,7 +90,7 @@ class TestHistogram2dMapFunctionality:
         p0_3 = generate_pixel_id(0, 3, self.width)
 
         data = [p2_2, p2_2, p3_2, p3_2, p3_2, p0_3, p0_3]
-        self.hist.add_data(self.pulse_time, [], data)
+        self.hist.add_data(self.pulse_time, data)
 
         assert self.hist.data.sum() == len(data)
         assert self.hist.data[2][2] == 2
@@ -106,7 +104,6 @@ class TestHistogram2dMapFunctionality:
         example_id = "abcdef"
         hist = DetHistogram(
             IRRELEVANT_TOPIC,
-            self.tof_range,
             self.det_range,
             self.width,
             self.height,
@@ -117,16 +114,15 @@ class TestHistogram2dMapFunctionality:
     def test_only_data_with_correct_source_is_added(self):
         hist = DetHistogram(
             IRRELEVANT_TOPIC,
-            self.tof_range,
             self.det_range,
             self.width,
             self.height,
             source="source1",
         )
 
-        hist.add_data(self.pulse_time, [], self.data, source="source1")
-        hist.add_data(self.pulse_time, [], self.data, source="source1")
-        hist.add_data(self.pulse_time, [], self.data, source="OTHER")
+        hist.add_data(self.pulse_time, self.data, source="source1")
+        hist.add_data(self.pulse_time, self.data, source="source1")
+        hist.add_data(self.pulse_time, self.data, source="OTHER")
 
         assert hist.data.sum() == len(self.data) * 2
 
@@ -138,10 +134,10 @@ class TestHistogram2dMapFunctionality:
         assert self.hist.data.sum() == 0
 
     def test_after_clearing_histogram_can_add_data(self):
-        self.hist.add_data(self.pulse_time, [], self.data)
+        self.hist.add_data(self.pulse_time, self.data)
         self.hist.clear_data()
 
-        self.hist.add_data(self.pulse_time, [], self.data)
+        self.hist.add_data(self.pulse_time, self.data)
 
         assert self.hist.shape == (5, 5)
         assert self.hist.data.sum() == len(self.data)
@@ -160,31 +156,11 @@ class TestHistogram2dMapFunctionality:
 
 
 class TestHistogram2dMapConstruction:
-    def test_if_tof_missing_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(
-                IRRELEVANT_TOPIC,
-                None,
-                IRRELEVANT_DET_RANGE,
-                IRRELEVANT_WIDTH,
-                IRRELEVANT_HEIGHT,
-            )
-
-    def test_if_tof_is_not_two_values_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(
-                IRRELEVANT_TOPIC,
-                (1,),
-                IRRELEVANT_DET_RANGE,
-                IRRELEVANT_WIDTH,
-                IRRELEVANT_HEIGHT,
-            )
 
     def test_if_width_not_numeric_then_histogram_not_created(self):
         with pytest.raises(JustBinItException):
             DetHistogram(
                 IRRELEVANT_TOPIC,
-                IRRELEVANT_TOF_RANGE,
                 IRRELEVANT_DET_RANGE,
                 None,
                 IRRELEVANT_HEIGHT,
@@ -194,7 +170,6 @@ class TestHistogram2dMapConstruction:
         with pytest.raises(JustBinItException):
             DetHistogram(
                 IRRELEVANT_TOPIC,
-                IRRELEVANT_TOF_RANGE,
                 IRRELEVANT_DET_RANGE,
                 0,
                 IRRELEVANT_HEIGHT,
@@ -204,7 +179,6 @@ class TestHistogram2dMapConstruction:
         with pytest.raises(JustBinItException):
             DetHistogram(
                 IRRELEVANT_TOPIC,
-                IRRELEVANT_TOF_RANGE,
                 IRRELEVANT_DET_RANGE,
                 IRRELEVANT_WIDTH,
                 None,
@@ -214,7 +188,6 @@ class TestHistogram2dMapConstruction:
         with pytest.raises(JustBinItException):
             DetHistogram(
                 IRRELEVANT_TOPIC,
-                IRRELEVANT_TOF_RANGE,
                 IRRELEVANT_DET_RANGE,
                 IRRELEVANT_WIDTH,
                 0,
@@ -224,7 +197,6 @@ class TestHistogram2dMapConstruction:
         with pytest.raises(JustBinItException):
             DetHistogram(
                 IRRELEVANT_TOPIC,
-                IRRELEVANT_TOF_RANGE,
                 None,
                 IRRELEVANT_WIDTH,
                 IRRELEVANT_HEIGHT,
@@ -234,7 +206,6 @@ class TestHistogram2dMapConstruction:
         with pytest.raises(JustBinItException):
             DetHistogram(
                 IRRELEVANT_TOPIC,
-                IRRELEVANT_TOF_RANGE,
                 (1,),
                 IRRELEVANT_WIDTH,
                 IRRELEVANT_HEIGHT,
@@ -243,7 +214,6 @@ class TestHistogram2dMapConstruction:
     def test_if_no_id_specified_then_empty_string(self):
         histogram = DetHistogram(
             IRRELEVANT_TOPIC,
-            IRRELEVANT_TOF_RANGE,
             IRRELEVANT_DET_RANGE,
             IRRELEVANT_WIDTH,
             IRRELEVANT_HEIGHT,
@@ -254,7 +224,6 @@ class TestHistogram2dMapConstruction:
     def test_config_with_id_specified_sets_id(self):
         histogram = DetHistogram(
             IRRELEVANT_TOPIC,
-            IRRELEVANT_TOF_RANGE,
             IRRELEVANT_DET_RANGE,
             IRRELEVANT_WIDTH,
             IRRELEVANT_HEIGHT,

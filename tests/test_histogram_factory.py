@@ -39,7 +39,6 @@ CONFIG_2D_MAP = [
         "data_brokers": ["localhost:9092", "someserver:9092"],
         "data_topics": ["my_topic"],
         "type": "dethist",
-        "tof_range": [20, 2000],
         "det_range": [1, 6144],
         "width": 32,
         "height": 192,
@@ -108,7 +107,6 @@ class TestHistogramFactory:
         histograms = HistogramFactory.generate(CONFIG_2D_MAP)
 
         assert isinstance(histograms[0], DetHistogram)
-        assert histograms[0].tof_range == (20, 2000)
         assert histograms[0].det_range == (1, 6144)
         assert histograms[0].width == 32
         assert histograms[0].height == 192
@@ -117,7 +115,7 @@ class TestHistogramFactory:
 
     def test_does_not_creates_2d_map_histogram_on_invalid_inputs(self):
         config = deepcopy(CONFIG_2D_MAP)
-        config[0]["tof_range"] = "NONSENSE"
+        config[0]["det_range"] = "NONSENSE"
 
         histograms = HistogramFactory.generate(config)
 

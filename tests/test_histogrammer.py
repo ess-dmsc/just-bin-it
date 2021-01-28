@@ -54,6 +54,14 @@ START_2D_CONFIG = {
             "topic": "hist-topic2",
             "id": "ghijk",
         },
+        {
+            "type": "dethist",
+            "det_range": [0, 100],
+            "num_bins": 50,
+            "topic": "hist-topic3",
+            "id": "xyzvfr",
+        },
+        
     ],
 }
 
