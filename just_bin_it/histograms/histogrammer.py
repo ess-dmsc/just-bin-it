@@ -1,8 +1,6 @@
 import json
 import logging
 
-from .histogram2d_map import DetHistogram
-
 HISTOGRAM_STATES = {
     "COUNTING": "COUNTING",
     "FINISHED": "FINISHED",
