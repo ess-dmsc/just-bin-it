@@ -6,14 +6,14 @@ from just_bin_it.histograms.histogram2d import Histogram2d
 from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 
-def parse_config(configuration, current_time=None):
+def parse_config(configuration, current_time_ms=None):
     """
     Parses the configuration that defines the histograms.
 
     Currently handles both the old-style syntax and the new one (see docs).
 
     :param configuration: The dictionary containing the configuration.
-    :param current_time: The time to use for defining the start time.
+    :param current_time_ms: The time to use for defining the start time (milliseconds).
     :return: tuple of start time, stop time and the list of histograms
     """
     brokers = configuration["data_brokers"] if "data_brokers" in configuration else None
@@ -35,7 +35,7 @@ def parse_config(configuration, current_time=None):
         raise Exception("Interval cannot be negative")
 
     if interval:
-        start = int(current_time) if current_time else int(time.time() * 1000)
+        start = int(current_time_ms) if current_time_ms else int(time.time() * 1000)
         stop = start + interval
 
     hist_configs = []
