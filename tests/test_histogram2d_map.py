@@ -5,6 +5,7 @@ from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 IRRELEVANT_TOPIC = "some-topic"
+IRRELEVANT_TOF_RANGE = (0, 100)
 IRRELEVANT_DET_RANGE = (0, 100)
 IRRELEVANT_WIDTH = 100
 IRRELEVANT_HEIGHT = 100
@@ -44,7 +45,7 @@ class TestHistogram2dMapFunctionality:
             IRRELEVANT_TOPIC, (3, 27), self.width, self.height
         )
 
-        hist.add_data(self.pulse_time, self.data)
+        hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data)
 
         # The data for det_ids 1 and 2 are discarded.
         assert hist.data.sum() == 322
@@ -90,7 +91,7 @@ class TestHistogram2dMapFunctionality:
         p0_3 = generate_pixel_id(0, 3, self.width)
 
         data = [p2_2, p2_2, p3_2, p3_2, p3_2, p0_3, p0_3]
-        self.hist.add_data(self.pulse_time, data)
+        self.hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, data)
 
         assert self.hist.data.sum() == len(data)
         assert self.hist.data[2][2] == 2
@@ -120,9 +121,9 @@ class TestHistogram2dMapFunctionality:
             source="source1",
         )
 
-        hist.add_data(self.pulse_time, self.data, source="source1")
-        hist.add_data(self.pulse_time, self.data, source="source1")
-        hist.add_data(self.pulse_time, self.data, source="OTHER")
+        hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data, source="source1")
+        hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data, source="source1")
+        hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data, source="OTHER")
 
         assert hist.data.sum() == len(self.data) * 2
 
@@ -134,10 +135,10 @@ class TestHistogram2dMapFunctionality:
         assert self.hist.data.sum() == 0
 
     def test_after_clearing_histogram_can_add_data(self):
-        self.hist.add_data(self.pulse_time, self.data)
+        self.hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data)
         self.hist.clear_data()
 
-        self.hist.add_data(self.pulse_time, self.data)
+        self.hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data)
 
         assert self.hist.shape == (5, 5)
         assert self.hist.data.sum() == len(self.data)

@@ -100,14 +100,18 @@ class DetHistogram:
     def shape(self):
         return self.width, self.height
 
-    def add_data(self, pulse_time, det_ids, source=""):
+    def add_data(self, pulse_time, tof, det_ids, source=""):
         """
         Add data to the histogram.
 
         :param pulse_time: The pulse time.
+        :param tof: The time-of-flight data.
         :param det_ids: The detector data.
         :param source: The source of the event.
         """
+        self._add_data(pulse_time, det_ids, source)
+
+    def _add_data(self, pulse_time, det_ids, source):
         # Discard any messages not from the specified source.
         if self.source is not None and source != self.source:
             return

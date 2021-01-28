@@ -52,10 +52,8 @@ class Histogrammer:
 
                 self._started = True
                 src = msg.source_name if not simulation else hist.source
-                if not isinstance(hist, DetHistogram):
-                    hist.add_data(msg.pulse_time, msg.time_of_flight, msg.detector_id, src)
-                else:
-                    hist.add_data(msg.pulse_time, msg.detector_id, src)
+
+                hist.add_data(msg.pulse_time, msg.time_of_flight, msg.detector_id, src)
 
     def publish_histograms(self, timestamp=0):
         """

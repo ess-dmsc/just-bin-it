@@ -146,7 +146,6 @@ For example:
       "type": "dethist",
       "data_brokers": ["localhost:9092"],
       "data_topics": ["TEST_events"],
-      "tof_range":[0, 100000000],
       "det_range":[1, 6144],
       "width":32,
       "height":192,

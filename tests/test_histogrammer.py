@@ -311,6 +311,9 @@ class TestHistogrammer:
         assert stats[1]["last_pulse_time"] == 1002 * 10 ** 9
         assert stats[1]["sum"] == 28
         assert stats[1]["diff"] == 28
+        assert stats[2]["sum"] == 28
+        assert stats[2]["diff"] == 28
+        assert stats[2]["last_pulse_time"] == 1002 * 10 ** 9
 
     def test_get_stats_with_no_histogram_returns_empty(self):
         histogrammer = create_histogrammer(self.hist_sink, NO_HIST_CONFIG)
