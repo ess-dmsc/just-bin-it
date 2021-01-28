@@ -90,10 +90,7 @@ class EventSource(BaseSource):
         offset_ranges = self.consumer.get_offset_range()
 
         # Kafka uses milliseconds
-        print(self.start_time)
         offsets = self.consumer.offset_for_time(self.start_time)
-        print(offsets)
-        logging.warning("Hello")
 
         for i, (lowest, highest) in enumerate(offset_ranges):
             if offsets[i] is None:
