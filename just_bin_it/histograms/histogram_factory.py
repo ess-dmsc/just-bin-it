@@ -96,7 +96,7 @@ class HistogramFactory:
                     width = config["width"] if "width" in config else 512
                     height = config["height"] if "height" in config else 512
                     histogram = DetHistogram(
-                        topic, tof_range, det_range, width, height, source, identifier
+                        topic, det_range, width, height, source, identifier
                     )
                 else:
                     # Log but do nothing
