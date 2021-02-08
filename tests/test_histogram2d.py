@@ -161,7 +161,7 @@ class TestHistogram2dConstruction:
                 IRRELEVANT_DET_RANGE,
             )
 
-    def test_different_number_of_bins_for_x_and_y_fails_with_negative_values(self):
+    def test_throws_if_bin_value_is_less_than_one(self):
         with pytest.raises(JustBinItException):
             Histogram2d(
                 IRRELEVANT_TOPIC, [0, 10], IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE
