@@ -20,7 +20,7 @@ class TestHistogram2dFunctionality:
         self.data = np.array([x for x in range(self.num_bins)])
         self.hist = Histogram2d("topic", self.num_bins, self.tof_range, self.det_range)
 
-    def test_different_number_of_bins_for_x_and_y_works(self):
+    def test_different_number_of_bins_for_x_and_y(self):
         num_bins_xy = [5, 10]
         hist = Histogram2d("topic", num_bins_xy, self.tof_range, self.det_range)
         assert len(hist.x_edges) == num_bins_xy[0] + 1
