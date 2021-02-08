@@ -109,7 +109,9 @@ A JSON histogramming configuration has the following parameters:
     * "det_range" (array of ints): the range of detectors to histogram (optional for hist1d)
     * "width" (int): the width of the detector (dethist only)
     * "height" (int): the height of the detector (dethist only)
-    * "num_bins" (int): the number of histogram bins (hist1d and hist2d only)
+    * "num_bins" int or array_like or [int, int]
+    	* if int, the number of bins for the two dimensions (nx=ny=bins) 
+  		* if array_like, the number of bins for the two dimensions  
     * "topic" (string): the topic to write histogram data to
     * "source" (string): the name of the source to accept data from
     * "id" (string): a unique identifier for the histogram which will be contained in the published histogram data (optional but recommended)
@@ -137,7 +139,7 @@ For example:
       "data_topics": ["TEST_events"],
       "tof_range": [0, 100000000],
       "det_range": [100, 1000],
-      "num_bins": 50,
+      "num_bins": 50, # can also be written as [50, 50]
       "topic": "output_topic_for_2d",
       "source": "detector1",
       "id": "histogram2d"
