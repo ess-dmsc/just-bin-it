@@ -152,7 +152,7 @@ class TestHistogram2dConstruction:
                 IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, IRRELEVANT_TOF_RANGE, (1,)
             )
 
-    def test_different_number_of_bins_for_x_and_y_fails_if_wrong_number_of_dimensions(self):
+    def test_throws_if_number_of_bin_dimensions_exceeds_two(self):
         with pytest.raises(JustBinItException):
             Histogram2d(
                 IRRELEVANT_TOPIC,
