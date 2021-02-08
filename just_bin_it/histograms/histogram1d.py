@@ -65,9 +65,9 @@ class Histogram1d:
         self.identifier = identifier
         self.source = source if source.strip() != "" else None
 
-        self._intialise_histogram()
+        self._initialise_histogram()
 
-    def _intialise_histogram(self):
+    def _initialise_histogram(self):
         """
         Create a zeroed histogram with the correct shape.
         """
@@ -118,4 +118,4 @@ class Histogram1d:
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self._intialise_histogram()
+        self._initialise_histogram()
