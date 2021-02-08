@@ -8,8 +8,6 @@ IRRELEVANT_TOPIC = "some-topic"
 IRRELEVANT_NUM_BINS = 123
 IRRELEVANT_TOF_RANGE = (0, 100)
 IRRELEVANT_DET_RANGE = (0, 100)
-ILLEGAL_NUM_BINS_DIMS = [5, 10, 15]
-ILLEGAL_NUM_BINS_VALUES = [0, 10]
 
 
 class TestHistogram2dFunctionality:
@@ -152,12 +150,12 @@ class TestHistogram2dConstruction:
 
     def test_different_number_of_bins_for_x_and_y_fails_if_wrong_dim(self):
         with pytest.raises(JustBinItException):
-            Histogram2d(IRRELEVANT_TOPIC, ILLEGAL_NUM_BINS_DIMS, 
+            Histogram2d(IRRELEVANT_TOPIC, [5, 10, 15], 
                         IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE)
 
     def test_different_number_of_bins_for_x_and_y_fails_with_negative_values(self):
         with pytest.raises(JustBinItException):
-            Histogram2d(IRRELEVANT_TOPIC, ILLEGAL_NUM_BINS_VALUES, 
+            Histogram2d(IRRELEVANT_TOPIC, [0, 10], 
                         IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE)
 
     def test_if_no_id_specified_then_empty_string(self):
