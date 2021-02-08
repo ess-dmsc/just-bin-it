@@ -26,8 +26,8 @@ def check_bins(num_bins, missing, invalid):
         if len(num_bins) != 2:
             invalid.append("Dimension of number of bins")
             return
-        check_int(num_bins[0], "y", invalid)
-        check_int(num_bins[1], "x", invalid)
+        check_int(num_bins[0], "x", invalid)
+        check_int(num_bins[1], "y", invalid)
     else:
         invalid.append("Unknown type of num_bins")
 
