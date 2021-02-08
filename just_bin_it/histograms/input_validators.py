@@ -20,12 +20,13 @@ def check_bins(num_bins, missing, invalid):
     if isinstance(num_bins, int):
         if num_bins < 1:
             invalid.append("Number of bins")
-
     elif isinstance(num_bins, (list, tuple)):
         if len(num_bins) != 2:
             invalid.append("Dimension of number of bins")
         elif num_bins[0] < 1 or num_bins[1] < 1:
             invalid.append("Range of number of bins")
+    else:
+        invalid.append("Unknown type of num_bins")
 
 
 def check_int(value, field, invalid):

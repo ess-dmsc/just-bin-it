@@ -20,6 +20,29 @@ class TestHistogram2dFunctionality:
         self.data = np.array([x for x in range(self.num_bins)])
         self.hist = Histogram2d("topic", self.num_bins, self.tof_range, self.det_range)
 
+
+    def test_different_number_of_bins_for_x_and_y_works(self):
+        num_bins_xy = [5, 10]
+        hist_xy = Histogram2d("topic", num_bins_xy, self.tof_range,
+                              self.det_range)
+        assert len(hist_xy.x_edges) == num_bins_xy[0] + 1
+        assert len(hist_xy.y_edges) == num_bins_xy[1] + 1
+
+
+    def test_different_number_of_bins_for_x_and_y_fails_if_wrong_dim(self):
+        with pytest.raises(JustBinItException):
+            Histogram2d("topic", [5, 10, 15], self.tof_range,
+                        self.det_range)
+        with pytest.raises(JustBinItException):
+            Histogram2d("topic", (5, 10, 15), self.tof_range,
+                        self.det_range)
+
+    def test_different_number_of_bins_for_x_and_y_fails_with_negative_values(self):
+        with pytest.raises(JustBinItException):
+            Histogram2d("topic", [0, 10], self.tof_range,
+                        self.det_range)
+
+
     def test_on_construction_histogram_is_uninitialised(self):
         assert self.hist.x_edges is not None
         assert self.hist.y_edges is not None
