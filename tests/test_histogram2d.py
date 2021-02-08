@@ -22,10 +22,14 @@ class TestHistogram2dFunctionality:
 
     def test_different_number_of_bins_for_x_and_y_works(self):
         num_bins_xy = [5, 10]
-        hist_xy = Histogram2d("topic", num_bins_xy, self.tof_range,
-                              self.det_range)
-        assert len(hist_xy.x_edges) == num_bins_xy[0] + 1
-        assert len(hist_xy.y_edges) == num_bins_xy[1] + 1
+        hist = Histogram2d("topic", num_bins_xy, self.tof_range, self.det_range)
+        assert len(hist.x_edges) == num_bins_xy[0] + 1
+        assert len(hist.y_edges) == num_bins_xy[1] + 1
+        assert hist.shape == tuple(num_bins_xy)
+
+        # add data and check the shape of histogram
+        hist.add_data(self.pulse_time, self.data, self.data)
+        assert hist.data.shape == tuple(num_bins_xy)
 
     def test_on_construction_histogram_is_uninitialised(self):
         assert self.hist.x_edges is not None
@@ -150,13 +154,18 @@ class TestHistogram2dConstruction:
 
     def test_different_number_of_bins_for_x_and_y_fails_if_wrong_dim(self):
         with pytest.raises(JustBinItException):
-            Histogram2d(IRRELEVANT_TOPIC, [5, 10, 15], 
-                        IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE)
+            Histogram2d(
+                IRRELEVANT_TOPIC,
+                [5, 10, 15],
+                IRRELEVANT_TOF_RANGE,
+                IRRELEVANT_DET_RANGE,
+            )
 
     def test_different_number_of_bins_for_x_and_y_fails_with_negative_values(self):
         with pytest.raises(JustBinItException):
-            Histogram2d(IRRELEVANT_TOPIC, [0, 10], 
-                        IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE)
+            Histogram2d(
+                IRRELEVANT_TOPIC, [0, 10], IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE
+            )
 
     def test_if_no_id_specified_then_empty_string(self):
         histogram = Histogram2d(
