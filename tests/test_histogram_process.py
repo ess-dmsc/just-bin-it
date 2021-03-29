@@ -62,6 +62,7 @@ class MockEventSource:
         return self.stop_time
 
 
+@pytest.mark.slow
 class TestHistogramProcessLowLevel:
     @pytest.fixture(autouse=True)
     def prepare(self):
@@ -232,6 +233,7 @@ def _create_mocked_histogram_process(monkeypatch, publish_interval=1):
     process.stop()
 
 
+@pytest.mark.slow
 def test_if_stats_message_waiting_then_can_be_retrieved(monkeypatch):
     with _create_mocked_histogram_process(monkeypatch) as process:
         # Give initial stats message time to arrive.
@@ -240,6 +242,7 @@ def test_if_stats_message_waiting_then_can_be_retrieved(monkeypatch):
         assert len(process.get_stats()) > 0
 
 
+@pytest.mark.slow
 def test_no_stats_message_waiting_then_get_none(monkeypatch):
     with _create_mocked_histogram_process(
         monkeypatch, publish_interval=10000
@@ -254,6 +257,7 @@ def test_no_stats_message_waiting_then_get_none(monkeypatch):
         assert process.get_stats() is None
 
 
+@pytest.mark.slow
 def test_on_clear_message_histograms_are_cleared(monkeypatch):
     with _create_mocked_histogram_process(monkeypatch) as process:
         # Give it time to get going.
