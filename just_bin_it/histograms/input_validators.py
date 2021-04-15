@@ -18,7 +18,7 @@ def is_valid(
         ):
             return False
     if length and len(value) != length:
-        print(f'length and len(value): {length}, {len(value)}')
+        print(f"length and len(value): {length}, {len(value)}")
         return False
     if limits and not (limits[0] <= value <= limits[1]):
         return False
@@ -41,13 +41,7 @@ def check_bins(num_bins, missing, invalid):
         return
 
     if not (
-        is_valid(num_bins, dtype=int, validator=lambda x: x > 0)
-        or is_valid(
-            num_bins,
-            dtype=Iterable,
-            length=2,
-            validator=lambda x: all(y > 0 for y in x),
-        )
+        is_valid(num_bins, dtype=int) or is_valid(num_bins, dtype=Iterable, length=2,)
     ):
         invalid.append("number of bins")  # pragma: no mutate
         return
