@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 import pytest
 from confluent_kafka.admin import AdminClient, NewTopic
@@ -38,6 +39,8 @@ class TestKafkaConsumer:
         self.producer = KafkaProducer(bootstrap_servers=BROKERS)
 
         self.num_messages = 50
+        # Ugly: give everything a chance to get going
+        time.sleep(5)
 
     def put_messages_in(self, topic_name, number_messages):
         # Put messages in
