@@ -35,11 +35,12 @@ def convert_for_plotting(histogram_data):
     return [hist]
 
 
-def main(brokers, topic):
+def main(brokers, topic, log_scale_for_2d):
     """
 
     :param brokers: The brokers to listen for data on.
     :param topic: The topic to listen for data on.
+    :param log_scale_for_2d: Whether to plot 2D images on a log scale
     """
     # Create the listener
     hist_consumer = Consumer(brokers, [topic])
@@ -54,7 +55,7 @@ def main(brokers, topic):
     _, _, hist_data = buffs[-1]
 
     hists = convert_for_plotting(hist_data)
-    plot_histograms(hists)
+    plot_histograms(hists, log_scale_for_2d)
 
 
 if __name__ == "__main__":
@@ -74,5 +75,9 @@ if __name__ == "__main__":
         "-t", "--topic", type=str, help="the histogram data topic", required=True
     )
 
+    required_args.add_argument(
+        "-l", "--log-scale", type=bool, help="the histogram data topic", default=False
+    )
+
     args = parser.parse_args()
-    main(args.brokers, args.topic)
+    main(args.brokers, args.topic, args.log_scale)

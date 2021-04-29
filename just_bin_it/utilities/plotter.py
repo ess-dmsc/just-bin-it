@@ -1,7 +1,8 @@
 import numpy as np
+from matplotlib import colors
 
 
-def plot_histograms(histograms):
+def plot_histograms(histograms, log_scale_for_2d=False):
     """
     Plot the histograms.
 
@@ -22,8 +23,18 @@ def plot_histograms(histograms):
             # Is 2-D
             x, y = np.meshgrid(hist.x_edges, hist.y_edges)
             ax = fig.add_subplot(plot_num_base + i)
-            # Need to transpose the data for display
-            ax.pcolormesh(x, y, hist.data.T)
+
+            # Note: need to transpose the data for display
+            if log_scale_for_2d:
+                min_value = hist.data.min() if hist.data.min() > 0 else 1
+                ax.pcolormesh(
+                    x,
+                    y,
+                    hist.data.T,
+                    norm=colors.LogNorm(vmin=min_value, vmax=hist.data.max()),
+                )
+            else:
+                ax.pcolormesh(x, y, hist.data.T)
             # And flip the y-axis to match ESS geometry definition
             ax.invert_yaxis()
         else:
