@@ -6,9 +6,13 @@ from just_bin_it.histograms.histogram1d import (
     Histogram1d,
     validate_hist_1d,
 )
-from just_bin_it.histograms.histogram2d import TOF_2D_TYPE, Histogram2d
+from just_bin_it.histograms.histogram2d import (
+    TOF_2D_TYPE,
+    Histogram2d,
+    validate_hist_2d,
+)
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE, DetHistogram
-from tests.test_config_validation import validate_hist_2d, validate_hist_2d_map
+from tests.test_config_validation import validate_hist_2d_map
 
 
 def parse_config(configuration, current_time_ms=None):

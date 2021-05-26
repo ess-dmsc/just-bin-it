@@ -2,7 +2,61 @@ import logging
 
 import numpy as np
 
+from just_bin_it.histograms.input_validators import (
+    check_bins,
+    check_data_brokers,
+    check_data_topics,
+    check_det_range,
+    check_id,
+    check_source,
+    check_tof,
+    check_topic,
+)
+
 TOF_2D_TYPE = "hist2d"
+
+
+def validate_hist_2d(histogram_config):
+    required = [
+        "tof_range",
+        "num_bins",
+        "topic",
+        "data_topics",
+        "data_brokers",
+        "det_range",
+        "type",
+    ]
+    if any(req not in histogram_config for req in required):
+        return False
+
+    if histogram_config["type"] != TOF_2D_TYPE:
+        return False
+
+    if not check_tof(histogram_config["tof_range"]):
+        return False
+
+    if not check_bins(histogram_config["num_bins"]):
+        return False
+
+    if not check_topic(histogram_config["topic"]):
+        return False
+
+    if not check_data_topics(histogram_config["data_topics"]):
+        return False
+
+    if not check_data_brokers(histogram_config["data_brokers"]):
+        return False
+
+    if not check_det_range(histogram_config["det_range"]):
+        return False
+
+    if "id" in histogram_config and not check_id(histogram_config["id"]):
+        return False
+
+    if "source" in histogram_config and not check_source(histogram_config["source"]):
+        return False
+
+    return True
 
 
 class Histogram2d:
