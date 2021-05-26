@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 IRRELEVANT_TOPIC = "some-topic"
@@ -36,14 +35,10 @@ class TestHistogram2dMapFunctionality:
         self.height = 5
         self.data = generate_image(self.width, self.height)
 
-        self.hist = DetHistogram(
-            "topic", self.det_range, self.width, self.height
-        )
+        self.hist = DetHistogram("topic", self.det_range, self.width, self.height)
 
     def test_adding_data_to_detector_range_which_does_not_start_at_zero_is_okay(self):
-        hist = DetHistogram(
-            IRRELEVANT_TOPIC, (3, 27), self.width, self.height
-        )
+        hist = DetHistogram(IRRELEVANT_TOPIC, (3, 27), self.width, self.height)
 
         hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data)
 
@@ -114,15 +109,15 @@ class TestHistogram2dMapFunctionality:
 
     def test_only_data_with_correct_source_is_added(self):
         hist = DetHistogram(
-            IRRELEVANT_TOPIC,
-            self.det_range,
-            self.width,
-            self.height,
-            source="source1",
+            IRRELEVANT_TOPIC, self.det_range, self.width, self.height, source="source1"
         )
 
-        hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data, source="source1")
-        hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data, source="source1")
+        hist.add_data(
+            self.pulse_time, IRRELEVANT_TOF_RANGE, self.data, source="source1"
+        )
+        hist.add_data(
+            self.pulse_time, IRRELEVANT_TOF_RANGE, self.data, source="source1"
+        )
         hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data, source="OTHER")
 
         assert hist.data.sum() == len(self.data) * 2
@@ -157,67 +152,9 @@ class TestHistogram2dMapFunctionality:
 
 
 class TestHistogram2dMapConstruction:
-
-    def test_if_width_not_numeric_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(
-                IRRELEVANT_TOPIC,
-                IRRELEVANT_DET_RANGE,
-                None,
-                IRRELEVANT_HEIGHT,
-            )
-
-    def test_if_width_not_greater_than_0_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(
-                IRRELEVANT_TOPIC,
-                IRRELEVANT_DET_RANGE,
-                0,
-                IRRELEVANT_HEIGHT,
-            )
-
-    def test_if_height_not_numeric_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(
-                IRRELEVANT_TOPIC,
-                IRRELEVANT_DET_RANGE,
-                IRRELEVANT_WIDTH,
-                None,
-            )
-
-    def test_if_height_not_greater_than_0_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(
-                IRRELEVANT_TOPIC,
-                IRRELEVANT_DET_RANGE,
-                IRRELEVANT_WIDTH,
-                0,
-            )
-
-    def test_if_det_range_is_missing_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(
-                IRRELEVANT_TOPIC,
-                None,
-                IRRELEVANT_WIDTH,
-                IRRELEVANT_HEIGHT,
-            )
-
-    def test_if_det_range_is_not_two_values_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(
-                IRRELEVANT_TOPIC,
-                (1,),
-                IRRELEVANT_WIDTH,
-                IRRELEVANT_HEIGHT,
-            )
-
     def test_if_no_id_specified_then_empty_string(self):
         histogram = DetHistogram(
-            IRRELEVANT_TOPIC,
-            IRRELEVANT_DET_RANGE,
-            IRRELEVANT_WIDTH,
-            IRRELEVANT_HEIGHT,
+            IRRELEVANT_TOPIC, IRRELEVANT_DET_RANGE, IRRELEVANT_WIDTH, IRRELEVANT_HEIGHT
         )
 
         assert histogram.identifier == ""

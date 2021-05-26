@@ -4,30 +4,59 @@ import numpy as np
 
 from just_bin_it.histograms.input_validators import (
     check_bins,
+    check_data_brokers,
+    check_data_topics,
     check_det_range,
+    check_id,
+    check_source,
     check_tof,
-    generate_exception,
+    check_topic,
 )
 
+TOF_2D_TYPE = "hist2d"
 
-def _validate_parameters(num_bins, tof_range, det_range):
-    """
-    Checks that the required parameters are defined, if not throw.
 
-    Note: probably not entirely bullet-proof but a good first defence.
+def validate_hist_2d(histogram_config):
+    required = [
+        "tof_range",
+        "num_bins",
+        "topic",
+        "data_topics",
+        "data_brokers",
+        "det_range",
+        "type",
+    ]
+    if any(req not in histogram_config for req in required):
+        return False
 
-    :param num_bins: The number of histogram bins.
-    :param tof_range: The time-of-flight range.
-    :param det_range: The detector range.
-    """
-    missing = []
-    invalid = []
+    if histogram_config["type"] != TOF_2D_TYPE:
+        return False
 
-    check_tof(tof_range, missing, invalid)
-    check_det_range(det_range, missing, invalid)
-    check_bins(num_bins, missing, invalid)
-    if missing or invalid:
-        generate_exception(missing, invalid, "2D")
+    if not check_tof(histogram_config["tof_range"]):
+        return False
+
+    if not check_bins(histogram_config["num_bins"]):
+        return False
+
+    if not check_topic(histogram_config["topic"]):
+        return False
+
+    if not check_data_topics(histogram_config["data_topics"]):
+        return False
+
+    if not check_data_brokers(histogram_config["data_brokers"]):
+        return False
+
+    if not check_det_range(histogram_config["det_range"]):
+        return False
+
+    if "id" in histogram_config and not check_id(histogram_config["id"]):
+        return False
+
+    if "source" in histogram_config and not check_source(histogram_config["source"]):
+        return False
+
+    return True
 
 
 class Histogram2d:
@@ -44,7 +73,6 @@ class Histogram2d:
         :param source: The data source to histogram.
         :param identifier: An optional identifier for the histogram.
         """
-        _validate_parameters(num_bins, tof_range, det_range)
         self._histogram = None
         self.x_edges = None
         self.y_edges = None

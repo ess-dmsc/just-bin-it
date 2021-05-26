@@ -107,12 +107,12 @@ A JSON histogramming configuration has the following parameters:
     * "data_topics" (string array): the topics to listen for event data on
     * "tof_range" (array of ints): the time-of-flight range to histogram (hist1d and hist2d only)
     * "det_range" (array of ints): the range of detectors to histogram (optional for hist1d)
-    * "width" (int): the width of the detector (dethist only)
-    * "height" (int): the height of the detector (dethist only)
     * "num_bins" (int for 1D or [int, int] for 2D): the number of histogram bins (hist1d and hist2d only)
     * "topic" (string): the topic to write histogram data to
-    * "source" (string): the name of the source to accept data from
+    * "source" (string): the name of the source to accept data from (optional)
     * "id" (string): a unique identifier for the histogram which will be contained in the published histogram data (optional but recommended)
+    * "width" (int): the width of the detector (dethist only)
+    * "height" (int): the height of the detector (dethist only)
 
 For example:
 ```json
@@ -156,10 +156,6 @@ For example:
   ]
 }
 ```
-
-##### A note about the old style configuration syntax
-The previous configuration style had the `data_brokers` and `data_topics` defined globally rather per histogram.
-For the short-term, that style of configuration will continue to work but may disappear without warning.
 
 #### Counting for a specified time
 By default just-bin-it will start counting from when it receives the configuration

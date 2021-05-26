@@ -1,41 +1,73 @@
 import logging
+import numbers
 
 import numpy as np
 
 from just_bin_it.histograms.input_validators import (
+    check_data_brokers,
+    check_data_topics,
     check_det_range,
-    check_int,
-    check_tof,
-    generate_exception,
+    check_id,
+    check_source,
+    check_topic,
 )
 
+MAP_TYPE = "dethist"
 
-def _validate_parameters(det_range, width, height):
-    """
-    Checks that the required parameters are defined, if not throw.
 
-    Note: probably not entirely bullet-proof but a good first defence.
+def validate_hist_2d_map(histogram_config):
+    required = [
+        "topic",
+        "data_topics",
+        "data_brokers",
+        "det_range",
+        "width",
+        "height",
+        "type",
+    ]
+    if any(req not in histogram_config for req in required):
+        return False
 
-    :param det_range: The detector range.
-    :param width: The detector width.
-    :param height: The detector height.
-    """
-    missing = []
-    invalid = []
+    if histogram_config["type"] != MAP_TYPE:
+        return False
 
-    check_det_range(det_range, missing, invalid)
-    check_int(width, "width", invalid)
-    check_int(height, "height", invalid)
-    if missing or invalid:
-        generate_exception(missing, invalid, "2D Map")
+    if not check_topic(histogram_config["topic"]):
+        return False
+
+    if not check_data_topics(histogram_config["data_topics"]):
+        return False
+
+    if not check_data_brokers(histogram_config["data_brokers"]):
+        return False
+
+    if not check_det_range(histogram_config["det_range"]):
+        return False
+
+    if (
+        not isinstance(histogram_config["height"], numbers.Number)
+        or histogram_config["height"] < 1
+    ):
+        return False
+
+    if (
+        not isinstance(histogram_config["width"], numbers.Number)
+        or histogram_config["width"] < 1
+    ):
+        return False
+
+    if "id" in histogram_config and not check_id(histogram_config["id"]):
+        return False
+
+    if "source" in histogram_config and not check_source(histogram_config["source"]):
+        return False
+
+    return True
 
 
 class DetHistogram:
     """Two dimensional histogram for detectors."""
 
-    def __init__(
-        self, topic, det_range, width, height, source="", identifier=""
-    ):
+    def __init__(self, topic, det_range, width, height, source="", identifier=""):
         """
         Constructor.
         :param topic: The name of the Kafka topic to publish to.
@@ -45,7 +77,6 @@ class DetHistogram:
         :param height:
         :param identifier: An optional identifier for the histogram.
         """
-        _validate_parameters(det_range, width, height)
         self._histogram = None
         self.x_edges = None
         self.det_range = det_range

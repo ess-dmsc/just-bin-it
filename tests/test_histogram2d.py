@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.histogram2d import Histogram2d
 
 IRRELEVANT_TOPIC = "some-topic"
@@ -120,65 +119,6 @@ class TestHistogram2dFunctionality:
 
 
 class TestHistogram2dConstruction:
-    def test_if_tof_missing_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, None, IRRELEVANT_DET_RANGE
-            )
-
-    def test_if_tof_is_not_two_values_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, (1,), IRRELEVANT_DET_RANGE
-            )
-
-    def test_if_bins_not_numeric_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC, ("a", "b"), IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE
-            )
-
-    def test_if_bins_less_than_one_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC, (0, 10), IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE
-            )
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC, (10, 0), IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE
-            )
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC, (-10, 10), IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE
-            )
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC, (10, -10), IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE
-            )
-
-    def test_if_det_range_is_not_two_values_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, IRRELEVANT_TOF_RANGE, (1,)
-            )
-
-    def test_if_number_of_bin_dimensions_exceeds_two_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC,
-                [5, 10, 15],
-                IRRELEVANT_TOF_RANGE,
-                IRRELEVANT_DET_RANGE,
-            )
-
-    def test_one_bin_number_and_less_than_one_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram2d(IRRELEVANT_TOPIC, 0, IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE)
-        with pytest.raises(JustBinItException):
-            Histogram2d(
-                IRRELEVANT_TOPIC, -10, IRRELEVANT_TOF_RANGE, IRRELEVANT_DET_RANGE
-            )
-
     def test_if_no_id_specified_then_empty_string(self):
         histogram = Histogram2d(
             IRRELEVANT_TOPIC,

@@ -1,23 +1,31 @@
 import logging
 import time
 
-from just_bin_it.histograms.histogram1d import Histogram1d
-from just_bin_it.histograms.histogram2d import Histogram2d
-from just_bin_it.histograms.histogram2d_map import DetHistogram
+from just_bin_it.histograms.histogram1d import (
+    TOF_1D_TYPE,
+    Histogram1d,
+    validate_hist_1d,
+)
+from just_bin_it.histograms.histogram2d import (
+    TOF_2D_TYPE,
+    Histogram2d,
+    validate_hist_2d,
+)
+from just_bin_it.histograms.histogram2d_map import (
+    MAP_TYPE,
+    DetHistogram,
+    validate_hist_2d_map,
+)
 
 
 def parse_config(configuration, current_time_ms=None):
     """
     Parses the configuration that defines the histograms.
 
-    Currently handles both the old-style syntax and the new one (see docs).
-
     :param configuration: The dictionary containing the configuration.
     :param current_time_ms: The time to use for defining the start time (milliseconds).
     :return: tuple of start time, stop time and the list of histograms
     """
-    brokers = configuration["data_brokers"] if "data_brokers" in configuration else None
-    topics = configuration["data_topics"] if "data_topics" in configuration else None
     start = configuration["start"] if "start" in configuration else None
     stop = configuration["stop"] if "stop" in configuration else None
 
@@ -42,23 +50,20 @@ def parse_config(configuration, current_time_ms=None):
 
     if "histograms" in configuration:
         for hist in configuration["histograms"]:
-            if _is_old_style_config(hist):
-                _handle_old_style_config(brokers, hist, topics)
+            if hist["type"] == TOF_1D_TYPE:
+                if not validate_hist_1d(hist):
+                    raise Exception("Could not parse 1d histogram")
+            elif hist["type"] == TOF_2D_TYPE:
+                if not validate_hist_2d(hist):
+                    raise Exception("Could not parse 2d histogram")
+            elif hist["type"] == MAP_TYPE:
+                if not validate_hist_2d_map(hist):
+                    raise Exception("Could not parse 2d map")
+            else:
+                raise Exception("Unexpected histogram type")
             hist_configs.append(hist)
 
     return start, stop, hist_configs
-
-
-def _handle_old_style_config(brokers, hist, topics):
-    # Old style configs have the brokers and topics defined at the top-level.
-    if not brokers or not topics:
-        raise Exception("Either the data brokers or data topics were not supplied")
-    hist["data_brokers"] = brokers
-    hist["data_topics"] = topics
-
-
-def _is_old_style_config(hist):
-    return "data_brokers" not in hist or "data_topics" not in hist
 
 
 class HistogramFactory:
@@ -84,15 +89,15 @@ class HistogramFactory:
             identifier = config["id"] if "id" in config else ""
 
             try:
-                if hist_type == "hist1d":
+                if hist_type == TOF_1D_TYPE:
                     histogram = Histogram1d(
                         topic, num_bins, tof_range, det_range, source, identifier
                     )
-                elif hist_type == "hist2d":
+                elif hist_type == TOF_2D_TYPE:
                     histogram = Histogram2d(
                         topic, num_bins, tof_range, det_range, source, identifier
                     )
-                elif hist_type == "dethist":
+                elif hist_type == MAP_TYPE:
                     width = config["width"] if "width" in config else 512
                     height = config["height"] if "height" in config else 512
                     histogram = DetHistogram(

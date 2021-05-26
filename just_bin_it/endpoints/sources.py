@@ -11,6 +11,7 @@ from just_bin_it.endpoints.serialisation import (
     deserialise_hs00,
 )
 from just_bin_it.exceptions import SourceException, TooOldTimeRequestedException
+from just_bin_it.histograms.histogram2d_map import MAP_TYPE
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
@@ -155,7 +156,7 @@ class SimulatedEventSource:
         self.start = start if start else int(time.time() * 1000)
         self.stop = stop
 
-        if config["type"] == "dethist":
+        if config["type"] == MAP_TYPE:
             # Different behaviour for this type of histogram
             self.is_dethist = True
             self.width = config["width"]

@@ -1,15 +1,15 @@
 from copy import deepcopy
 
-from just_bin_it.histograms.histogram1d import Histogram1d
-from just_bin_it.histograms.histogram2d import Histogram2d
-from just_bin_it.histograms.histogram2d_map import DetHistogram
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE, Histogram1d
+from just_bin_it.histograms.histogram2d import TOF_2D_TYPE, Histogram2d
+from just_bin_it.histograms.histogram2d_map import MAP_TYPE, DetHistogram
 from just_bin_it.histograms.histogram_factory import HistogramFactory
 
 CONFIG_1D = [
     {
         "data_brokers": ["localhost:9092", "someserver:9092"],
         "data_topics": ["my_topic"],
-        "type": "hist1d",
+        "type": TOF_1D_TYPE,
         "tof_range": [20, 2000],
         "det_range": [0, 500],
         "num_bins": 50,
@@ -23,7 +23,7 @@ CONFIG_2D = [
     {
         "data_brokers": ["localhost:9092", "someserver:9092"],
         "data_topics": ["my_topic"],
-        "type": "hist2d",
+        "type": TOF_2D_TYPE,
         "tof_range": [20, 2000],
         "det_range": [0, 500],
         "num_bins": 50,
@@ -38,7 +38,7 @@ CONFIG_2D_MAP = [
     {
         "data_brokers": ["localhost:9092", "someserver:9092"],
         "data_topics": ["my_topic"],
-        "type": "dethist",
+        "type": MAP_TYPE,
         "det_range": [1, 6144],
         "width": 32,
         "height": 192,

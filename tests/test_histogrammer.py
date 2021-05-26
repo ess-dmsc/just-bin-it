@@ -5,25 +5,30 @@ import pytest
 
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.endpoints.serialisation import EventData, deserialise_hs00
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
+from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
+from just_bin_it.histograms.histogram2d_map import MAP_TYPE
 from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from tests.doubles.producers import SpyProducer
 
 START_CONFIG = {
     "cmd": "config",
-    "data_brokers": ["fakehost:9092"],
-    "data_topics": ["LOQ_events"],
     "start": 1000 * 10 ** 3,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
+            "data_brokers": ["fakehost:9092"],
+            "data_topics": ["LOQ_events"],
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "hist-topic1",
             "id": "abcdef",
         },
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
+            "data_brokers": ["fakehost:9092"],
+            "data_topics": ["LOQ_events"],
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "hist-topic2",
@@ -34,12 +39,12 @@ START_CONFIG = {
 
 START_2D_CONFIG = {
     "cmd": "config",
-    "data_brokers": ["fakehost:9092"],
-    "data_topics": ["LOQ_events"],
     "start": 1000 * 10 ** 3,
     "histograms": [
         {
-            "type": "hist2d",
+            "type": TOF_2D_TYPE,
+            "data_brokers": ["fakehost:9092"],
+            "data_topics": ["LOQ_events"],
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
@@ -47,7 +52,9 @@ START_2D_CONFIG = {
             "id": "abcdef",
         },
         {
-            "type": "hist2d",
+            "type": TOF_2D_TYPE,
+            "data_brokers": ["fakehost:9092"],
+            "data_topics": ["LOQ_events"],
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
@@ -55,13 +62,15 @@ START_2D_CONFIG = {
             "id": "ghijk",
         },
         {
-            "type": "dethist",
+            "type": MAP_TYPE,
+            "data_brokers": ["fakehost:9092"],
+            "data_topics": ["LOQ_events"],
             "det_range": [0, 100],
-            "num_bins": 50,
+            "width": 100,
+            "height": 100,
             "topic": "hist-topic3",
             "id": "xyzvfr",
         },
-        
     ],
 }
 
@@ -74,12 +83,12 @@ NO_HIST_CONFIG = {
 
 STOP_CONFIG = {
     "cmd": "config",
-    "data_brokers": ["fakehost:9092"],
-    "data_topics": ["LOQ_events"],
     "stop": 1001 * 10 ** 3,
     "histograms": [
         {
-            "type": "hist1d",
+            "data_brokers": ["fakehost:9092"],
+            "data_topics": ["LOQ_events"],
+            "type": TOF_1D_TYPE,
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "hist-topic2",
@@ -222,7 +231,7 @@ class TestHistogrammer:
         assert histogrammer.histograms[1].data.sum() == 28
 
     def test_before_counting_published_histogram_is_labelled_to_indicate_not_started(
-        self
+        self,
     ):
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
 
@@ -356,7 +365,7 @@ class TestHistogrammer:
         assert stats[1]["diff"] == 0
 
     def test_if_no_data_after_start_time_and_stop_time_exceeded_histogram_is_finished(
-        self
+        self,
     ):
         config = copy.deepcopy(START_CONFIG)
         config["start"] = 1003 * 10 ** 3
@@ -372,7 +381,7 @@ class TestHistogrammer:
         assert info["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_if_no_data_after_start_time_and_stop_time_not_exceeded_histogram_is_not_finished(
-        self
+        self,
     ):
         config = copy.deepcopy(START_CONFIG)
         config["start"] = 1003 * 10 ** 3
@@ -397,7 +406,7 @@ class TestHistogrammer:
         assert info["stop"] == 1005 * 10 ** 3
 
     def test_if_start_time_and_stop_time_not_defined_then_they_are_not_in_the_info(
-        self
+        self,
     ):
         config = copy.deepcopy(START_CONFIG)
         del config["start"]

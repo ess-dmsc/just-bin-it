@@ -2,6 +2,9 @@ import copy
 
 import pytest
 
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
+from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
+from just_bin_it.histograms.histogram2d_map import MAP_TYPE
 from just_bin_it.histograms.histogram_factory import parse_config
 
 CONFIG_FULL = {
@@ -10,24 +13,37 @@ CONFIG_FULL = {
     "stop": 1571831125940,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "data_brokers": ["localhost:9092"],
-            "data_topics": ["junk_data_2"],
+            "data_topics": ["junk_data_1"],
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
-            "topic": "hist-topic1",
-            "id": "abcdef",
+            "topic": "hist_topic1",
+            "id": "some_id1",
+            "source": "source1",
         },
         {
-            "type": "hist1d",
+            "type": TOF_2D_TYPE,
             "data_brokers": ["localhost:9092"],
             "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
-            "topic": "hist-topic2",
-            "id": "ghijk",
+            "topic": "hist_topic2",
+            "id": "some_id2",
+            "source": "source1",
+        },
+        {
+            "type": MAP_TYPE,
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["junk_data_3"],
+            "det_range": [1, 10000],
+            "width": 100,
+            "height": 100,
+            "topic": "hist_topic3",
+            "id": "some_id3",
+            "source": "source3",
         },
     ],
 }
@@ -37,7 +53,7 @@ CONFIG_INTERVAL = {
     "interval": 5,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "data_brokers": ["localhost:9092"],
             "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
@@ -47,7 +63,7 @@ CONFIG_INTERVAL = {
             "id": "abcdef",
         },
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "data_brokers": ["localhost:9092"],
             "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
@@ -64,7 +80,7 @@ CONFIG_NO_DET_RANGE = {
     "interval": 5,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "data_brokers": ["localhost:9092"],
             "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
@@ -81,33 +97,58 @@ class TestConfigParser:
     def prepare(self):
         pass
 
-    def test_if_histograms_then_all_config_settings_added_correctly(self):
+    def test_if_histograms_then_all_settings_added_correctly(self):
         start, stop, hists = parse_config(CONFIG_FULL)
 
-        assert len(hists) == 2
+        assert len(hists) == 3
         assert start == CONFIG_FULL["start"]
         assert stop == CONFIG_FULL["stop"]
 
         for i, h in enumerate(hists):
+            # common to all types
             assert h["data_brokers"] == CONFIG_FULL["histograms"][i]["data_brokers"]
             assert h["data_topics"] == CONFIG_FULL["histograms"][i]["data_topics"]
             assert h["type"] == CONFIG_FULL["histograms"][i]["type"]
-            assert h["tof_range"] == CONFIG_FULL["histograms"][i]["tof_range"]
-            assert h["det_range"] == CONFIG_FULL["histograms"][i]["det_range"]
-            assert h["num_bins"] == CONFIG_FULL["histograms"][i]["num_bins"]
-            assert h["topic"] == CONFIG_FULL["histograms"][i]["topic"]
             assert h["id"] == CONFIG_FULL["histograms"][i]["id"]
+            assert h["source"] == CONFIG_FULL["histograms"][i]["source"]
+            assert h["topic"] == CONFIG_FULL["histograms"][i]["topic"]
 
-    def test_raises_if_no_data_brokers_supplied_for_a_hist(self):
+            # Different for different hist types
+            if "tof_range" in CONFIG_FULL["histograms"][i]:
+                assert h["tof_range"] == CONFIG_FULL["histograms"][i]["tof_range"]
+            if "det_range" in CONFIG_FULL["histograms"][i]:
+                assert h["det_range"] == CONFIG_FULL["histograms"][i]["det_range"]
+            if "num_bins" in CONFIG_FULL["histograms"][i]:
+                assert h["num_bins"] == CONFIG_FULL["histograms"][i]["num_bins"]
+            if "height" in CONFIG_FULL["histograms"][i]:
+                assert h["height"] == CONFIG_FULL["histograms"][i]["height"]
+            if "width" in CONFIG_FULL["histograms"][i]:
+                assert h["width"] == CONFIG_FULL["histograms"][i]["width"]
+
+    def test_raises_if_config_invalid_for_1d_hist(self):
         config = copy.deepcopy(CONFIG_FULL)
         del config["histograms"][0]["data_brokers"]
 
         with pytest.raises(Exception):
             parse_config(config)
 
-    def test_raises_if_no_data_topics_supplied_for_a_hist(self):
+    def test_raises_if_config_invalid_for_2d_hist(self):
         config = copy.deepcopy(CONFIG_FULL)
-        del config["histograms"][0]["data_topics"]
+        del config["histograms"][1]["data_brokers"]
+
+        with pytest.raises(Exception):
+            parse_config(config)
+
+    def test_raises_if_config_invalid_for_2d_map(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        del config["histograms"][2]["data_brokers"]
+
+        with pytest.raises(Exception):
+            parse_config(config)
+
+    def test_if_hist_type_is_unknown_then_parsing_throws(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        config["histograms"][0]["type"] = "UNKNOWN"
 
         with pytest.raises(Exception):
             parse_config(config)
@@ -132,6 +173,13 @@ class TestConfigParser:
     def test_if_interval_negative_then_parsing_throws(self):
         config = copy.deepcopy(CONFIG_INTERVAL)
         config["interval"] = -5
+
+        with pytest.raises(Exception):
+            parse_config(config)
+
+    def test_if_interval_is_non_numeric_parsing_throws(self):
+        config = copy.deepcopy(CONFIG_INTERVAL)
+        config["interval"] = "hello"
 
         with pytest.raises(Exception):
             parse_config(config)

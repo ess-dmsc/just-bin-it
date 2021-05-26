@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.histogram1d import Histogram1d
 
 IRRELEVANT_TOPIC = "some-topic"
@@ -110,28 +109,6 @@ class TestHistogram1dFunctionality:
 
 
 class TestHistogram1dConstruction:
-    def test_if_tof_missing_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram1d(IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, None)
-
-    def test_if_tof_is_not_two_values_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram1d(IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, (1,))
-
-    def test_if_bins_not_numeric_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram1d(IRRELEVANT_TOPIC, None, IRRELEVANT_TOF_RANGE)
-
-    def test_if_bins_not_greater_than_zero_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram1d(IRRELEVANT_TOPIC, 0, IRRELEVANT_TOF_RANGE)
-
-    def test_if_det_range_is_not_two_values_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            Histogram1d(
-                IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, IRRELEVANT_TOF_RANGE, (1,)
-            )
-
     def test_if_no_id_specified_then_empty_string(self):
         histogram = Histogram1d(
             IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, IRRELEVANT_TOF_RANGE

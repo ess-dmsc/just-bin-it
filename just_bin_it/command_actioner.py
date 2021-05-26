@@ -73,9 +73,9 @@ class CommandActioner:
             self._stop_processes(hist_processes)
         elif message["cmd"] == "config":
             logging.info("Config command received")
-            self._stop_processes(hist_processes)
-
             start, stop, hist_configs = parse_config(message)
+
+            self._stop_processes(hist_processes)
 
             try:
                 for config in hist_configs:
