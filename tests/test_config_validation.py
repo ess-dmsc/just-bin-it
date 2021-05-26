@@ -4,8 +4,12 @@ import re
 
 import pytest
 
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
+from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
+from just_bin_it.histograms.histogram2d_map import MAP_TYPE
+
 CONFIG_1D = {
-    "type": "hist1d",
+    "type": TOF_1D_TYPE,
     "data_brokers": ["localhost:9092"],
     "data_topics": ["fake_events_empty"],
     "tof_range": [0, 100_000_000],
@@ -17,7 +21,7 @@ CONFIG_1D = {
 }
 
 CONFIG_2D = {
-    "type": "hist2d",
+    "type": TOF_2D_TYPE,
     "data_brokers": ["localhost:9092"],
     "data_topics": ["fake_events_empty"],
     "tof_range": [0, 100_000_000],
@@ -29,7 +33,7 @@ CONFIG_2D = {
 }
 
 CONFIG_2D_MAP = {
-    "type": "dethist",
+    "type": MAP_TYPE,
     "data_brokers": ["localhost:9092"],
     "data_topics": ["fake_events_empty"],
     "det_range": [1, 10000],
@@ -112,8 +116,11 @@ def check_source(source):
 
 
 def validate_hist_1d(histogram_config):
-    required = ["tof_range", "num_bins", "topic", "data_topics", "data_brokers"]
+    required = ["tof_range", "num_bins", "topic", "data_topics", "data_brokers", "type"]
     if any(req not in histogram_config for req in required):
+        return False
+
+    if histogram_config["type"] != TOF_1D_TYPE:
         return False
 
     if not check_tof(histogram_config["tof_range"]):
@@ -153,8 +160,12 @@ def validate_hist_2d(histogram_config):
         "data_topics",
         "data_brokers",
         "det_range",
+        "type",
     ]
     if any(req not in histogram_config for req in required):
+        return False
+
+    if histogram_config["type"] != TOF_2D_TYPE:
         return False
 
     if not check_tof(histogram_config["tof_range"]):
@@ -185,8 +196,19 @@ def validate_hist_2d(histogram_config):
 
 
 def validate_hist_2d_map(histogram_config):
-    required = ["topic", "data_topics", "data_brokers", "det_range", "width", "height"]
+    required = [
+        "topic",
+        "data_topics",
+        "data_brokers",
+        "det_range",
+        "width",
+        "height",
+        "type",
+    ]
     if any(req not in histogram_config for req in required):
+        return False
+
+    if histogram_config["type"] != MAP_TYPE:
         return False
 
     if not check_topic(histogram_config["topic"]):
@@ -305,10 +327,16 @@ class TestConfigValidationHist1d:
         assert validate_hist_1d(self.config)
 
     @pytest.mark.parametrize(
-        "missing", ["tof_range", "num_bins", "topic", "data_topics", "data_brokers"]
+        "missing",
+        ["tof_range", "num_bins", "topic", "data_topics", "data_brokers", "type"],
     )
     def test_if_required_parameter_missing_then_validation_fails(self, missing):
         del self.config[missing]
+
+        assert not validate_hist_1d(self.config)
+
+    def test_if_hist_type_invalid_fails(self):
+        self.config["type"] = "not correct"
 
         assert not validate_hist_1d(self.config)
 
@@ -364,10 +392,23 @@ class TestConfigValidationHist2d:
 
     @pytest.mark.parametrize(
         "missing",
-        ["tof_range", "num_bins", "topic", "data_topics", "data_brokers", "det_range"],
+        [
+            "tof_range",
+            "num_bins",
+            "topic",
+            "data_topics",
+            "data_brokers",
+            "det_range",
+            "type",
+        ],
     )
     def test_if_required_parameter_missing_then_validation_fails(self, missing):
         del self.config[missing]
+
+        assert not validate_hist_2d(self.config)
+
+    def test_if_hist_type_invalid_fails(self):
+        self.config["type"] = "not correct"
 
         assert not validate_hist_2d(self.config)
 
@@ -423,10 +464,23 @@ class TestConfigValidationMap2d:
 
     @pytest.mark.parametrize(
         "missing",
-        ["topic", "data_topics", "data_brokers", "det_range", "width", "height"],
+        [
+            "topic",
+            "data_topics",
+            "data_brokers",
+            "det_range",
+            "width",
+            "height",
+            "type",
+        ],
     )
     def test_if_required_parameter_missing_then_validation_fails(self, missing):
         del self.config[missing]
+
+        assert not validate_hist_2d_map(self.config)
+
+    def test_if_hist_type_invalid_fails(self):
+        self.config["type"] = "not correct"
 
         assert not validate_hist_2d_map(self.config)
 

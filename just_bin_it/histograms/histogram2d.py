@@ -9,6 +9,8 @@ from just_bin_it.histograms.input_validators import (
     generate_exception,
 )
 
+TOF_2D_TYPE = "hist2d"
+
 
 def _validate_parameters(num_bins, tof_range, det_range):
     """

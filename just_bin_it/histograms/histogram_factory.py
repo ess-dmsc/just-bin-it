@@ -1,9 +1,9 @@
 import logging
 import time
 
-from just_bin_it.histograms.histogram1d import Histogram1d
-from just_bin_it.histograms.histogram2d import Histogram2d
-from just_bin_it.histograms.histogram2d_map import DetHistogram
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE, Histogram1d
+from just_bin_it.histograms.histogram2d import TOF_2D_TYPE, Histogram2d
+from just_bin_it.histograms.histogram2d_map import MAP_TYPE, DetHistogram
 
 
 def parse_config(configuration, current_time_ms=None):
@@ -84,15 +84,15 @@ class HistogramFactory:
             identifier = config["id"] if "id" in config else ""
 
             try:
-                if hist_type == "hist1d":
+                if hist_type == TOF_1D_TYPE:
                     histogram = Histogram1d(
                         topic, num_bins, tof_range, det_range, source, identifier
                     )
-                elif hist_type == "hist2d":
+                elif hist_type == TOF_2D_TYPE:
                     histogram = Histogram2d(
                         topic, num_bins, tof_range, det_range, source, identifier
                     )
-                elif hist_type == "dethist":
+                elif hist_type == MAP_TYPE:
                     width = config["width"] if "width" in config else 512
                     height = config["height"] if "height" in config else 512
                     histogram = DetHistogram(

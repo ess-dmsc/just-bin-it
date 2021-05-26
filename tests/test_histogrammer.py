@@ -5,6 +5,9 @@ import pytest
 
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.endpoints.serialisation import EventData, deserialise_hs00
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
+from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
+from just_bin_it.histograms.histogram2d_map import MAP_TYPE
 from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from tests.doubles.producers import SpyProducer
@@ -16,14 +19,14 @@ START_CONFIG = {
     "start": 1000 * 10 ** 3,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "hist-topic1",
             "id": "abcdef",
         },
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "hist-topic2",
@@ -39,7 +42,7 @@ START_2D_CONFIG = {
     "start": 1000 * 10 ** 3,
     "histograms": [
         {
-            "type": "hist2d",
+            "type": TOF_2D_TYPE,
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
@@ -47,7 +50,7 @@ START_2D_CONFIG = {
             "id": "abcdef",
         },
         {
-            "type": "hist2d",
+            "type": TOF_2D_TYPE,
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
@@ -55,7 +58,7 @@ START_2D_CONFIG = {
             "id": "ghijk",
         },
         {
-            "type": "dethist",
+            "type": MAP_TYPE,
             "det_range": [0, 100],
             "num_bins": 50,
             "topic": "hist-topic3",
@@ -78,7 +81,7 @@ STOP_CONFIG = {
     "stop": 1001 * 10 ** 3,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "hist-topic2",

@@ -1,5 +1,6 @@
 import pytest
 
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram_factory import parse_config
 
 CONFIG_FULL = {
@@ -10,7 +11,7 @@ CONFIG_FULL = {
     "stop": 1571831125940,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,
@@ -18,7 +19,7 @@ CONFIG_FULL = {
             "id": "abcdef",
         },
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "tof_range": [0, 100000000],
             "det_range": [0, 100],
             "num_bins": 50,

@@ -4,6 +4,7 @@ import mock
 import pytest
 
 from just_bin_it.command_actioner import CommandActioner, ResponsePublisher
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 
 TEST_TOPIC = "topic1"
 CONFIG_CMD = {
@@ -14,7 +15,7 @@ CONFIG_CMD = {
     "stop": 1564727668779,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "tof_range": [0, 100000000],
             "num_bins": 50,
             "topic": "output_topic_for_1d",

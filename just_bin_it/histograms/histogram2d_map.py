@@ -8,6 +8,8 @@ from just_bin_it.histograms.input_validators import (
     generate_exception,
 )
 
+MAP_TYPE = "dethist"
+
 
 def _validate_parameters(det_range, width, height):
     """

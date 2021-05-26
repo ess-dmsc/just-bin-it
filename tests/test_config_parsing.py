@@ -2,6 +2,7 @@ import copy
 
 import pytest
 
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram_factory import parse_config
 
 CONFIG_FULL = {
@@ -10,7 +11,7 @@ CONFIG_FULL = {
     "stop": 1571831125940,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "data_brokers": ["localhost:9092"],
             "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
@@ -20,7 +21,7 @@ CONFIG_FULL = {
             "id": "abcdef",
         },
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "data_brokers": ["localhost:9092"],
             "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
@@ -37,7 +38,7 @@ CONFIG_INTERVAL = {
     "interval": 5,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "data_brokers": ["localhost:9092"],
             "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
@@ -47,7 +48,7 @@ CONFIG_INTERVAL = {
             "id": "abcdef",
         },
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "data_brokers": ["localhost:9092"],
             "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
@@ -64,7 +65,7 @@ CONFIG_NO_DET_RANGE = {
     "interval": 5,
     "histograms": [
         {
-            "type": "hist1d",
+            "type": TOF_1D_TYPE,
             "data_brokers": ["localhost:9092"],
             "data_topics": ["junk_data_2"],
             "tof_range": [0, 100000000],
