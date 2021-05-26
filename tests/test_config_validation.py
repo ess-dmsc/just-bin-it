@@ -16,6 +16,18 @@ CONFIG_1D = {
     "source": "some_source",
 }
 
+CONFIG_2D = {
+    "type": "hist2d",
+    "data_brokers": ["localhost:9092"],
+    "data_topics": ["fake_events_empty"],
+    "tof_range": [0, 100_000_000],
+    "det_range": [0, 100],
+    "num_bins": (50, 10),
+    "topic": "hist_topic2",
+    "id": "some_id3",
+    "source": "some_source",
+}
+
 
 def check_tof(tof):
     if not isinstance(tof, (list, tuple)) or len(tof) != 2:
@@ -89,6 +101,47 @@ def check_source(source):
 
 def validate_hist_1d(histogram_config):
     required = ["tof_range", "num_bins", "topic", "data_topics", "data_brokers"]
+    if any(req not in histogram_config for req in required):
+        return False
+
+    if not check_tof(histogram_config["tof_range"]):
+        return False
+
+    if not check_bins(histogram_config["num_bins"]):
+        return False
+
+    if not check_topic(histogram_config["topic"]):
+        return False
+
+    if not check_data_topics(histogram_config["data_topics"]):
+        return False
+
+    if not check_data_brokers(histogram_config["data_brokers"]):
+        return False
+
+    if "det_range" in histogram_config and not check_det_range(
+        histogram_config["det_range"]
+    ):
+        return False
+
+    if "id" in histogram_config and not check_id(histogram_config["id"]):
+        return False
+
+    if "source" in histogram_config and not check_source(histogram_config["source"]):
+        return False
+
+    return True
+
+
+def validate_hist_2d(histogram_config):
+    required = [
+        "tof_range",
+        "num_bins",
+        "topic",
+        "data_topics",
+        "data_brokers",
+        "det_range",
+    ]
     if any(req not in histogram_config for req in required):
         return False
 
@@ -196,64 +249,117 @@ class TestCommonValidation:
 
 
 class TestConfigValidationHist1d:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        self.config = copy.deepcopy(CONFIG_1D)
+
     def test_valid_config(self):
-        config = copy.deepcopy(CONFIG_1D)
-        assert validate_hist_1d(config)
+        assert validate_hist_1d(self.config)
 
     @pytest.mark.parametrize(
         "missing", ["tof_range", "num_bins", "topic", "data_topics", "data_brokers"]
     )
     def test_if_required_parameter_missing_then_validation_fails(self, missing):
-        config = copy.deepcopy(CONFIG_1D)
-        del config[missing]
+        del self.config[missing]
 
-        assert not validate_hist_1d(config)
+        assert not validate_hist_1d(self.config)
 
     def test_if_tof_invalid_then_validation_fails(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["tof_range"] = "string"
+        self.config["tof_range"] = "string"
 
-        assert not validate_hist_1d(config)
+        assert not validate_hist_1d(self.config)
 
     def test_if_num_bins_invalid_then_validation_fails(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["num_bins"] = "string"
+        self.config["num_bins"] = "string"
 
-        assert not validate_hist_1d(config)
+        assert not validate_hist_1d(self.config)
 
     def test_if_topic_invalid_then_validation_fails(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["topic"] = 123
+        self.config["topic"] = 123
 
-        assert not validate_hist_1d(config)
+        assert not validate_hist_1d(self.config)
 
     @pytest.mark.parametrize("missing", ["det_range", "id", "source"])
     def test_if_optional_parameter_missing_then_validation_passes(self, missing):
-        config = copy.deepcopy(CONFIG_1D)
-        del config[missing]
+        del self.config[missing]
 
-        assert validate_hist_1d(config)
+        assert validate_hist_1d(self.config)
 
-    def test_if_optional_parameter_invalid_then_validation_fails(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["det_range"] = 123
+    def test_if_det_range_invalid_then_validation_fails(self):
+        self.config["det_range"] = 123
 
-        assert not validate_hist_1d(config)
+        assert not validate_hist_1d(self.config)
 
     def test_if_id_invalid_then_validation_fails(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["id"] = 123
+        self.config["id"] = 123
 
-        assert not validate_hist_1d(config)
+        assert not validate_hist_1d(self.config)
 
     def test_if_data_topic_invalid_then_validation_fails(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["data_topics"] = [123]
+        self.config["data_topics"] = [123]
 
-        assert not validate_hist_1d(config)
+        assert not validate_hist_1d(self.config)
 
     def test_if_data_broker_invalid_then_validation_fails(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["data_brokers"] = [123]
+        self.config["data_brokers"] = [123]
 
-        assert not validate_hist_1d(config)
+        assert not validate_hist_1d(self.config)
+
+
+class TestConfigValidationHist2d:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        self.config = copy.deepcopy(CONFIG_2D)
+
+    def test_valid_config(self):
+        assert validate_hist_2d(self.config)
+
+    @pytest.mark.parametrize(
+        "missing",
+        ["tof_range", "num_bins", "topic", "data_topics", "data_brokers", "det_range"],
+    )
+    def test_if_required_parameter_missing_then_validation_fails(self, missing):
+        del self.config[missing]
+
+        assert not validate_hist_2d(self.config)
+
+    def test_if_tof_invalid_then_validation_fails(self):
+        self.config["tof_range"] = "string"
+
+        assert not validate_hist_2d(self.config)
+
+    def test_if_num_bins_invalid_then_validation_fails(self):
+        self.config["num_bins"] = "string"
+
+        assert not validate_hist_2d(self.config)
+
+    def test_if_topic_invalid_then_validation_fails(self):
+        self.config["topic"] = 123
+
+        assert not validate_hist_2d(self.config)
+
+    def test_if_det_range_invalid_then_validation_fails(self):
+        self.config["det_range"] = 123
+
+        assert not validate_hist_2d(self.config)
+
+    @pytest.mark.parametrize("missing", ["id", "source"])
+    def test_if_optional_parameter_missing_then_validation_passes(self, missing):
+        del self.config[missing]
+
+        assert validate_hist_2d(self.config)
+
+    def test_if_id_invalid_then_validation_fails(self):
+        self.config["id"] = 123
+
+        assert not validate_hist_2d(self.config)
+
+    def test_if_data_topic_invalid_then_validation_fails(self):
+        self.config["data_topics"] = [123]
+
+        assert not validate_hist_2d(self.config)
+
+    def test_if_data_broker_invalid_then_validation_fails(self):
+        self.config["data_brokers"] = [123]
+
+        assert not validate_hist_2d(self.config)
