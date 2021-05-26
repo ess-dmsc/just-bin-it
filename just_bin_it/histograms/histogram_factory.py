@@ -11,8 +11,11 @@ from just_bin_it.histograms.histogram2d import (
     Histogram2d,
     validate_hist_2d,
 )
-from just_bin_it.histograms.histogram2d_map import MAP_TYPE, DetHistogram
-from tests.test_config_validation import validate_hist_2d_map
+from just_bin_it.histograms.histogram2d_map import (
+    MAP_TYPE,
+    DetHistogram,
+    validate_hist_2d_map,
+)
 
 
 def parse_config(configuration, current_time_ms=None):

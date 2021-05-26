@@ -1,11 +1,10 @@
 import copy
-import numbers
 
 import pytest
 
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE, validate_hist_1d
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE, validate_hist_2d
-from just_bin_it.histograms.histogram2d_map import MAP_TYPE
+from just_bin_it.histograms.histogram2d_map import MAP_TYPE, validate_hist_2d_map
 from just_bin_it.histograms.input_validators import (
     check_bins,
     check_data_brokers,
@@ -52,55 +51,6 @@ CONFIG_2D_MAP = {
     "id": "some_id",
     "source": "some_source",
 }
-
-
-def validate_hist_2d_map(histogram_config):
-    required = [
-        "topic",
-        "data_topics",
-        "data_brokers",
-        "det_range",
-        "width",
-        "height",
-        "type",
-    ]
-    if any(req not in histogram_config for req in required):
-        return False
-
-    if histogram_config["type"] != MAP_TYPE:
-        return False
-
-    if not check_topic(histogram_config["topic"]):
-        return False
-
-    if not check_data_topics(histogram_config["data_topics"]):
-        return False
-
-    if not check_data_brokers(histogram_config["data_brokers"]):
-        return False
-
-    if not check_det_range(histogram_config["det_range"]):
-        return False
-
-    if (
-        not isinstance(histogram_config["height"], numbers.Number)
-        or histogram_config["height"] < 1
-    ):
-        return False
-
-    if (
-        not isinstance(histogram_config["width"], numbers.Number)
-        or histogram_config["width"] < 1
-    ):
-        return False
-
-    if "id" in histogram_config and not check_id(histogram_config["id"]):
-        return False
-
-    if "source" in histogram_config and not check_source(histogram_config["source"]):
-        return False
-
-    return True
 
 
 class TestCommonValidation:
@@ -156,11 +106,11 @@ class TestCommonValidation:
         assert not check_det_range(det_range)
 
     def test_if_source_is_valid_then_passes(self):
-        assert check_id(":: a string ::")
+        assert check_source(":: a string ::")
 
     @pytest.mark.parametrize("hist_id", [123, ["list"]])
     def test_if_source_is_invalid_then_fails(self, hist_id):
-        assert not check_id(hist_id)
+        assert not check_source(hist_id)
 
     def test_if_data_topics_valid_then_passes(self):
         assert check_data_topics(["valid1", "valid2"])
