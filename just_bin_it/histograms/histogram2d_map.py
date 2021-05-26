@@ -2,33 +2,7 @@ import logging
 
 import numpy as np
 
-from just_bin_it.histograms.input_validators import (
-    check_det_range,
-    check_int,
-    generate_exception,
-)
-
 MAP_TYPE = "dethist"
-
-
-def _validate_parameters(det_range, width, height):
-    """
-    Checks that the required parameters are defined, if not throw.
-
-    Note: probably not entirely bullet-proof but a good first defence.
-
-    :param det_range: The detector range.
-    :param width: The detector width.
-    :param height: The detector height.
-    """
-    missing = []
-    invalid = []
-
-    check_det_range(det_range, missing, invalid)
-    check_int(width, "width", invalid)
-    check_int(height, "height", invalid)
-    if missing or invalid:
-        generate_exception(missing, invalid, "2D Map")
 
 
 class DetHistogram:
@@ -44,7 +18,6 @@ class DetHistogram:
         :param height:
         :param identifier: An optional identifier for the histogram.
         """
-        _validate_parameters(det_range, width, height)
         self._histogram = None
         self.x_edges = None
         self.det_range = det_range

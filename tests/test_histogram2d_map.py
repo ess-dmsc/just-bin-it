@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 IRRELEVANT_TOPIC = "some-topic"
@@ -153,32 +152,6 @@ class TestHistogram2dMapFunctionality:
 
 
 class TestHistogram2dMapConstruction:
-    def test_if_width_not_numeric_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(
-                IRRELEVANT_TOPIC, IRRELEVANT_DET_RANGE, None, IRRELEVANT_HEIGHT
-            )
-
-    def test_if_width_not_greater_than_0_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(IRRELEVANT_TOPIC, IRRELEVANT_DET_RANGE, 0, IRRELEVANT_HEIGHT)
-
-    def test_if_height_not_numeric_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(IRRELEVANT_TOPIC, IRRELEVANT_DET_RANGE, IRRELEVANT_WIDTH, None)
-
-    def test_if_height_not_greater_than_0_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(IRRELEVANT_TOPIC, IRRELEVANT_DET_RANGE, IRRELEVANT_WIDTH, 0)
-
-    def test_if_det_range_is_missing_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(IRRELEVANT_TOPIC, None, IRRELEVANT_WIDTH, IRRELEVANT_HEIGHT)
-
-    def test_if_det_range_is_not_two_values_then_histogram_not_created(self):
-        with pytest.raises(JustBinItException):
-            DetHistogram(IRRELEVANT_TOPIC, (1,), IRRELEVANT_WIDTH, IRRELEVANT_HEIGHT)
-
     def test_if_no_id_specified_then_empty_string(self):
         histogram = DetHistogram(
             IRRELEVANT_TOPIC, IRRELEVANT_DET_RANGE, IRRELEVANT_WIDTH, IRRELEVANT_HEIGHT
