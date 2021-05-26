@@ -1,66 +1,72 @@
-from just_bin_it.exceptions import JustBinItException
+import numbers
+import re
 
 
-def check_tof(tof_range, missing, invalid):
-    if tof_range is None:
-        missing.append("TOF range")  # pragma: no mutate
-    elif (
-        not isinstance(tof_range, list)
-        and not isinstance(tof_range, tuple)
-        or len(tof_range) != 2
+def check_tof(tof):
+    if not isinstance(tof, (list, tuple)) or len(tof) != 2:
+        return False
+    if not isinstance(tof[0], numbers.Number) or not isinstance(tof[1], numbers.Number):
+        return False
+    if tof[0] > tof[1]:
+        return False
+    return True
+
+
+def check_det_range(det_range):
+    if not isinstance(det_range, (list, tuple)) or len(det_range) != 2:
+        return False
+    if not isinstance(det_range[0], numbers.Number) or not isinstance(
+        det_range[1], numbers.Number
     ):
-        invalid.append("TOF range")  # pragma: no mutate
+        return False
+    if det_range[0] > det_range[1]:
+        return False
+    return True
 
 
-def check_bins(num_bins, missing, invalid):
-    if num_bins is None:
-        missing.append("number of bins")  # pragma: no mutate
-        return
+def check_bins(num_bins):
+    if isinstance(num_bins, int) and num_bins > 0:
+        return True
 
-    if isinstance(num_bins, int):
-        if num_bins < 1:
-            invalid.append("Number of bins")
-            return
-        check_int(num_bins, "number of bins", invalid)
-    elif isinstance(num_bins, (list, tuple)):
-        if len(num_bins) != 2:
-            invalid.append("Dimension of number of bins")
-            return
-        check_int(num_bins[0], "x", invalid)
-        check_int(num_bins[1], "y", invalid)
-    else:
-        invalid.append("Unknown type of num_bins")
+    if isinstance(num_bins, (list, tuple)) and len(num_bins) == 2:
+        if (
+            isinstance(num_bins[0], int)
+            and num_bins[0] > 0
+            and isinstance(num_bins[1], int)
+            and num_bins[1] > 0
+        ):
+            return True
+
+    return False
 
 
-def check_int(value, field, invalid):
-    if not isinstance(value, int):
-        invalid.append(field)  # pragma: no mutate
-        return
-    if value < 1:
-        invalid.append(field)  # pragma: no mutate
+def check_topic(topic):
+    if not isinstance(topic, str):
+        return False
+    # Matching rules from Kafka documentation
+    if not re.match(r"^[a-zA-Z0-9._\-]+$", topic):
+        return False
+    return True
 
 
-def check_det_range(det_range, missing, invalid):
-    if det_range is None:
-        missing.append("Detector range")  # pragma: no mutate
-    elif (
-        not isinstance(det_range, list)
-        and not isinstance(det_range, tuple)
-        or len(det_range) != 2
-    ):
-        invalid.append("Detector range")  # pragma: no mutate
+def check_data_topics(topics):
+    if not isinstance(topics, (list, tuple)):
+        return False
+
+    return all(check_topic(topic) for topic in topics)
 
 
-def generate_exception(missing, invalid, hist_type):
-    error_msg = ""
+def check_data_brokers(brokers):
+    if not isinstance(brokers, (list, tuple)):
+        return False
 
-    if missing:
-        error_msg += (
-            f"Missing information for {hist_type} histogram: {', '.join(missing)}"
-        )  # pragma: no mutate
-    if invalid:
-        error_msg += (
-            f"Invalid information for {hist_type} histogram:  {', '.join(missing)}"
-        )  # pragma: no mutate
-    if error_msg:
-        raise JustBinItException(error_msg)
+    # For now just check they are strings
+    return all(isinstance(broker, str) for broker in brokers)
+
+
+def check_id(hist_id):
+    return isinstance(hist_id, str)
+
+
+def check_source(source):
+    return isinstance(source, str)

@@ -1,12 +1,21 @@
 import copy
 import numbers
-import re
 
 import pytest
 
-from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE, validate_hist_1d
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
+from just_bin_it.histograms.input_validators import (
+    check_bins,
+    check_data_brokers,
+    check_data_topics,
+    check_det_range,
+    check_id,
+    check_source,
+    check_tof,
+    check_topic,
+)
 
 CONFIG_1D = {
     "type": TOF_1D_TYPE,
@@ -43,113 +52,6 @@ CONFIG_2D_MAP = {
     "id": "some_id",
     "source": "some_source",
 }
-
-
-def check_tof(tof):
-    if not isinstance(tof, (list, tuple)) or len(tof) != 2:
-        return False
-    if not isinstance(tof[0], numbers.Number) or not isinstance(tof[1], numbers.Number):
-        return False
-    if tof[0] > tof[1]:
-        return False
-    return True
-
-
-def check_det_range(det_range):
-    if not isinstance(det_range, (list, tuple)) or len(det_range) != 2:
-        return False
-    if not isinstance(det_range[0], numbers.Number) or not isinstance(
-        det_range[1], numbers.Number
-    ):
-        return False
-    if det_range[0] > det_range[1]:
-        return False
-    return True
-
-
-def check_bins(num_bins):
-    if isinstance(num_bins, int) and num_bins > 0:
-        return True
-
-    if isinstance(num_bins, (list, tuple)) and len(num_bins) == 2:
-        if (
-            isinstance(num_bins[0], int)
-            and num_bins[0] > 0
-            and isinstance(num_bins[1], int)
-            and num_bins[1] > 0
-        ):
-            return True
-
-    return False
-
-
-def check_topic(topic):
-    if not isinstance(topic, str):
-        return False
-    # Matching rules from Kafka documentation
-    if not re.match(r"^[a-zA-Z0-9._\-]+$", topic):
-        return False
-    return True
-
-
-def check_data_topics(topics):
-    if not isinstance(topics, (list, tuple)):
-        return False
-
-    return all(check_topic(topic) for topic in topics)
-
-
-def check_data_brokers(brokers):
-    if not isinstance(brokers, (list, tuple)):
-        return False
-
-    # For now just check they are strings
-    return all(isinstance(broker, str) for broker in brokers)
-
-
-def check_id(hist_id):
-    return isinstance(hist_id, str)
-
-
-def check_source(source):
-    return isinstance(source, str)
-
-
-def validate_hist_1d(histogram_config):
-    required = ["tof_range", "num_bins", "topic", "data_topics", "data_brokers", "type"]
-    if any(req not in histogram_config for req in required):
-        return False
-
-    if histogram_config["type"] != TOF_1D_TYPE:
-        return False
-
-    if not check_tof(histogram_config["tof_range"]):
-        return False
-
-    if not check_bins(histogram_config["num_bins"]):
-        return False
-
-    if not check_topic(histogram_config["topic"]):
-        return False
-
-    if not check_data_topics(histogram_config["data_topics"]):
-        return False
-
-    if not check_data_brokers(histogram_config["data_brokers"]):
-        return False
-
-    if "det_range" in histogram_config and not check_det_range(
-        histogram_config["det_range"]
-    ):
-        return False
-
-    if "id" in histogram_config and not check_id(histogram_config["id"]):
-        return False
-
-    if "source" in histogram_config and not check_source(histogram_config["source"]):
-        return False
-
-    return True
 
 
 def validate_hist_2d(histogram_config):

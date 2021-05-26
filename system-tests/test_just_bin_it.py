@@ -9,10 +9,9 @@ import pytest
 from confluent_kafka.admin import AdminClient, NewTopic
 from kafka import KafkaConsumer, KafkaProducer, TopicPartition
 
-from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import deserialise_hs00, serialise_ev42
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 

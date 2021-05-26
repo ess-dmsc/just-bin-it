@@ -1,23 +1,24 @@
 import logging
 import time
 
-from just_bin_it.histograms.histogram1d import TOF_1D_TYPE, Histogram1d
+from just_bin_it.histograms.histogram1d import (
+    TOF_1D_TYPE,
+    Histogram1d,
+    validate_hist_1d,
+)
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE, Histogram2d
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE, DetHistogram
+from tests.test_config_validation import validate_hist_2d, validate_hist_2d_map
 
 
 def parse_config(configuration, current_time_ms=None):
     """
     Parses the configuration that defines the histograms.
 
-    Currently handles both the old-style syntax and the new one (see docs).
-
     :param configuration: The dictionary containing the configuration.
     :param current_time_ms: The time to use for defining the start time (milliseconds).
     :return: tuple of start time, stop time and the list of histograms
     """
-    brokers = configuration["data_brokers"] if "data_brokers" in configuration else None
-    topics = configuration["data_topics"] if "data_topics" in configuration else None
     start = configuration["start"] if "start" in configuration else None
     stop = configuration["stop"] if "stop" in configuration else None
 
@@ -42,8 +43,17 @@ def parse_config(configuration, current_time_ms=None):
 
     if "histograms" in configuration:
         for hist in configuration["histograms"]:
-            if _is_old_style_config(hist):
-                _handle_old_style_config(brokers, hist, topics)
+            if hist["type"] == TOF_1D_TYPE:
+                if not validate_hist_1d(hist):
+                    raise Exception("Could not parse 1d histogram")
+            elif hist["type"] == TOF_2D_TYPE:
+                if not validate_hist_2d(hist):
+                    raise Exception("Could not parse 2d histogram")
+            elif hist["type"] == MAP_TYPE:
+                if not validate_hist_2d_map(hist):
+                    raise Exception("Could not parse 2d map")
+            else:
+                raise Exception("Unexpected histogram type")
             hist_configs.append(hist)
 
     return start, stop, hist_configs
