@@ -111,7 +111,7 @@ A JSON histogramming configuration has the following parameters:
     * "height" (int): the height of the detector (dethist only)
     * "num_bins" (int for 1D or [int, int] for 2D): the number of histogram bins (hist1d and hist2d only)
     * "topic" (string): the topic to write histogram data to
-    * "source" (string): the name of the source to accept data from
+    * "source" (string): the name of the source to accept data from (optional)
     * "id" (string): a unique identifier for the histogram which will be contained in the published histogram data (optional but recommended)
 
 For example:

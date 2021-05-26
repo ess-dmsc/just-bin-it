@@ -5,7 +5,6 @@ import numpy as np
 from just_bin_it.histograms.input_validators import (
     check_det_range,
     check_int,
-    check_tof,
     generate_exception,
 )
 
@@ -33,9 +32,7 @@ def _validate_parameters(det_range, width, height):
 class DetHistogram:
     """Two dimensional histogram for detectors."""
 
-    def __init__(
-        self, topic, det_range, width, height, source="", identifier=""
-    ):
+    def __init__(self, topic, det_range, width, height, source="", identifier=""):
         """
         Constructor.
         :param topic: The name of the Kafka topic to publish to.

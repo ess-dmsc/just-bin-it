@@ -13,6 +13,7 @@ CONFIG_1D = {
     "num_bins": 50,
     "topic": "hist_topic1",
     "id": "some_id1",
+    "source": "some_source",
 }
 
 
@@ -22,6 +23,18 @@ def check_tof(tof):
     if not isinstance(tof[0], numbers.Number) or not isinstance(tof[1], numbers.Number):
         return False
     if tof[0] > tof[1]:
+        return False
+    return True
+
+
+def check_det_range(det_range):
+    if not isinstance(det_range, (list, tuple)) or len(det_range) != 2:
+        return False
+    if not isinstance(det_range[0], numbers.Number) or not isinstance(
+        det_range[1], numbers.Number
+    ):
+        return False
+    if det_range[0] > det_range[1]:
         return False
     return True
 
@@ -51,8 +64,31 @@ def check_topic(topic):
     return True
 
 
+def check_data_topics(topics):
+    if not isinstance(topics, (list, tuple)):
+        return False
+
+    return all(check_topic(topic) for topic in topics)
+
+
+def check_data_brokers(brokers):
+    if not isinstance(brokers, (list, tuple)):
+        return False
+
+    # For now just check they are strings
+    return all(isinstance(broker, str) for broker in brokers)
+
+
+def check_id(hist_id):
+    return isinstance(hist_id, str)
+
+
+def check_source(source):
+    return isinstance(source, str)
+
+
 def validate_hist_1d(histogram_config):
-    required = ["tof_range", "num_bins", "topic"]
+    required = ["tof_range", "num_bins", "topic", "data_topics", "data_brokers"]
     if any(req not in histogram_config for req in required):
         return False
 
@@ -65,39 +101,45 @@ def validate_hist_1d(histogram_config):
     if not check_topic(histogram_config["topic"]):
         return False
 
+    if not check_data_topics(histogram_config["data_topics"]):
+        return False
+
+    if not check_data_brokers(histogram_config["data_brokers"]):
+        return False
+
+    if "det_range" in histogram_config and not check_det_range(
+        histogram_config["det_range"]
+    ):
+        return False
+
+    if "id" in histogram_config and not check_id(histogram_config["id"]):
+        return False
+
+    if "source" in histogram_config and not check_source(histogram_config["source"]):
+        return False
+
     return True
-
-
-class TestConfigValidationHist1d:
-    def test_valid_config(self):
-        config = copy.deepcopy(CONFIG_1D)
-        assert validate_hist_1d(config)
-
-    @pytest.mark.parametrize("missing", ["tof_range", "num_bins", "topic"])
-    def test_if_required_parameter_missing_then_validation_fails(self, missing):
-        config = copy.deepcopy(CONFIG_1D)
-        del config[missing]
-
-        assert not validate_hist_1d(config)
 
 
 class TestCommonValidation:
     @pytest.mark.parametrize("tof", [(0, 100), [0, 100]])
-    def test_if_tof_valid_then_validation_passes(self, tof):
+    def test_if_tof_valid_then_passes(self, tof):
         assert check_tof(tof)
 
-    @pytest.mark.parametrize("tof", [123, ("a", "b"), (123, "b"), ("a", 123), (123, 0)])
-    def test_if_tof_invalid_then_validation_fails(self, tof):
+    @pytest.mark.parametrize(
+        "tof", [123, ("a", "b"), (123, "b"), ("a", 123), (123, 0), (100, 200, 300)]
+    )
+    def test_if_tof_invalid_then_fails(self, tof):
         assert not check_tof(tof)
 
     @pytest.mark.parametrize("bins", [100, (100, 100), [100, 100]])
-    def test_if_bins_valid_then_validation_passes(self, bins):
+    def test_if_bins_valid_then_passes(self, bins):
         assert check_bins(bins)
 
     @pytest.mark.parametrize(
         "bins", ["a", (1, 2, 3), (-100, 100), (100, -100), (0, 100), (100, 0)]
     )
-    def test_if_bins_invalid_then_validation_fails(self, bins):
+    def test_if_bins_invalid_then_fails(self, bins):
         assert not check_bins(bins)
 
     @pytest.mark.parametrize(
@@ -111,44 +153,107 @@ class TestCommonValidation:
             "hyphen-hyphen",
         ],
     )
-    def test_if_topic_valid_string_then_validation_passes(self, topic):
+    def test_if_topic_valid_then_passes(self, topic):
         assert check_topic(topic)
 
     @pytest.mark.parametrize("topic", [123, "with spaces", "::"])
-    def test_if_topic_not_valid_string_then_validation_fails(self, topic):
+    def test_if_topic_not_valid_then_fails(self, topic):
         assert not check_topic(topic)
 
-    # def test_if_tof_is_not_two_values_then_histogram_not_created(self):
-    #     with pytest.raises(JustBinItException):
-    #         Histogram1d(IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, (1,))
-    #
-    # def test_if_bins_not_numeric_then_histogram_not_created(self):
-    #     with pytest.raises(JustBinItException):
-    #         Histogram1d(IRRELEVANT_TOPIC, None, IRRELEVANT_TOF_RANGE)
-    #
-    # def test_if_bins_not_greater_than_zero_then_histogram_not_created(self):
-    #     with pytest.raises(JustBinItException):
-    #         Histogram1d(IRRELEVANT_TOPIC, 0, IRRELEVANT_TOF_RANGE)
-    #
-    # def test_if_det_range_is_not_two_values_then_histogram_not_created(self):
-    #     with pytest.raises(JustBinItException):
-    #         Histogram1d(
-    #             IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, IRRELEVANT_TOF_RANGE, (1,)
-    #         )
-    #
-    # def test_if_no_id_specified_then_empty_string(self):
-    #     histogram = Histogram1d(
-    #         IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, IRRELEVANT_TOF_RANGE
-    #     )
-    #
-    #     assert histogram.identifier == ""
-    #
-    # def test_config_with_id_specified_sets_id(self):
-    #     histogram = Histogram1d(
-    #         IRRELEVANT_TOPIC,
-    #         IRRELEVANT_NUM_BINS,
-    #         IRRELEVANT_TOF_RANGE,
-    #         identifier="123456",
-    #     )
-    #
-    #     assert histogram.identifier == "123456"
+    def test_if_id_is_valid_then_passes(self):
+        assert check_id(":: a string ::")
+
+    @pytest.mark.parametrize("hist_id", [123, ["list"]])
+    def test_if_id_is_invalid_then_fails(self, hist_id):
+        assert not check_id(hist_id)
+
+    @pytest.mark.parametrize(
+        "det_range", [123, ("a", "b"), (123, "b"), ("a", 123), (123, 0)]
+    )
+    def test_if_det_range_invalid_then_validation_fails(self, det_range):
+        assert not check_det_range(det_range)
+
+    def test_if_source_is_valid_then_passes(self):
+        assert check_id(":: a string ::")
+
+    @pytest.mark.parametrize("hist_id", [123, ["list"]])
+    def test_if_source_is_invalid_then_fails(self, hist_id):
+        assert not check_id(hist_id)
+
+    def test_if_data_topics_valid_then_passes(self):
+        assert check_data_topics(["valid1", "valid2"])
+
+    @pytest.mark.parametrize("topics", [123, [123]])
+    def test_if_data_topics_invalid_then_fails(self, topics):
+        assert not check_data_topics(topics)
+
+    def test_if_data_brokers_valid_then_passes(self):
+        assert check_data_brokers(["valid1", "valid2"])
+
+    @pytest.mark.parametrize("brokers", [123, [123]])
+    def test_if_data_brokers_invalid_then_fails(self, brokers):
+        assert not check_data_brokers(brokers)
+
+
+class TestConfigValidationHist1d:
+    def test_valid_config(self):
+        config = copy.deepcopy(CONFIG_1D)
+        assert validate_hist_1d(config)
+
+    @pytest.mark.parametrize(
+        "missing", ["tof_range", "num_bins", "topic", "data_topics", "data_brokers"]
+    )
+    def test_if_required_parameter_missing_then_validation_fails(self, missing):
+        config = copy.deepcopy(CONFIG_1D)
+        del config[missing]
+
+        assert not validate_hist_1d(config)
+
+    def test_if_tof_invalid_then_validation_fails(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["tof_range"] = "string"
+
+        assert not validate_hist_1d(config)
+
+    def test_if_num_bins_invalid_then_validation_fails(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["num_bins"] = "string"
+
+        assert not validate_hist_1d(config)
+
+    def test_if_topic_invalid_then_validation_fails(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["topic"] = 123
+
+        assert not validate_hist_1d(config)
+
+    @pytest.mark.parametrize("missing", ["det_range", "id", "source"])
+    def test_if_optional_parameter_missing_then_validation_passes(self, missing):
+        config = copy.deepcopy(CONFIG_1D)
+        del config[missing]
+
+        assert validate_hist_1d(config)
+
+    def test_if_optional_parameter_invalid_then_validation_fails(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["det_range"] = 123
+
+        assert not validate_hist_1d(config)
+
+    def test_if_id_invalid_then_validation_fails(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["id"] = 123
+
+        assert not validate_hist_1d(config)
+
+    def test_if_data_topic_invalid_then_validation_fails(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["data_topics"] = [123]
+
+        assert not validate_hist_1d(config)
+
+    def test_if_data_broker_invalid_then_validation_fails(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["data_brokers"] = [123]
+
+        assert not validate_hist_1d(config)

@@ -61,7 +61,6 @@ START_2D_CONFIG = {
             "topic": "hist-topic3",
             "id": "xyzvfr",
         },
-        
     ],
 }
 
