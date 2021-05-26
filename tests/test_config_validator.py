@@ -1,5 +1,6 @@
 import copy
 import numbers
+import re
 
 import pytest
 
@@ -16,7 +17,7 @@ CONFIG_1D = {
 
 
 def check_tof(tof):
-    if not isinstance(tof, list) and not isinstance(tof, tuple) or len(tof) != 2:
+    if not isinstance(tof, (list, tuple)) or len(tof) != 2:
         return False
     if not isinstance(tof[0], numbers.Number) or not isinstance(tof[1], numbers.Number):
         return False
@@ -41,8 +42,17 @@ def check_bins(num_bins):
     return False
 
 
+def check_topic(topic):
+    if not isinstance(topic, str):
+        return False
+    # Matching rules from Kafka documentation
+    if not re.match(r"^[a-zA-Z0-9._\-]+$", topic):
+        return False
+    return True
+
+
 def validate_hist_1d(histogram_config):
-    required = ["tof_range", "num_bins", "topic", "data_brokers", "data_topics"]
+    required = ["tof_range", "num_bins", "topic"]
     if any(req not in histogram_config for req in required):
         return False
 
@@ -50,6 +60,9 @@ def validate_hist_1d(histogram_config):
         return False
 
     if not check_bins(histogram_config["num_bins"]):
+        return False
+
+    if not check_topic(histogram_config["topic"]):
         return False
 
     return True
@@ -60,30 +73,50 @@ class TestConfigValidationHist1d:
         config = copy.deepcopy(CONFIG_1D)
         assert validate_hist_1d(config)
 
-    @pytest.mark.parametrize(
-        "missing", ["tof_range", "num_bins", "topic", "data_brokers", "data_topics"]
-    )
+    @pytest.mark.parametrize("missing", ["tof_range", "num_bins", "topic"])
     def test_if_required_parameter_missing_then_validation_fails(self, missing):
         config = copy.deepcopy(CONFIG_1D)
         del config[missing]
 
         assert not validate_hist_1d(config)
 
+
+class TestCommonValidation:
+    @pytest.mark.parametrize("tof", [(0, 100), [0, 100]])
+    def test_if_tof_valid_then_validation_passes(self, tof):
+        assert check_tof(tof)
+
     @pytest.mark.parametrize("tof", [123, ("a", "b"), (123, "b"), ("a", 123), (123, 0)])
     def test_if_tof_invalid_then_validation_fails(self, tof):
-        config = copy.deepcopy(CONFIG_1D)
-        config["tof_range"] = tof
+        assert not check_tof(tof)
 
-        assert not validate_hist_1d(config)
+    @pytest.mark.parametrize("bins", [100, (100, 100), [100, 100]])
+    def test_if_bins_valid_then_validation_passes(self, bins):
+        assert check_bins(bins)
 
     @pytest.mark.parametrize(
         "bins", ["a", (1, 2, 3), (-100, 100), (100, -100), (0, 100), (100, 0)]
     )
     def test_if_bins_invalid_then_validation_fails(self, bins):
-        config = copy.deepcopy(CONFIG_1D)
-        config["num_bins"] = bins
+        assert not check_bins(bins)
 
-        assert not validate_hist_1d(config)
+    @pytest.mark.parametrize(
+        "topic",
+        [
+            "simple",
+            "CAPITALS",
+            "under_scores",
+            "dot.dot",
+            "numbers123",
+            "hyphen-hyphen",
+        ],
+    )
+    def test_if_topic_valid_string_then_validation_passes(self, topic):
+        assert check_topic(topic)
+
+    @pytest.mark.parametrize("topic", [123, "with spaces", "::"])
+    def test_if_topic_not_valid_string_then_validation_fails(self, topic):
+        assert not check_topic(topic)
 
     # def test_if_tof_is_not_two_values_then_histogram_not_created(self):
     #     with pytest.raises(JustBinItException):
