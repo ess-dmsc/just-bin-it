@@ -75,6 +75,8 @@ class CommandActioner:
             logging.info("Config command received")
             start, stop, hist_configs = parse_config(message)
 
+            self._stop_processes(hist_processes)
+
             try:
                 for config in hist_configs:
                     # Check brokers and data topics exist (skip in simulation)
@@ -82,8 +84,6 @@ class CommandActioner:
                         config["data_brokers"], config["data_topics"]
                     ):
                         raise KafkaException("Invalid Kafka settings")
-
-                    self._stop_processes(hist_processes)
 
                     process = self.process_creator(config, start, stop, self.simulation)
                     hist_processes.append(process)
