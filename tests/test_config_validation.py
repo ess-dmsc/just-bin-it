@@ -28,6 +28,18 @@ CONFIG_2D = {
     "source": "some_source",
 }
 
+CONFIG_2D_MAP = {
+    "type": "dethist",
+    "data_brokers": ["localhost:9092"],
+    "data_topics": ["fake_events_empty"],
+    "det_range": [1, 10000],
+    "width": 100,
+    "height": 100,
+    "topic": "hist_topic3",
+    "id": "some_id",
+    "source": "some_source",
+}
+
 
 def check_tof(tof):
     if not isinstance(tof, (list, tuple)) or len(tof) != 2:
@@ -160,8 +172,44 @@ def validate_hist_2d(histogram_config):
     if not check_data_brokers(histogram_config["data_brokers"]):
         return False
 
-    if "det_range" in histogram_config and not check_det_range(
-        histogram_config["det_range"]
+    if not check_det_range(histogram_config["det_range"]):
+        return False
+
+    if "id" in histogram_config and not check_id(histogram_config["id"]):
+        return False
+
+    if "source" in histogram_config and not check_source(histogram_config["source"]):
+        return False
+
+    return True
+
+
+def validate_hist_2d_map(histogram_config):
+    required = ["topic", "data_topics", "data_brokers", "det_range", "width", "height"]
+    if any(req not in histogram_config for req in required):
+        return False
+
+    if not check_topic(histogram_config["topic"]):
+        return False
+
+    if not check_data_topics(histogram_config["data_topics"]):
+        return False
+
+    if not check_data_brokers(histogram_config["data_brokers"]):
+        return False
+
+    if not check_det_range(histogram_config["det_range"]):
+        return False
+
+    if (
+        not isinstance(histogram_config["height"], numbers.Number)
+        or histogram_config["height"] < 1
+    ):
+        return False
+
+    if (
+        not isinstance(histogram_config["width"], numbers.Number)
+        or histogram_config["width"] < 1
     ):
         return False
 
@@ -363,3 +411,64 @@ class TestConfigValidationHist2d:
         self.config["data_brokers"] = [123]
 
         assert not validate_hist_2d(self.config)
+
+
+class TestConfigValidationMap2d:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        self.config = copy.deepcopy(CONFIG_2D_MAP)
+
+    def test_valid_config(self):
+        assert validate_hist_2d_map(self.config)
+
+    @pytest.mark.parametrize(
+        "missing",
+        ["topic", "data_topics", "data_brokers", "det_range", "width", "height"],
+    )
+    def test_if_required_parameter_missing_then_validation_fails(self, missing):
+        del self.config[missing]
+
+        assert not validate_hist_2d_map(self.config)
+
+    @pytest.mark.parametrize("width", ["string", 0, -100, [100]])
+    def test_if_width_invalid_then_validation_fails(self, width):
+        self.config["width"] = width
+
+        assert not validate_hist_2d_map(self.config)
+
+    @pytest.mark.parametrize("height", ["string", 0, -100, [100]])
+    def test_if_height_invalid_then_validation_fails(self, height):
+        self.config["width"] = height
+
+        assert not validate_hist_2d_map(self.config)
+
+    def test_if_topic_invalid_then_validation_fails(self):
+        self.config["topic"] = 123
+
+        assert not validate_hist_2d_map(self.config)
+
+    def test_if_det_range_invalid_then_validation_fails(self):
+        self.config["det_range"] = 123
+
+        assert not validate_hist_2d_map(self.config)
+
+    @pytest.mark.parametrize("missing", ["id", "source"])
+    def test_if_optional_parameter_missing_then_validation_passes(self, missing):
+        del self.config[missing]
+
+        assert validate_hist_2d_map(self.config)
+
+    def test_if_id_invalid_then_validation_fails(self):
+        self.config["id"] = 123
+
+        assert not validate_hist_2d_map(self.config)
+
+    def test_if_data_topic_invalid_then_validation_fails(self):
+        self.config["data_topics"] = [123]
+
+        assert not validate_hist_2d_map(self.config)
+
+    def test_if_data_broker_invalid_then_validation_fails(self):
+        self.config["data_brokers"] = [123]
+
+        assert not validate_hist_2d_map(self.config)
