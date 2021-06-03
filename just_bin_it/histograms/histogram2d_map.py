@@ -71,10 +71,10 @@ class DetHistogram:
         """
         Constructor.
         :param topic: The name of the Kafka topic to publish to.
-        :param source: The data source to histogram.
         :param det_range: The range of sequential detectors to histogram over.
         :param width: How many detectors in a row.
-        :param height:
+        :param height: How many rows of detectors.
+        :param source: The data source to histogram.
         :param identifier: An optional identifier for the histogram.
         """
         self._histogram = None
