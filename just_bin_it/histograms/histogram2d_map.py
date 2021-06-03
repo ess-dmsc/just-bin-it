@@ -136,7 +136,7 @@ class DetHistogram:
         Add data to the histogram.
 
         :param pulse_time: The pulse time.
-        :param tofs: The time-of-flight data.
+        :param tofs: Not used.
         :param det_ids: The detector data.
         :param source: The source of the event.
         """

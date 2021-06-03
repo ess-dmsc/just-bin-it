@@ -130,12 +130,6 @@ class RoiHistogram:
                 hist2d[i] = value
                 i += 1
 
-        # Copy the data over
-        # for val in self._histogram:
-        # for y in self.left_edges:
-        #     for x in range(self.width):
-        #         hist2d[x][y] = self._histogram[
-
         return hist2d.reshape(self.shape)
 
     @property
@@ -147,7 +141,7 @@ class RoiHistogram:
         Add data to the histogram.
 
         :param pulse_time: The pulse time.
-        :param tofs: not used.
+        :param tofs: Not used.
         :param det_ids: The detector data.
         :param source: The source of the event.
         """
