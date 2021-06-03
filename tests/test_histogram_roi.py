@@ -6,9 +6,6 @@ from tests.test_histogram2d_map import generate_image
 
 IRRELEVANT_TOPIC = "some-topic"
 TOF_IS_IGNORED = None
-IRRELEVANT_DET_RANGE = (0, 100)
-IRRELEVANT_WIDTH = 100
-IRRELEVANT_HEIGHT = 100
 
 
 class TestHistogramRoiFunctionality:
@@ -100,52 +97,32 @@ class TestHistogramRoiFunctionality:
 
         assert np.array_equal(hist.data, expected_result)
 
+    def test_clearing_histogram_data_clears_histogram(self):
+        self.hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
 
-#
-#     def test_clearing_histogram_data_clears_histogram(self):
-#         self.hist.add_data(self.pulse_time, [], self.data)
-#
-#         self.hist.clear_data()
-#
-#         assert self.hist.data.sum() == 0
-#
-#     def test_after_clearing_histogram_can_add_data(self):
-#         self.hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data)
-#         self.hist.clear_data()
-#
-#         self.hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data)
-#
-#         assert self.hist.shape == (5, 5)
-#         assert self.hist.data.sum() == len(self.data)
-#
-#     def test_adding_empty_data_does_nothing(self):
-#         self.hist.add_data(self.pulse_time, [], [])
-#
-#         assert self.hist.data.sum() == 0
-#
-#     def test_histogram_keeps_track_of_last_pulse_time_processed(self):
-#         self.hist.add_data(1234, [], self.data)
-#         self.hist.add_data(1235, [], self.data)
-#         self.hist.add_data(1236, [], self.data)
-#
-#         assert self.hist.last_pulse_time == 1236
-#
-#
-# class TestHistogram2dMapConstruction:
-#     def test_if_no_id_specified_then_empty_string(self):
-#         histogram = DetHistogram(
-#             IRRELEVANT_TOPIC, IRRELEVANT_DET_RANGE, IRRELEVANT_WIDTH, IRRELEVANT_HEIGHT
-#         )
-#
-#         assert histogram.identifier == ""
-#
-#     def test_config_with_id_specified_sets_id(self):
-#         histogram = DetHistogram(
-#             IRRELEVANT_TOPIC,
-#             IRRELEVANT_DET_RANGE,
-#             IRRELEVANT_WIDTH,
-#             IRRELEVANT_HEIGHT,
-#             identifier="123456",
-#         )
-#
-#         assert histogram.identifier == "123456"
+        self.hist.clear_data()
+
+        assert self.hist.data.sum() == 0
+
+    def test_after_clearing_histogram_can_add_data(self):
+        expected_result = [[32, 34, 36, 38], [50, 52, 54, 56], [68, 70, 72, 74]]
+
+        self.hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+        self.hist.clear_data()
+
+        self.hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+        self.hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+
+        assert np.array_equal(self.hist.data, expected_result)
+
+    def test_adding_empty_data_does_nothing(self):
+        self.hist.add_data(self.pulse_time, TOF_IS_IGNORED, [])
+
+        assert self.hist.data.sum() == 0
+
+    def test_histogram_keeps_track_of_last_pulse_time_processed(self):
+        self.hist.add_data(1234, TOF_IS_IGNORED, self.data)
+        self.hist.add_data(1235, TOF_IS_IGNORED, self.data)
+        self.hist.add_data(1236, TOF_IS_IGNORED, self.data)
+
+        assert self.hist.last_pulse_time == 1236
