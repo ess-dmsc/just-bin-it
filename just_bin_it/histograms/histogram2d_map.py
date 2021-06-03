@@ -105,7 +105,7 @@ class DetHistogram:
 
         # The data is actually stored as a 1d histogram, it is converted to 2d
         # when read - this speeds things up significantly.
-        self._histogram, self._edges = np.histogram(
+        self._histogram, _ = np.histogram(
             [], range=self.det_range, bins=(self.det_range[1] - self.det_range[0])
         )
 
