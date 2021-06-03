@@ -106,22 +106,3 @@ class TestHistogram1dFunctionality:
 
         assert hist.data.sum() == 2
         assert np.array_equal(hist.data, [0, 1, 1, 0, 0])
-
-
-class TestHistogram1dConstruction:
-    def test_if_no_id_specified_then_empty_string(self):
-        histogram = Histogram1d(
-            IRRELEVANT_TOPIC, IRRELEVANT_NUM_BINS, IRRELEVANT_TOF_RANGE
-        )
-
-        assert histogram.identifier == ""
-
-    def test_config_with_id_specified_sets_id(self):
-        histogram = Histogram1d(
-            IRRELEVANT_TOPIC,
-            IRRELEVANT_NUM_BINS,
-            IRRELEVANT_TOF_RANGE,
-            identifier="123456",
-        )
-
-        assert histogram.identifier == "123456"
