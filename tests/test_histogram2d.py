@@ -4,9 +4,6 @@ import pytest
 from just_bin_it.histograms.histogram2d import Histogram2d
 
 IRRELEVANT_TOPIC = "some-topic"
-IRRELEVANT_NUM_BINS = (123, 456)
-IRRELEVANT_TOF_RANGE = (0, 100)
-IRRELEVANT_DET_RANGE = (0, 100)
 
 
 class TestHistogram2dFunctionality:

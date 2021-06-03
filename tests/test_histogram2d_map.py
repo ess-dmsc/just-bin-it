@@ -5,9 +5,6 @@ from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 IRRELEVANT_TOPIC = "some-topic"
 IRRELEVANT_TOF_RANGE = (0, 100)
-IRRELEVANT_DET_RANGE = (0, 100)
-IRRELEVANT_WIDTH = 100
-IRRELEVANT_HEIGHT = 100
 
 
 def generate_pixel_id(x, y, width):

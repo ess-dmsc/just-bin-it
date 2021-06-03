@@ -4,8 +4,6 @@ import pytest
 from just_bin_it.histograms.histogram1d import Histogram1d
 
 IRRELEVANT_TOPIC = "some-topic"
-IRRELEVANT_NUM_BINS = 123
-IRRELEVANT_TOF_RANGE = (0, 100)
 
 
 class TestHistogram1dFunctionality:
