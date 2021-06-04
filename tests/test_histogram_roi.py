@@ -18,6 +18,7 @@ class TestHistogramRoiFunctionality:
     @pytest.fixture(autouse=True)
     def prepare(self):
         # A rhomboid 10 x 5 detector just to make things hard ;)
+        # See the docs for a visualisation.
         self.width = 10
         self.height = 5
         self.roi_left_edges = [16, 25, 34]

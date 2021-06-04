@@ -101,14 +101,11 @@ class RoiHistogram:
                 # this row and the start of the next
                 self.bins.append(self.bins[~0] + 1)
                 self.mask.append(1)
-        # TODO: put this information in a doc?
-        # numpy includes the right most edge of the last bin as part of that bin
-        # e.g., bins = [1,2,3] gives two buckets 1 to 1.99999 and 2 to 3
-        # What we want is three buckets one each for 1, 2, 3, so we add an extra
-        # bin, e.g., bins = [1,2,3,4] but this means the value 4 will end up in
-        # the "3" bin.
-        # To avoid this we add one more bin and just ignore the two "extra" bins
-        # e.g., bins = [1,2,3,4,5]
+        self._correct_for_last_bin()
+
+    def _correct_for_last_bin(self):
+        # Without extra bins, data from the pixel after the last ROI pixel
+        # will be added to the last ROI pixel.
         self.bins.append(self.bins[~0] + 1)
         self.bins.append(self.bins[~0] + 1)
         self.mask.append(1)
