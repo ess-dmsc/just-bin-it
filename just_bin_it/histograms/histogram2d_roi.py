@@ -100,11 +100,12 @@ class RoiHistogram:
         for edge in self.left_edges:
             bins.extend([edge + x for x in range(self.width)])
             self.mask.extend([0 for x in range(self.width)])
-            # Add wide extra bin for ids we don't care about between the end of
+            # Add extra bin for ids we don't care about between the end of
             # this row and the start of the next
             bins.append(bins[~0] + 1)
             self.mask.append(1)
 
+        # TODO: put this information in a doc?
         # numpy includes the right most edge of the last bin as part of that bin
         # e.g., bins = [1,2,3] gives two buckets 1 to 1.99999 and 2 to 3
         # What we want is three buckets one each for 1, 2, 3, so we add an extra

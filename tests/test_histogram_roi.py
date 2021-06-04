@@ -126,3 +126,86 @@ class TestHistogramRoiFunctionality:
         self.hist.add_data(1236, TOF_IS_IGNORED, self.data)
 
         assert self.hist.last_pulse_time == 1236
+
+
+class TestHistogramRoiEdgeCases:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        # Use a rectangular detector of 5 x 4
+        self.data = generate_image(5, 4)
+        self.pulse_time = 1234
+
+    def test_when_roi_is_the_whole_detector_it_still_works(self):
+        left_edges = [1, 6, 11, 16]
+        roi_width = 5
+        expected_result = [
+            [1, 2, 3, 4, 5],
+            [6, 7, 8, 9, 10],
+            [11, 12, 13, 14, 15],
+            [16, 17, 18, 19, 20],
+        ]
+        hist = RoiHistogram("topic", left_edges, roi_width)
+
+        hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+
+        assert np.array_equal(hist.data, expected_result)
+
+    def test_roi_with_one_pixel_border(self):
+        left_edges = [7, 12]
+        roi_width = 3
+        expected_result = [[7, 8, 9], [12, 13, 14]]
+
+        hist = RoiHistogram("topic", left_edges, roi_width)
+        hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+
+        assert np.array_equal(hist.data, expected_result)
+
+    def test_top_left_roi(self):
+        left_edges = [1, 6]
+        roi_width = 2
+        expected_result = [[1, 2], [6, 7]]
+
+        hist = RoiHistogram("topic", left_edges, roi_width)
+        hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+
+        assert np.array_equal(hist.data, expected_result)
+
+    def test_top_right_roi(self):
+        left_edges = [4, 9]
+        roi_width = 2
+        expected_result = [[4, 5], [9, 10]]
+
+        hist = RoiHistogram("topic", left_edges, roi_width)
+        hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+
+        assert np.array_equal(hist.data, expected_result)
+
+    def test_bottom_left_roi(self):
+        left_edges = [11, 16]
+        roi_width = 2
+        expected_result = [[11, 12], [16, 17]]
+
+        hist = RoiHistogram("topic", left_edges, roi_width)
+        hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+
+        assert np.array_equal(hist.data, expected_result)
+
+    def test_bottom_right_roi(self):
+        left_edges = [14, 19]
+        roi_width = 2
+        expected_result = [[14, 15], [19, 20]]
+
+        hist = RoiHistogram("topic", left_edges, roi_width)
+        hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+
+        assert np.array_equal(hist.data, expected_result)
+
+    def test_roi_of_one_pixel(self):
+        left_edges = [8]
+        roi_width = 1
+        expected_result = [[8]]
+
+        hist = RoiHistogram("topic", left_edges, roi_width)
+        hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
+
+        assert np.array_equal(hist.data, expected_result)
