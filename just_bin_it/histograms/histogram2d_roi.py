@@ -85,13 +85,16 @@ class RoiHistogram:
         # Work out the bins
         self.mask = []
         bins = []
-        for edge in self.left_edges:
+        for i, edge in enumerate(self.left_edges):
             bins.extend([edge + x for x in range(self.width)])
-            self.mask.extend([0 for x in range(self.width)])
-            # Add extra bin for ids we don't care about between the end of
-            # this row and the start of the next
-            bins.append(bins[~0] + 1)
-            self.mask.append(1)
+            self.mask.extend([0 for _ in range(self.width)])
+            if i < len(self.left_edges) - 1 and self._is_roi_discontiguous(
+                bins[~0], self.left_edges[i + 1]
+            ):
+                # Add extra bin for ids we don't care about between the end of
+                # this row and the start of the next
+                bins.append(bins[~0] + 1)
+                self.mask.append(1)
 
         # TODO: put this information in a doc?
         # numpy includes the right most edge of the last bin as part of that bin
@@ -102,11 +105,16 @@ class RoiHistogram:
         # To avoid this we add one more bin and just ignore the two "extra" bins
         # e.g., bins = [1,2,3,4,5]
         bins.append(bins[~0] + 1)
+        bins.append(bins[~0] + 1)
+        self.mask.append(1)
         self.mask.append(1)
 
         # The data is actually stored as a 1d histogram, it is converted to 2d
         # when read - this speeds things up significantly.
         self._histogram, self.x_edges = np.histogram([], bins=bins)
+
+    def _is_roi_discontiguous(self, last_bin, next_left_edge):
+        return next_left_edge != last_bin + 1
 
     @property
     def data(self):
