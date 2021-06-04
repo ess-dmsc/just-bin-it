@@ -81,12 +81,15 @@ class RoiHistogram:
         self._initialise_histogram()
 
     def _initialise_histogram(self):
-        """
-        Create a zeroed histogram.
-        """
-        self.bins.clear()
-        self.mask.clear()
+        self._calculate_bins()
+        self._create_empty_histogram()
 
+    def _create_empty_histogram(self):
+        # The data is actually stored as a 1d histogram, it is converted to 2d
+        # when read - this speeds things up significantly.
+        self._histogram, _ = np.histogram([], bins=self.bins)
+
+    def _calculate_bins(self):
         # Work out the bins
         for i, edge in enumerate(self.left_edges):
             self.bins.extend([edge + x for x in range(self.width)])
@@ -98,7 +101,6 @@ class RoiHistogram:
                 # this row and the start of the next
                 self.bins.append(self.bins[~0] + 1)
                 self.mask.append(1)
-
         # TODO: put this information in a doc?
         # numpy includes the right most edge of the last bin as part of that bin
         # e.g., bins = [1,2,3] gives two buckets 1 to 1.99999 and 2 to 3
@@ -111,10 +113,6 @@ class RoiHistogram:
         self.bins.append(self.bins[~0] + 1)
         self.mask.append(1)
         self.mask.append(1)
-
-        # The data is actually stored as a 1d histogram, it is converted to 2d
-        # when read - this speeds things up significantly.
-        self._histogram, _ = np.histogram([], bins=self.bins)
 
     def _is_roi_discontiguous(self, last_bin, next_left_edge):
         return next_left_edge != last_bin + 1
@@ -157,4 +155,4 @@ class RoiHistogram:
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self._initialise_histogram()
+        self._create_empty_histogram()
