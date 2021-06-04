@@ -3,6 +3,7 @@ from copy import deepcopy
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE, Histogram1d
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE, Histogram2d
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE, DetHistogram
+from just_bin_it.histograms.histogram2d_roi import ROI_TYPE, RoiHistogram
 from just_bin_it.histograms.histogram_factory import HistogramFactory
 
 CONFIG_1D = [
@@ -42,6 +43,20 @@ CONFIG_2D_MAP = [
         "det_range": [1, 6144],
         "width": 32,
         "height": 192,
+        "topic": "topic0",
+        "source": "source1",
+        "id": "123456",
+    }
+]
+
+
+CONFIG_2D_ROI = [
+    {
+        "data_brokers": ["localhost:9092", "someserver:9092"],
+        "data_topics": ["my_topic"],
+        "type": ROI_TYPE,
+        "width": 3,
+        "left_edges": [7, 12],
         "topic": "topic0",
         "source": "source1",
         "id": "123456",
@@ -116,6 +131,23 @@ class TestHistogramFactory:
     def test_does_not_creates_2d_map_histogram_on_invalid_inputs(self):
         config = deepcopy(CONFIG_2D_MAP)
         config[0]["det_range"] = "NONSENSE"
+
+        histograms = HistogramFactory.generate(config)
+
+        assert len(histograms) == 0
+
+    def test_creates_2d_roi_histogram_correctly(self):
+        histograms = HistogramFactory.generate(CONFIG_2D_ROI)
+
+        assert isinstance(histograms[0], RoiHistogram)
+        assert histograms[0].left_edges == [7, 12]
+        assert histograms[0].width == 3
+        assert histograms[0].topic == "topic0"
+        assert histograms[0].source == "source1"
+
+    def test_does_not_creates_2d_roi_histogram_on_invalid_inputs(self):
+        config = deepcopy(CONFIG_2D_ROI)
+        config[0]["left_edges"] = "NONSENSE"
 
         histograms = HistogramFactory.generate(config)
 

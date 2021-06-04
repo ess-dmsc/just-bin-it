@@ -16,6 +16,11 @@ from just_bin_it.histograms.histogram2d_map import (
     DetHistogram,
     validate_hist_2d_map,
 )
+from just_bin_it.histograms.histogram2d_roi import (
+    ROI_TYPE,
+    RoiHistogram,
+    validate_hist_2d_roi,
+)
 
 
 def parse_config(configuration, current_time_ms=None):
@@ -52,13 +57,16 @@ def parse_config(configuration, current_time_ms=None):
         for hist in configuration["histograms"]:
             if hist["type"] == TOF_1D_TYPE:
                 if not validate_hist_1d(hist):
-                    raise Exception("Could not parse 1d histogram")
+                    raise Exception("Could not parse 1d histogram config")
             elif hist["type"] == TOF_2D_TYPE:
                 if not validate_hist_2d(hist):
-                    raise Exception("Could not parse 2d histogram")
+                    raise Exception("Could not parse 2d histogram config")
             elif hist["type"] == MAP_TYPE:
                 if not validate_hist_2d_map(hist):
-                    raise Exception("Could not parse 2d map")
+                    raise Exception("Could not parse 2d map config")
+            elif hist["type"] == ROI_TYPE:
+                if not validate_hist_2d_roi(hist):
+                    raise Exception("Could not parse 2d ROI config")
             else:
                 raise Exception("Unexpected histogram type")
             hist_configs.append(hist)
@@ -98,10 +106,16 @@ class HistogramFactory:
                         topic, num_bins, tof_range, det_range, source, identifier
                     )
                 elif hist_type == MAP_TYPE:
-                    width = config["width"] if "width" in config else 512
-                    height = config["height"] if "height" in config else 512
+                    width = config["width"]
+                    height = config["height"]
                     histogram = DetHistogram(
                         topic, det_range, width, height, source, identifier
+                    )
+                elif hist_type == ROI_TYPE:
+                    width = config["width"]
+                    left_edges = config["left_edges"]
+                    histogram = RoiHistogram(
+                        topic, left_edges, width, source, identifier
                     )
                 else:
                     # Log but do nothing
