@@ -5,6 +5,7 @@ import pytest
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE, validate_hist_1d
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE, validate_hist_2d
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE, validate_hist_2d_map
+from just_bin_it.histograms.histogram2d_roi import ROI_TYPE, validate_hist_2d_roi
 from just_bin_it.histograms.input_validators import (
     check_bins,
     check_data_brokers,
@@ -47,6 +48,17 @@ CONFIG_2D_MAP = {
     "det_range": [1, 10000],
     "width": 100,
     "height": 100,
+    "topic": "hist_topic3",
+    "id": "some_id",
+    "source": "some_source",
+}
+
+CONFIG_2D_ROI = {
+    "type": ROI_TYPE,
+    "data_brokers": ["localhost:9092"],
+    "data_topics": ["fake_events_empty"],
+    "width": 3,
+    "left_edges": [7, 12],
     "topic": "hist_topic3",
     "id": "some_id",
     "source": "some_source",
@@ -127,7 +139,7 @@ class TestCommonValidation:
         assert not check_data_brokers(brokers)
 
 
-class TestConfigValidationHist1d:
+class TestConfigValidation1dHist:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.config = copy.deepcopy(CONFIG_1D)
@@ -191,7 +203,7 @@ class TestConfigValidationHist1d:
         assert not validate_hist_1d(self.config)
 
 
-class TestConfigValidationHist2d:
+class TestConfigValidation2dHist:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.config = copy.deepcopy(CONFIG_2D)
@@ -263,7 +275,7 @@ class TestConfigValidationHist2d:
         assert not validate_hist_2d(self.config)
 
 
-class TestConfigValidationMap2d:
+class TestConfigValidation2dMap:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.config = copy.deepcopy(CONFIG_2D_MAP)
@@ -335,3 +347,74 @@ class TestConfigValidationMap2d:
         self.config["data_brokers"] = [123]
 
         assert not validate_hist_2d_map(self.config)
+
+
+class TestConfigValidation2dRoi:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        self.config = copy.deepcopy(CONFIG_2D_ROI)
+
+    def test_valid_config(self):
+        assert validate_hist_2d_roi(self.config)
+
+    @pytest.mark.parametrize(
+        "missing",
+        ["topic", "data_topics", "data_brokers", "width", "type", "left_edges"],
+    )
+    def test_if_required_parameter_missing_then_validation_fails(self, missing):
+        del self.config[missing]
+
+        assert not validate_hist_2d_roi(self.config)
+
+    def test_if_hist_type_invalid_fails(self):
+        self.config["type"] = "not correct"
+
+        assert not validate_hist_2d_roi(self.config)
+
+    @pytest.mark.parametrize("width", ["string", 0, -100, [100]])
+    def test_if_width_invalid_then_validation_fails(self, width):
+        self.config["width"] = width
+
+        assert not validate_hist_2d_roi(self.config)
+
+    @pytest.mark.parametrize("height", ["string", 0, -100, [100]])
+    def test_if_height_invalid_then_validation_fails(self, height):
+        self.config["width"] = height
+
+        assert not validate_hist_2d_roi(self.config)
+
+    def test_if_topic_invalid_then_validation_fails(self):
+        self.config["topic"] = 123
+
+        assert not validate_hist_2d_roi(self.config)
+
+    @pytest.mark.parametrize(
+        "left_edges",
+        (123, [], [1, "abc", 3]),
+        ids=("not a list", "empty_list", "non-numeric value"),
+    )
+    def test_if_left_edges_invalid_then_validation_fails(self, left_edges):
+        self.config["left_edges"] = left_edges
+
+        assert not validate_hist_2d_roi(self.config)
+
+    @pytest.mark.parametrize("missing", ["id", "source"])
+    def test_if_optional_parameter_missing_then_validation_passes(self, missing):
+        del self.config[missing]
+
+        assert validate_hist_2d_roi(self.config)
+
+    def test_if_id_invalid_then_validation_fails(self):
+        self.config["id"] = 123
+
+        assert not validate_hist_2d_roi(self.config)
+
+    def test_if_data_topic_invalid_then_validation_fails(self):
+        self.config["data_topics"] = [123]
+
+        assert not validate_hist_2d_roi(self.config)
+
+    def test_if_data_broker_invalid_then_validation_fails(self):
+        self.config["data_brokers"] = [123]
+
+        assert not validate_hist_2d_roi(self.config)

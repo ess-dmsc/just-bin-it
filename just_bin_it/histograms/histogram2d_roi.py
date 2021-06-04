@@ -1,67 +1,55 @@
 import logging
+import numbers
 
 import numpy as np
 
-# import numbers
+from just_bin_it.histograms.input_validators import (
+    check_data_brokers,
+    check_data_topics,
+    check_id,
+    check_source,
+    check_topic,
+    is_collection_numeric,
+)
 
-
-# from just_bin_it.histograms.input_validators import (
-#     check_data_brokers,
-#     check_data_topics,
-#     check_det_range,
-#     check_id,
-#     check_source,
-#     check_topic,
-# )
-
-MAP_TYPE = "roihist"
+ROI_TYPE = "roihist"
 
 
 def validate_hist_2d_roi(histogram_config):
-    # required = [
-    #     "topic",
-    #     "data_topics",
-    #     "data_brokers",
-    #     "det_range",
-    #     "width",
-    #     "height",
-    #     "type",
-    # ]
-    # if any(req not in histogram_config for req in required):
-    #     return False
-    #
-    # if histogram_config["type"] != MAP_TYPE:
-    #     return False
-    #
-    # if not check_topic(histogram_config["topic"]):
-    #     return False
-    #
-    # if not check_data_topics(histogram_config["data_topics"]):
-    #     return False
-    #
-    # if not check_data_brokers(histogram_config["data_brokers"]):
-    #     return False
-    #
-    # if not check_det_range(histogram_config["det_range"]):
-    #     return False
-    #
-    # if (
-    #     not isinstance(histogram_config["height"], numbers.Number)
-    #     or histogram_config["height"] < 1
-    # ):
-    #     return False
-    #
-    # if (
-    #     not isinstance(histogram_config["width"], numbers.Number)
-    #     or histogram_config["width"] < 1
-    # ):
-    #     return False
-    #
-    # if "id" in histogram_config and not check_id(histogram_config["id"]):
-    #     return False
-    #
-    # if "source" in histogram_config and not check_source(histogram_config["source"]):
-    #     return False
+    required = ["topic", "data_topics", "data_brokers", "width", "left_edges", "type"]
+    if any(req not in histogram_config for req in required):
+        return False
+
+    if histogram_config["type"] != ROI_TYPE:
+        return False
+
+    if not check_topic(histogram_config["topic"]):
+        return False
+
+    if not check_data_topics(histogram_config["data_topics"]):
+        return False
+
+    if not check_data_brokers(histogram_config["data_brokers"]):
+        return False
+
+    if (
+        not isinstance(histogram_config["width"], numbers.Number)
+        or histogram_config["width"] < 1
+    ):
+        return False
+
+    if (
+        not isinstance(histogram_config["left_edges"], list)
+        or len(histogram_config["left_edges"]) == 0
+        or not is_collection_numeric(histogram_config["left_edges"])
+    ):
+        return False
+
+    if "id" in histogram_config and not check_id(histogram_config["id"]):
+        return False
+
+    if "source" in histogram_config and not check_source(histogram_config["source"]):
+        return False
 
     return True
 
