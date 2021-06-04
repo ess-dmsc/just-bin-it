@@ -23,13 +23,13 @@ class TestHistogramRoiFunctionality:
         self.hist = RoiHistogram("topic", self.roi_left_edges, self.roi_width)
 
     def test_top_left_is_first_bin(self):
-        assert self.hist.x_edges[0] == 16
+        assert self.hist.bins[0] == 16
 
     def test_last_bin_is_bottom_right_plus_two(self):
-        assert self.hist.x_edges[~0] == 37 + 2
+        assert self.hist.bins[~0] == 37 + 2
 
     def test_extra_ignored_bin_at_end_of_first_row(self):
-        assert self.hist.x_edges[4] == 20
+        assert self.hist.bins[4] == 20
 
     def test_all_bins_are_correct(self):
         hand_calculated_bins = [
@@ -50,7 +50,7 @@ class TestHistogramRoiFunctionality:
             38,
             39,
         ]
-        assert np.array_equal(self.hist.x_edges, hand_calculated_bins)
+        assert np.array_equal(self.hist.bins, hand_calculated_bins)
 
     def test_adding_data_outside_bins_is_ignored(self):
         ids_outside = [15, 40]
@@ -62,9 +62,10 @@ class TestHistogramRoiFunctionality:
         assert self.hist.shape == (3, 4)
 
     def test_initial_outputted_data_is_correct_shape_and_all_zeros(self):
-        data = self.hist.data
-        assert data.shape == (3, 4)
-        assert np.array_equal(data, np.zeros((3, 4)))
+        assert self.hist.data.shape == (3, 4)
+        assert self.hist.x_edges == [0, 1, 2, 3]
+        assert self.hist.y_edges == [0, 1, 2]
+        assert np.array_equal(self.hist.data, np.zeros((3, 4)))
 
     def test_added_data_is_histogrammed_correctly(self):
         expected_result = [[32, 34, 36, 38], [50, 52, 54, 56], [68, 70, 72, 74]]

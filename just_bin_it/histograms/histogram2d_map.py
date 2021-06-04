@@ -79,6 +79,7 @@ class DetHistogram:
         """
         self._histogram = None
         self.x_edges = None
+        self.y_edges = None
         self.det_range = det_range
         # The number of bins is the number of detectors.
         self.num_bins = det_range[1] - det_range[0] + 1

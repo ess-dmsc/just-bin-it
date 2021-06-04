@@ -67,8 +67,10 @@ class RoiHistogram:
         :param identifier: An optional identifier for the histogram.
         """
         self._histogram = None
-        self.x_edges = None
-        self.mask = None
+        self.x_edges = [x for x in range(width)]
+        self.y_edges = [y for y in range(len(left_edges))]
+        self.mask = []
+        self.bins = []
         self.left_edges = left_edges
         self.width = width
         self.topic = topic
@@ -82,18 +84,19 @@ class RoiHistogram:
         """
         Create a zeroed histogram.
         """
+        self.bins.clear()
+        self.mask.clear()
+
         # Work out the bins
-        self.mask = []
-        bins = []
         for i, edge in enumerate(self.left_edges):
-            bins.extend([edge + x for x in range(self.width)])
+            self.bins.extend([edge + x for x in range(self.width)])
             self.mask.extend([0 for _ in range(self.width)])
             if i < len(self.left_edges) - 1 and self._is_roi_discontiguous(
-                bins[~0], self.left_edges[i + 1]
+                self.bins[~0], self.left_edges[i + 1]
             ):
                 # Add extra bin for ids we don't care about between the end of
                 # this row and the start of the next
-                bins.append(bins[~0] + 1)
+                self.bins.append(self.bins[~0] + 1)
                 self.mask.append(1)
 
         # TODO: put this information in a doc?
@@ -104,14 +107,14 @@ class RoiHistogram:
         # the "3" bin.
         # To avoid this we add one more bin and just ignore the two "extra" bins
         # e.g., bins = [1,2,3,4,5]
-        bins.append(bins[~0] + 1)
-        bins.append(bins[~0] + 1)
+        self.bins.append(self.bins[~0] + 1)
+        self.bins.append(self.bins[~0] + 1)
         self.mask.append(1)
         self.mask.append(1)
 
         # The data is actually stored as a 1d histogram, it is converted to 2d
         # when read - this speeds things up significantly.
-        self._histogram, self.x_edges = np.histogram([], bins=bins)
+        self._histogram, _ = np.histogram([], bins=self.bins)
 
     def _is_roi_discontiguous(self, last_bin, next_left_edge):
         return next_left_edge != last_bin + 1
@@ -148,7 +151,7 @@ class RoiHistogram:
 
         self.last_pulse_time = pulse_time
 
-        self._histogram += np.histogram(det_ids, bins=self.x_edges)[0]
+        self._histogram += np.histogram(det_ids, bins=self.bins)[0]
 
     def clear_data(self):
         """
