@@ -200,10 +200,19 @@ class TestHistogramRoiEdgeCases:
 
         assert np.array_equal(hist.data, expected_result)
 
-    def test_roi_of_one_pixel(self):
-        left_edges = [8]
+    @pytest.mark.parametrize(
+        "left_edges, expected_result",
+        [
+            ([1], [[1]]),
+            ([5], [[5]]),
+            ([7], [[7]]),
+            ([14], [[14]]),
+            ([16], [[16]]),
+            ([20], [[20]]),
+        ],
+    )
+    def test_roi_of_single_pixel(self, left_edges, expected_result):
         roi_width = 1
-        expected_result = [[8]]
 
         hist = RoiHistogram("topic", left_edges, roi_width)
         hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
