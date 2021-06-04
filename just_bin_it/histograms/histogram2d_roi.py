@@ -121,20 +121,19 @@ class RoiHistogram:
 
     @property
     def data(self):
-        # Create an empty 1d histogram
-        hist2d, _ = np.histogram([], bins=(self.width * len(self.left_edges)))
-
+        hist2d, _, _ = np.histogram2d([], [], bins=self.shape)
         i = 0
         for mask, value in zip(self.mask, self._histogram):
             if not mask:
-                hist2d[i] = value
+                x = i % self.width
+                y = i // self.width
+                hist2d[x][y] = value
                 i += 1
-
-        return hist2d.reshape(self.shape)
+        return hist2d
 
     @property
     def shape(self):
-        return len(self.left_edges), self.width
+        return self.width, len(self.left_edges)
 
     def add_data(self, pulse_time, tofs, det_ids, source=""):
         """
