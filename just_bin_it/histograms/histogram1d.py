@@ -85,9 +85,6 @@ class Histogram1d:
         self._initialise_histogram()
 
     def _initialise_histogram(self):
-        """
-        Create a zeroed histogram with the correct shape.
-        """
         self._histogram, self.x_edges = np.histogram(
             [], range=self.tof_range, bins=self.num_bins
         )
@@ -109,7 +106,7 @@ class Histogram1d:
 
         if self.det_range:
             # Create 2D histogram so we can filter on det-id then reduce to 1D.
-            # This is the quickest way to filter on det-id.
+            # This is the quickest way to filter on det-id (probably).
             histogram, _, _ = np.histogram2d(
                 tofs,
                 det_ids,

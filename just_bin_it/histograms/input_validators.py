@@ -2,10 +2,14 @@ import numbers
 import re
 
 
+def is_collection_numeric(data):
+    return all((isinstance(x, numbers.Number) for x in data))
+
+
 def check_tof(tof):
     if not isinstance(tof, (list, tuple)) or len(tof) != 2:
         return False
-    if not isinstance(tof[0], numbers.Number) or not isinstance(tof[1], numbers.Number):
+    if not is_collection_numeric(tof):
         return False
     if tof[0] > tof[1]:
         return False
@@ -15,9 +19,7 @@ def check_tof(tof):
 def check_det_range(det_range):
     if not isinstance(det_range, (list, tuple)) or len(det_range) != 2:
         return False
-    if not isinstance(det_range[0], numbers.Number) or not isinstance(
-        det_range[1], numbers.Number
-    ):
+    if not is_collection_numeric(det_range):
         return False
     if det_range[0] > det_range[1]:
         return False

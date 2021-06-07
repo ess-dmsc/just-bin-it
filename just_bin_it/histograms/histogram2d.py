@@ -87,9 +87,6 @@ class Histogram2d:
         self._initialise_histogram()
 
     def _initialise_histogram(self):
-        """
-        Create a zeroed histogram with the correct shape.
-        """
         self._histogram, self.x_edges, self.y_edges = np.histogram2d(
             [], [], range=(self.tof_range, self.det_range), bins=self.num_bins
         )

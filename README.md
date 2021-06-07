@@ -96,25 +96,14 @@ existing histograms will no longer be updated.
 
 A JSON histogramming configuration has the following parameters:
 
-* "cmd" (string): the command type (config, stop, etc.)
-* "msg_id" (string): a unique identifier for the message
-* "start" (seconds since epoch in ms): only histogram data after this UTC time (optional)
-* "stop" (seconds since epoch in ms): only histogram data up to this UTC time (optional)
-* "interval" (seconds): only histogram for this interval (optional)
-* "histograms" (array of dicts): the histograms to create, contains the following:
-    * "type" (string): the histogram type (hist1d, hist2d or dethist)
-    * "data_brokers" (string array): the addresses of the Kafka brokers
-    * "data_topics" (string array): the topics to listen for event data on
-    * "tof_range" (array of ints): the time-of-flight range to histogram (hist1d and hist2d only)
-    * "det_range" (array of ints): the range of detectors to histogram (optional for hist1d)
-    * "num_bins" (int for 1D or [int, int] for 2D): the number of histogram bins (hist1d and hist2d only)
-    * "topic" (string): the topic to write histogram data to
-    * "source" (string): the name of the source to accept data from (optional)
-    * "id" (string): a unique identifier for the histogram which will be contained in the published histogram data (optional but recommended)
-    * "width" (int): the width of the detector (dethist only)
-    * "height" (int): the height of the detector (dethist only)
+* "cmd" (string): the command type (config, stop, etc.).
+* "msg_id" (string): a unique identifier for the message.
+* "start" (seconds since epoch in ms): only histogram data after this UTC time (optional).
+* "stop" (seconds since epoch in ms): only histogram data up to this UTC time (optional).
+* "interval" (seconds): only histogram for this interval (optional).
+* "histograms" (array of dicts): the histograms to create, see the docs for more information.
 
-For example:
+An example:
 ```json
 {
   "cmd": "config",
@@ -165,11 +154,10 @@ If `start` is supplied then it will start histogramming from that time regardles
 if it is the future or past.
 If `stop` is supplied then histogramming will stop at that time.
 If both `start` and `stop` are in the past then historic data will be used
-(provided it still exists)
+(provided it still exists).
 
 `interval` starts counting immediately and stops after the interval time is exceeded.
 
-If "interval" is defined
 If `interval`"` is defined in combination with `start` and/or `stop` then the
 message will be treated as invalid and ignored.
 
@@ -177,32 +165,20 @@ message will be treated as invalid and ignored.
 
 ##### hist1d
 A simple 1-D histogram of time-of-flight vs counts.
-
-The `tof_range` specifies the time-of-flight range to histogram over and `num_bins`
-specifies how many bins to divide the range up into. Note: the bins are equally sized.
-
-The `det_range` is optional but if supplied then data from detectors with IDs outside of that
-range are ignored.
+See the docs for more information.
 
 ##### hist2d
 A 2-D histogram of time-of-flight vs detector IDs.
-
-The `tof_range` specifies the time-of-flight range to histogram over and `num_bins`
-specifies how many bins to divide the range up into. Note: the bins are equally sized.
-
-The `det_range` specifies the range of detector IDs to histogram over and `num_bins`
-specifies how many bins to divide the range up into. Note: the bins are equally sized.
-
-Currently the number of bins are the same for time-of-flight and the detectors.
+See the docs for more information.
 
 ##### dethist
 A 2-D histogram of detector IDs (pixels) where each ID is a bin and the histogram
 is arranged to approximate the physical layout of the detector.
+See the docs for more information
 
-The `det_range` specifies the range of detector IDs to histogram over.
-
-The `width` and `height` define the dimensions of the detector for the
-conversion of detector IDs into their respective 2-D positions.
+##### roihist
+A 2-D histogram of a region-of-interest on a detector.
+See the docs for more information.
 
 ### Restarting the count
 To restarting the histograms counting from zero, send the `reset_counts` command:

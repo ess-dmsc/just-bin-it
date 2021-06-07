@@ -4,9 +4,6 @@ import pytest
 from just_bin_it.histograms.histogram2d import Histogram2d
 
 IRRELEVANT_TOPIC = "some-topic"
-IRRELEVANT_NUM_BINS = (123, 456)
-IRRELEVANT_TOF_RANGE = (0, 100)
-IRRELEVANT_DET_RANGE = (0, 100)
 
 
 class TestHistogram2dFunctionality:
@@ -116,26 +113,3 @@ class TestHistogram2dFunctionality:
         self.hist.add_data(1236, self.data, self.data)
 
         assert self.hist.last_pulse_time == 1236
-
-
-class TestHistogram2dConstruction:
-    def test_if_no_id_specified_then_empty_string(self):
-        histogram = Histogram2d(
-            IRRELEVANT_TOPIC,
-            IRRELEVANT_NUM_BINS,
-            IRRELEVANT_TOF_RANGE,
-            IRRELEVANT_DET_RANGE,
-        )
-
-        assert histogram.identifier == ""
-
-    def test_config_with_id_specified_sets_id(self):
-        histogram = Histogram2d(
-            IRRELEVANT_TOPIC,
-            IRRELEVANT_NUM_BINS,
-            IRRELEVANT_TOF_RANGE,
-            IRRELEVANT_DET_RANGE,
-            identifier="123456",
-        )
-
-        assert histogram.identifier == "123456"

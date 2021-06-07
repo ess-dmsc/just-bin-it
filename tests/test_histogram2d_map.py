@@ -5,9 +5,6 @@ from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 IRRELEVANT_TOPIC = "some-topic"
 IRRELEVANT_TOF_RANGE = (0, 100)
-IRRELEVANT_DET_RANGE = (0, 100)
-IRRELEVANT_WIDTH = 100
-IRRELEVANT_HEIGHT = 100
 
 
 def generate_pixel_id(x, y, width):
@@ -149,23 +146,3 @@ class TestHistogram2dMapFunctionality:
         self.hist.add_data(1236, [], self.data)
 
         assert self.hist.last_pulse_time == 1236
-
-
-class TestHistogram2dMapConstruction:
-    def test_if_no_id_specified_then_empty_string(self):
-        histogram = DetHistogram(
-            IRRELEVANT_TOPIC, IRRELEVANT_DET_RANGE, IRRELEVANT_WIDTH, IRRELEVANT_HEIGHT
-        )
-
-        assert histogram.identifier == ""
-
-    def test_config_with_id_specified_sets_id(self):
-        histogram = DetHistogram(
-            IRRELEVANT_TOPIC,
-            IRRELEVANT_DET_RANGE,
-            IRRELEVANT_WIDTH,
-            IRRELEVANT_HEIGHT,
-            identifier="123456",
-        )
-
-        assert histogram.identifier == "123456"

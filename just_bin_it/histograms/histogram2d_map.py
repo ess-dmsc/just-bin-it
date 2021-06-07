@@ -79,6 +79,7 @@ class DetHistogram:
         """
         self._histogram = None
         self.x_edges = None
+        self.y_edges = None
         self.det_range = det_range
         # The number of bins is the number of detectors.
         self.num_bins = det_range[1] - det_range[0] + 1
@@ -92,21 +93,22 @@ class DetHistogram:
         self._initialise_histogram()
 
     def _initialise_histogram(self):
-        """
-        Create a zeroed histogram.
-        """
-        # Work out the edges for the 2d histogram.
+        self._calculate_edges()
+        self._create_empty_histogram()
+
+    def _create_empty_histogram(self):
+        # The data is actually stored as a 1d histogram, it is converted to 2d
+        # when read - this speeds things up significantly.
+        self._histogram, _ = np.histogram(
+            [], range=self.det_range, bins=(self.det_range[1] - self.det_range[0])
+        )
+
+    def _calculate_edges(self):
         _, self.x_edges, self.y_edges = np.histogram2d(
             [],
             [],
             range=((0, self.width), (0, self.height)),
             bins=(self.width, self.height),
-        )
-
-        # The data is actually stored as a 1d histogram, it is converted to 2d
-        # when read - this speeds things up significantly.
-        self._histogram, self._edges = np.histogram(
-            [], range=self.det_range, bins=(self.det_range[1] - self.det_range[0])
         )
 
     @property
@@ -136,7 +138,7 @@ class DetHistogram:
         Add data to the histogram.
 
         :param pulse_time: The pulse time.
-        :param tofs: The time-of-flight data.
+        :param tofs: Not used.
         :param det_ids: The detector data.
         :param source: The source of the event.
         """
@@ -155,4 +157,4 @@ class DetHistogram:
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self._initialise_histogram()
+        self._create_empty_histogram()
