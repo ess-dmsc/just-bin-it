@@ -198,11 +198,11 @@ Currently the number of bins are the same for time-of-flight and the detectors.
 ##### dethist
 A 2-D histogram of detector IDs (pixels) where each ID is a bin and the histogram
 is arranged to approximate the physical layout of the detector.
+See the docs for more information
 
-The `det_range` specifies the range of detector IDs to histogram over.
-
-The `width` and `height` define the dimensions of the detector for the
-conversion of detector IDs into their respective 2-D positions.
+##### roihist
+A 2-D histogram of a region-of-interest on a detector.
+See the docs for more information.
 
 ### Restarting the count
 To restarting the histograms counting from zero, send the `reset_counts` command:

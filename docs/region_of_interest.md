@@ -68,7 +68,7 @@ Our workaround is to use wide bins for the IDs we are not interested in, e.g for
 16, 17, 18, 19, 20, 25, 26, 27, ..
 ```
 Because we are not interested in the IDs between 19 and 25 we create one wide bin to reduce the total number of bins.
-When the 1-D data is transformed into 2-D, we ignore the data in the bins we don't care about.
+When the 1-D data is transformed into 2-D we ignore the data in the bins we don't care about.
 
 #### Why do we add two extra bins at the end?
 Numpy includes the right most edge of the last bin as part of that bin,
