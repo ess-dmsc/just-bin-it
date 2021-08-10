@@ -315,7 +315,7 @@ directory.
 For testing purposes it is possible to create fake event data that is send to Kafka.
 
 ```
-python bin/generate_event_data.py --brokers localhost:9092 --config-topic fake_events --num_messages 100 --num_events 10000
+python bin/generate_event_data.py --brokers localhost:9092 --topic fake_events --num_messages 100 --num_events 10000
 ```
 The command line parameters are:
 * brokers (string): the address for the Kafka brokers
@@ -337,7 +337,7 @@ To use this, some additional requirements must be installed:
 
 Example usage:
 ```
-python bin/viewer.py --brokers localhost:9092 --config-topic output_topic
+python bin/viewer.py --brokers localhost:9092 --topic output_topic
 ```
 This will plot a graph of the most recent histogram. Note: the plot does not update,
 so it will be necessary to re-run it to get fresh data.
@@ -345,7 +345,7 @@ so it will be necessary to re-run it to get fresh data.
 view_output_messages.py will continuously print a textual representation of the
 data being outputted. Example usage:
 ```
-python bin/view_output_messages.py --brokers localhost:9092 --config-topic output_topic
+python bin/view_output_messages.py --brokers localhost:9092 --topic output_topic
 ```
 
 ## Supported schemas
