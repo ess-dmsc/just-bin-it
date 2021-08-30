@@ -1,5 +1,4 @@
 import time
-from contextlib import contextmanager
 from multiprocessing import Queue
 
 import pytest
@@ -169,7 +168,7 @@ class TestHistogramProcessLowLevel:
         assert self.histogrammer.histogramming_stopped
 
     def test_processing_does_not_request_stop_if_event_source_does_not_know_and_histogrammer_does_not_says_time_exceeded(
-        self
+        self,
     ):
         self.event_source.stop_time = StopTimeStatus.UNKNOWN
         self.histogrammer.histogramming_stopped = False
@@ -180,7 +179,7 @@ class TestHistogramProcessLowLevel:
         assert not self.histogrammer.histogramming_stopped
 
     def test_processing_requests_stop_if_event_source_does_not_know_and_histogrammer_says_time_exceeded(
-        self
+        self,
     ):
         self.event_source.stop_time = StopTimeStatus.UNKNOWN
         self.histogrammer.histogramming_stopped = True
@@ -191,7 +190,7 @@ class TestHistogramProcessLowLevel:
         assert self.histogrammer.histogramming_stopped
 
     def test_processing_does_not_request_stop_if_histogrammer_says_time_exceeded_but_event_source_does_not(
-        self
+        self,
     ):
         self.event_source.stop_time = StopTimeStatus.NOT_EXCEEDED
         self.histogrammer.histogramming_stopped = True
@@ -214,59 +213,3 @@ class TestHistogramProcessLowLevel:
         self.processor.run_processing()
 
         assert self.histogrammer.data_received
-
-
-@contextmanager
-def _create_mocked_histogram_process(monkeypatch, publish_interval=1):
-    import just_bin_it.histograms.histogram_process as jbi
-
-    def mock_create_histogrammer(configuration, start, stop):
-        return MockHistogrammer()
-
-    def mock_create_event_source(configuration, start, stop):
-        return MockEventSource()
-
-    monkeypatch.setattr(jbi, "create_histogrammer", mock_create_histogrammer)
-    monkeypatch.setattr(jbi, "create_event_source", mock_create_event_source)
-
-    process = jbi.HistogramProcess(VALID_CONFIG, None, None, publish_interval)
-    yield process
-    process.stop()
-
-
-@pytest.mark.slow
-def test_if_stats_message_waiting_then_can_be_retrieved(monkeypatch):
-    with _create_mocked_histogram_process(monkeypatch) as process:
-        # Give initial stats message time to arrive.
-        time.sleep(0.1)
-
-        assert len(process.get_stats()) > 0
-
-
-@pytest.mark.slow
-def test_no_stats_message_waiting_then_get_none(monkeypatch):
-    with _create_mocked_histogram_process(
-        monkeypatch, publish_interval=10000
-    ) as process:
-        # Give initial stats message time to arrive.
-        time.sleep(0.1)
-
-        # There will be at least one message as initialisation always sends one.
-        _ = process.get_stats()
-
-        # Immediate request for another message should return  None
-        assert process.get_stats() is None
-
-
-@pytest.mark.slow
-def test_on_clear_message_histograms_are_cleared(monkeypatch):
-    with _create_mocked_histogram_process(monkeypatch) as process:
-        # Give it time to get going.
-        time.sleep(0.1)
-
-        process.clear()
-        time.sleep(0.1)
-
-        # Hacky way to get whether the histogrammer has been cleared
-        stats = process.get_stats()
-        assert stats["cleared"]
