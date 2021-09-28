@@ -252,7 +252,7 @@ class TestEventSourceMultiplePartitions:
         assert compare_two_messages(self.messages[45], new_data[0])
 
     def test_given_time_more_recent_than_last_message_then_seeks_to_last_message_on_all_partitions(
-        self
+        self,
     ):
         last_timestamp, _, _ = self.messages[149]
         msg_time = last_timestamp + 1000
@@ -262,7 +262,7 @@ class TestEventSourceMultiplePartitions:
         assert offsets == [50, 50, 50]
 
     def test_query_for_exact_last_message_time_finds_correct_offset_for_all_partitions(
-        self
+        self,
     ):
         expected_timestamp, _, _ = self.messages[149]
         self.event_source.start_time = expected_timestamp
@@ -271,7 +271,7 @@ class TestEventSourceMultiplePartitions:
         assert offsets == [50, 50, 49]
 
     def test_query_for_inaccurate_last_message_time_finds_next_offset_for_all_partitions(
-        self
+        self,
     ):
         expected_timestamp, _, _ = self.messages[149]
         # Go back a little, so it should find the expected message

@@ -19,7 +19,7 @@ class TestConfigListener:
         assert self.config_listener.check_for_messages()
 
     def test_when_waiting_message_not_consumed_checking_again_still_returns_message_waiting(
-        self
+        self,
     ):
         self.consumer.add_messages([(0, 0, '"message1"')])
         self.config_listener.check_for_messages()
