@@ -1,6 +1,8 @@
-import json
+from os import getpid
+from socket import gethostname
 
 import pytest
+from streaming_data_types import deserialise_x5f2
 
 from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
 from just_bin_it.utilities import time_in_ns
@@ -43,9 +45,14 @@ class TestHeartbeatPublisher:
         self.publisher.publish(current_time_ms)
 
         _, msg = self.producer.messages[0]
-        msg = json.loads(msg)
-        assert msg["message"] == current_time_ms
-        assert msg["message_interval"] == self.update_interval
+        msg = deserialise_x5f2(msg)
+        assert msg.software_name == "just-bin-it"
+        assert msg.host_name == gethostname()
+        assert msg.process_id == getpid()
+        assert msg.update_interval == self.update_interval
+        assert msg.service_id == ""
+        assert msg.software_version == ""
+        assert msg.status_json == ""
 
     def test_after_first_message_publish_if_interval_has_passed(self):
         current_time_ms = time_in_ns() // 1_000_000
