@@ -25,7 +25,7 @@ class HeartbeatPublisher:
         assert current_time_ms >= 0
 
         if current_time_ms >= self.next_time_to_publish:
-            self._publish(current_time_ms)
+            self._publish()
             self._update_publish_time(current_time_ms)
 
     def _update_publish_time(self, current_time_ms):
@@ -35,7 +35,7 @@ class HeartbeatPublisher:
             self.next_time_to_publish % self.heartbeat_interval_ms
         )
 
-    def _publish(self, current_time_ms=0):
+    def _publish(self):
         try:
             msg = serialise_x5f2(
                 "just-bin-it",
