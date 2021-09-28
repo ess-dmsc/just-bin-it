@@ -1,7 +1,7 @@
 -r requirements.txt
-black
-flake8
-isort
+black==21.9b0   # Pinned to match pre-commit config
+flake8==3.8.3   # Pinned to match pre-commit config
+isort==5.9.3    # Pinned to match pre-commit config
 mutmut
 pre-commit
 pytest
