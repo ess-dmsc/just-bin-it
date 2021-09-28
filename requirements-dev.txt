@@ -4,5 +4,6 @@ flake8
 isort
 mutmut
 pre-commit
+pytest
 pytest-cov
 tox

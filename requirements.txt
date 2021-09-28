@@ -4,4 +4,3 @@ graphyte
 kafka-python
 mock
 numpy
-pytest
