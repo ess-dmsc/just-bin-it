@@ -208,8 +208,6 @@ histogram then the simulated data will be 2-D.
 When a heartbeat topic is supplied via the `hb-topic` option then just-bin-it
 will send periodic messages to that topic.
 
-Note: no histogram data is written to the output topic in Kafka with this mode.
-
 ```
 python bin/just-bin-it.py --brokers localhost:9092 --config-topic hist_commands --hb-topic heartbeat
 ```
