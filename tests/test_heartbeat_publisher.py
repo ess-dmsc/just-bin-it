@@ -52,7 +52,7 @@ class TestHeartbeatPublisher:
         assert msg.update_interval == self.update_interval
         assert msg.service_id == ""
         assert msg.software_version == ""
-        assert msg.status_json == ""
+        assert msg.status_json == "{}"
 
     def test_after_first_message_publish_if_interval_has_passed(self):
         current_time_ms = time_in_ns() // 1_000_000

@@ -44,7 +44,7 @@ class HeartbeatPublisher:
                 self._host,
                 self._pid,
                 self.heartbeat_interval_ms,
-                "",
+                "{}",
             )
             self.producer.publish_message(self.topic, msg)
         except KafkaException as error:
