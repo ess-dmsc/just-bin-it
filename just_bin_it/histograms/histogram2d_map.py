@@ -2,6 +2,7 @@ import logging
 import numbers
 
 import numpy as np
+from fast_histogram import histogram1d
 
 from just_bin_it.histograms.input_validators import (
     check_data_brokers,
@@ -80,7 +81,9 @@ class DetHistogram:
         self._histogram = None
         self.x_edges = None
         self.y_edges = None
-        self.det_range = det_range
+        # fast_histogram doesn't include the last value in a range, so we add
+        # a small fudge factor.
+        self._det_range = (det_range[0], det_range[1] + 0.01)
         # The number of bins is the number of detectors.
         self.num_bins = width * height
         self.width = width
@@ -99,7 +102,7 @@ class DetHistogram:
     def _create_empty_histogram(self):
         # The data is actually stored as a 1d histogram, it is converted to 2d
         # when read - this speeds things up significantly.
-        self._histogram, _ = np.histogram([], range=self.det_range, bins=self.num_bins)
+        self._histogram = histogram1d([], range=self._det_range, bins=self.num_bins)
 
     def _calculate_edges(self):
         _, self.x_edges, self.y_edges = np.histogram2d(
@@ -145,9 +148,9 @@ class DetHistogram:
 
         self.last_pulse_time = pulse_time
 
-        self._histogram += np.histogram(
-            det_ids, range=self.det_range, bins=self.num_bins
-        )[0]
+        self._histogram += histogram1d(
+            det_ids, range=self._det_range, bins=self.num_bins
+        )
 
     def clear_data(self):
         """
@@ -155,3 +158,8 @@ class DetHistogram:
         """
         logging.info("Clearing data")  # pragma: no mutate
         self._create_empty_histogram()
+
+    @property
+    def det_range(self):
+        # Hide the fudge factor to the outside world
+        return self._det_range[0], int(self._det_range[1])
