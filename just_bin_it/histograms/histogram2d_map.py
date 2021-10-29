@@ -82,7 +82,7 @@ class DetHistogram:
         self.y_edges = None
         self.det_range = det_range
         # The number of bins is the number of detectors.
-        self.num_bins = det_range[1] - det_range[0] + 1
+        self.num_bins = width * height
         self.width = width
         self.height = height
         self.topic = topic
@@ -99,9 +99,7 @@ class DetHistogram:
     def _create_empty_histogram(self):
         # The data is actually stored as a 1d histogram, it is converted to 2d
         # when read - this speeds things up significantly.
-        self._histogram, _ = np.histogram(
-            [], range=self.det_range, bins=(self.det_range[1] - self.det_range[0])
-        )
+        self._histogram, _ = np.histogram([], range=self.det_range, bins=self.num_bins)
 
     def _calculate_edges(self):
         _, self.x_edges, self.y_edges = np.histogram2d(
@@ -122,11 +120,10 @@ class DetHistogram:
         )
 
         # Copy the data over
-        for det_id in range(self.det_range[0], self.det_range[1]):
-            x = (det_id - 1) % self.width
-            y = ((det_id - 1) // self.width) % self.height
-            hist2d[x][y] = self._histogram[det_id - self.det_range[0]]
-
+        for i, value in enumerate(self._histogram):
+            x = i % self.width
+            y = i // self.width
+            hist2d[x][y] = value
         return hist2d
 
     @property
@@ -149,7 +146,7 @@ class DetHistogram:
         self.last_pulse_time = pulse_time
 
         self._histogram += np.histogram(
-            det_ids, range=self.det_range, bins=(self.det_range[1] - self.det_range[0])
+            det_ids, range=self.det_range, bins=self.num_bins
         )[0]
 
     def clear_data(self):
