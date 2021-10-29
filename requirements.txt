@@ -1,5 +1,5 @@
 confluent-kafka
-ess-streaming-data-types==0.14.0
+ess-streaming-data-types==0.15.0
 graphyte
 kafka-python
 mock
