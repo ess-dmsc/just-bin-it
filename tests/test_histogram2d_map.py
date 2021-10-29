@@ -27,30 +27,32 @@ class TestHistogram2dMapFunctionality:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.pulse_time = 1234
-        self.det_range = (1, 25)
+        self.det_range = (1, 30)
         self.width = 5
-        self.height = 5
+        self.height = 6
         self.data = generate_image(self.width, self.height)
 
         self.hist = DetHistogram("topic", self.det_range, self.width, self.height)
 
     def test_adding_data_to_detector_range_which_does_not_start_at_zero_is_okay(self):
-        hist = DetHistogram(IRRELEVANT_TOPIC, (3, 27), self.width, self.height)
+        hist = DetHistogram(IRRELEVANT_TOPIC, (3, 30), self.width, self.height)
 
         hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data)
 
         # The data for det_ids 1 and 2 are discarded.
-        assert hist.data.sum() == 322
+        assert hist.data.sum() == len(self.data) - self.data.count(1) - self.data.count(
+            2
+        )
 
     def test_on_construction_histogram_is_uninitialised(self):
         assert self.hist.x_edges is not None
-        assert self.hist.shape == (5, 5)
-        assert len(self.hist.x_edges) == 6
-        assert len(self.hist.y_edges) == 6
+        assert self.hist.shape == (self.width, self.height)
+        assert len(self.hist.x_edges) == self.width + 1
+        assert len(self.hist.y_edges) == self.height + 1
         assert self.hist.x_edges[0] == 0
         assert self.hist.x_edges[-1] == 5
         assert self.hist.y_edges[0] == 0
-        assert self.hist.y_edges[-1] == 5
+        assert self.hist.y_edges[-1] == 6
         assert self.hist.data.sum() == 0
 
     def test_adding_data_to_initialised_histogram_new_data_is_added(self):
@@ -69,7 +71,7 @@ class TestHistogram2dMapFunctionality:
         x_edges = self.hist.x_edges[:]
 
         # Add data that is outside the edges
-        new_data = np.array([0, 26, 27, 100])
+        new_data = np.array([0, 31, 32, 100])
         self.hist.add_data(self.pulse_time, [], new_data)
 
         # Sum should not change
@@ -78,17 +80,19 @@ class TestHistogram2dMapFunctionality:
         assert np.array_equal(self.hist.x_edges, x_edges)
 
     def test_adding_data_of_specific_shape_is_captured(self):
-        p2_2 = generate_pixel_id(2, 2, self.width)
+        p0_0 = generate_pixel_id(0, 0, self.width)
         p3_2 = generate_pixel_id(3, 2, self.width)
         p0_3 = generate_pixel_id(0, 3, self.width)
+        p4_5 = generate_pixel_id(4, 5, self.width)
 
-        data = [p2_2, p2_2, p3_2, p3_2, p3_2, p0_3, p0_3]
+        data = [p0_0, p0_0, p3_2, p3_2, p3_2, p0_3, p0_3, p4_5]
         self.hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, data)
 
         assert self.hist.data.sum() == len(data)
-        assert self.hist.data[2][2] == 2
+        assert self.hist.data[0][0] == 2
         assert self.hist.data[3][2] == 3
         assert self.hist.data[0][3] == 2
+        assert self.hist.data[4][5] == 1
 
     def test_if_no_id_supplied_then_defaults_to_empty_string(self):
         assert self.hist.identifier == ""
@@ -132,7 +136,7 @@ class TestHistogram2dMapFunctionality:
 
         self.hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data)
 
-        assert self.hist.shape == (5, 5)
+        assert self.hist.shape == (self.width, self.height)
         assert self.hist.data.sum() == len(self.data)
 
     def test_adding_empty_data_does_nothing(self):
