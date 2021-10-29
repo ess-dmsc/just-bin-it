@@ -34,6 +34,7 @@ class TestHistogramRoiFunctionality:
         assert self.hist.bins[0] == 16
 
     def test_last_bin_is_bottom_right_plus_two(self):
+        # See implementation for why +2 is important!
         assert self.hist.bins[~0] == 37 + 2
 
     def test_extra_ignored_bin_at_end_of_first_row(self):
