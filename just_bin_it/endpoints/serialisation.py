@@ -28,31 +28,29 @@ def deserialise_hs00(buf):
         raise JustBinItException(f"Could not deserialise hs00 buffer: {error}")
 
 
-def serialise_hs00(histogrammer, timestamp: int = 0, info_message: str = ""):
+def serialise_hs00(histogram, timestamp: int = 0, info_message: str = ""):
     """
     Serialise a histogram as an hs00 FlatBuffers message.
 
-    :param histogrammer: The histogrammer containing the histogram to serialise.
+    :param histogram: The histogram to serialise.
     :param timestamp: The timestamp to assign to the histogram.
     :param info_message: Information to write to the 'info' field.
     :return: The raw buffer of the FlatBuffers message.
     """
 
-    dim_metadata = [
-        {"bin_boundaries": histogrammer.x_edges, "length": histogrammer.shape[0]}
-    ]
+    dim_metadata = [{"bin_boundaries": histogram.x_edges, "length": histogram.shape[0]}]
 
-    if hasattr(histogrammer, "y_edges"):
+    if hasattr(histogram, "y_edges"):
         dim_metadata.append(
-            {"bin_boundaries": histogrammer.y_edges, "length": histogrammer.shape[1]}
+            {"bin_boundaries": histogram.y_edges, "length": histogram.shape[1]}
         )
 
     data = {
         "source": "just-bin-it",
         "timestamp": timestamp,
-        "current_shape": histogrammer.shape,
+        "current_shape": histogram.shape,
         "dim_metadata": dim_metadata,
-        "data": histogrammer.data,
+        "data": histogram.data,
         "info": info_message,
     }
 
