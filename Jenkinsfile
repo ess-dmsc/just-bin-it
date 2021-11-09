@@ -40,7 +40,7 @@ builders = pipeline_builder.createBuilders { container ->
     def conan_remote = "ess-dmsc-local"
     container.sh """
       /opt/miniconda/bin/conda init bash
-      export PATH=/opt/miniconda/bin:$PATH
+      export PATH=/opt/miniconda/bin:\\\$PATH
       python --version
       python -m pip install --user -r ${project}/requirements-dev.txt
     """
@@ -49,7 +49,7 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Test") {
     def test_output = "TestResults.xml"
     container.sh """
-      export PATH=/opt/miniconda/bin:$PATH
+      export PATH=/opt/miniconda/bin:\\\$PATH
       python --version
       cd ${project}
       python -m tox -- --junitxml=${test_output}
