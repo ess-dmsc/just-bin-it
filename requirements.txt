@@ -1,7 +1,6 @@
-confluent-kafka
+confluent-kafka==1.7.0
 ess-streaming-data-types==0.15.0
-fast-histogram
-graphyte
-kafka-python
-mock
-numpy
+fast-histogram==0.10
+graphyte==1.7.0
+kafka-python==2.0.2
+numpy==1.21.3
