@@ -3,4 +3,4 @@ ess-streaming-data-types==0.15.1
 fast-histogram==0.10
 graphyte==1.7.0
 kafka-python==2.0.2
-numpy==1.19.5
+numpy==1.22.1
