@@ -5,13 +5,10 @@ import time
 from enum import Enum
 from typing import Optional
 
-from just_bin_it.endpoints.serialisation import (
-    EventData,
-    deserialise_ev42,
-    deserialise_hs00,
-)
+from just_bin_it.endpoints.serialisation import EventData, deserialise_ev42, get_schema
 from just_bin_it.exceptions import SourceException, TooOldTimeRequestedException
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
+from just_bin_it.histograms.histogram_factory import INPUT_SCHEMAS
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
@@ -140,7 +137,9 @@ class EventSource(BaseSource):
 class HistogramSource(BaseSource):
     def _process_record(self, record):
         try:
-            return deserialise_hs00(record)
+            schema = get_schema(record)
+            if schema in INPUT_SCHEMAS:
+                return INPUT_SCHEMAS[schema](record)
         except Exception as error:
             raise SourceException(error)
 

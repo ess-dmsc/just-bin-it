@@ -1,7 +1,7 @@
 import os
 
-import pytest
 import numpy as np
+import pytest
 
 import tests
 from just_bin_it.endpoints.serialisation import (

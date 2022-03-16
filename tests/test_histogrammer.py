@@ -4,7 +4,11 @@ import json
 import pytest
 
 from just_bin_it.endpoints.histogram_sink import HistogramSink
-from just_bin_it.endpoints.serialisation import EventData, deserialise_hs00, serialise_hs00
+from just_bin_it.endpoints.serialisation import (
+    EventData,
+    deserialise_hs00,
+    serialise_hs00,
+)
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
