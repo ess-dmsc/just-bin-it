@@ -89,7 +89,7 @@ class CommandActioner:
                     ):
                         raise KafkaException("Invalid Kafka settings")
 
-                    process = self.process_creator(config, start, stop, self.simulation)
+                    process = self.process_creator.create(config, start, stop, self.simulation)
                     hist_processes.append(process)
             except Exception as error:
                 # If one fails then close any that were started then rethrow

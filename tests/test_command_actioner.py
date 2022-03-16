@@ -40,26 +40,25 @@ class SpyProcess:
         self.clear_called = True
 
 
-def create_spy_process(*args, **kwargs):
-    return SpyProcess()
-
-
 class TestCommandActioner:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.response_publisher = mock.create_autospec(ResponsePublisher)
+        self.process_factory = mock.create_autospec(ProcessCreator)
+        self.process_1 = mock.create_autospec(HistogramProcess)
+        self.process_2 = mock.create_autospec(HistogramProcess)
+        self.processes = [self.process_1, self.process_2]
+        self.process_factory.create.side_effect = self.processes
+
         # Put into simulation to avoid kafka checks
         self.actioner = CommandActioner(
-            self.response_publisher, True, create_spy_process
+            self.response_publisher, True, self.process_factory
         )
-        self.spy_process = SpyProcess()
-
-        self.hist_processes = [self.spy_process]
 
     def test_on_invalid_command_without_id_then_error_response_not_sent(self):
         invalid_cmd = deepcopy(CONFIG_CMD)
         invalid_cmd["cmd"] = "not a recognised command"
-        self.actioner.handle_command_message(invalid_cmd, self.hist_processes)
+        self.actioner.handle_command_message(invalid_cmd, self.processes)
 
         self.response_publisher.send_error_response.assert_not_called()
 
@@ -67,7 +66,7 @@ class TestCommandActioner:
         invalid_cmd = deepcopy(CONFIG_CMD)
         invalid_cmd["cmd"] = "not a recognised command"
         invalid_cmd["msg_id"] = "hello"
-        self.actioner.handle_command_message(invalid_cmd, self.hist_processes)
+        self.actioner.handle_command_message(invalid_cmd, self.processes)
 
         self.response_publisher.send_error_response.assert_called_once()
 
@@ -83,22 +82,26 @@ class TestCommandActioner:
 
         self.response_publisher.send_ack_response.assert_called_once()
 
-    def test_on_config_command_existing_processes_stopped(self):
-        self.actioner.handle_command_message(CONFIG_CMD, self.hist_processes)
+    def test_on_config_command_new_processes_created(self):
+        self.actioner.handle_command_message(CONFIG_CMD, [])
 
-        assert self.spy_process.stop_called
-        assert len(self.hist_processes) == 1
-        # Check the process is not the original - it should be a new one
-        assert self.hist_processes[0] != self.spy_process
+        self.process_factory.create.assert_called_once()
+
+    def test_on_config_command_existing_processes_stopped(self):
+        self.actioner.handle_command_message(CONFIG_CMD, self.processes)
+
+        self.process_1.stop.assert_called_once()
+        self.process_2.stop.assert_called_once()
 
     def test_on_stop_command_existing_processes_stopped(self):
-        self.actioner.handle_command_message(STOP_CMD, self.hist_processes)
+        self.actioner.handle_command_message(STOP_CMD, self.processes)
 
-        assert self.spy_process.stop_called
-        assert len(self.hist_processes) == 0
+        self.process_1.stop.assert_called_once()
+        self.process_2.stop.assert_called_once()
+        assert len(self.processes) == 0
 
     def test_on_reset_command_existing_processes_cleared(self):
-        self.actioner.handle_command_message(RESET_CMD, self.hist_processes)
+        self.actioner.handle_command_message(RESET_CMD, self.processes)
 
-        assert self.spy_process.clear_called
-        assert len(self.hist_processes) == 1
+        self.process_1.clear.assert_called_once()
+        self.process_2.clear.assert_called_once()
