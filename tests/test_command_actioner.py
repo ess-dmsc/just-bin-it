@@ -84,7 +84,7 @@ class TestCommandActioner:
 
         self.actioner.handle_command_message(CONFIG_CMD, [])
 
-        self.process_factory.create.assert_called_once()
+        self.process_factory.create.assert_called_once_with(mock.ANY, 1564727596867, 1564727668779, "hs00", True)
         self.process_1.start.assert_called_once()
 
     def test_on_config_command_existing_processes_stopped(self):

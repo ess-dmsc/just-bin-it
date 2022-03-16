@@ -10,8 +10,9 @@ from confluent_kafka.admin import AdminClient, NewTopic
 from kafka import KafkaConsumer, KafkaProducer, TopicPartition
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from just_bin_it.endpoints.serialisation import deserialise_hs00, serialise_ev42
+from just_bin_it.endpoints.serialisation import serialise_ev42, get_schema
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
+from just_bin_it.histograms.histogram_factory import INPUT_SCHEMAS
 from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
@@ -24,6 +25,7 @@ RESPONSE_TOPIC = "hist_responses"
 
 CONFIG_CMD = {
     "cmd": "config",
+    "output_schema": "hs01",
     "histograms": [
         {
             "type": TOF_1D_TYPE,
@@ -129,7 +131,9 @@ class TestJustBinIt:
             data = self.consumer.poll(5)
 
         msg = data[self.topic_part][-1]
-        return deserialise_hs00(msg.value)
+        schema = get_schema(msg.value)
+        if schema in INPUT_SCHEMAS:
+            return INPUT_SCHEMAS[schema](msg.value)
 
     def get_response_message_from_kafka(self):
         data = []
