@@ -44,7 +44,7 @@ class CommandActioner:
         self,
         response_publisher,
         simulation=False,
-        process_creator=create_histogram_process,
+        process_creator=ProcessCreator(),
     ):
         self.response_publisher = response_publisher
         self.simulation = simulation
