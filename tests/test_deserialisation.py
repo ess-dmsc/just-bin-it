@@ -1,14 +1,19 @@
 import os
 
 import pytest
+import numpy as np
 
 import tests
 from just_bin_it.endpoints.serialisation import (
     deserialise_ev42,
     deserialise_hs00,
+    deserialise_hs01,
     get_schema,
+    serialise_hs00,
+    serialise_hs01,
 )
 from just_bin_it.exceptions import JustBinItException
+from just_bin_it.histograms.histogram1d import Histogram1d
 
 
 class TestDeserialisationEv42:
@@ -45,34 +50,81 @@ class TestDeserialisationEv42:
             deserialise_ev42(new_buf)
 
 
-class TestDeserialisationHs00:
-    @pytest.fixture(autouse=True)
-    def prepare(self):
-        # Trick to get path of test data
-        path = os.path.dirname(tests.__file__)
-        with open(os.path.join(path, "example_hs00_fb.dat"), "rb") as f:
-            self.buf = f.read()
-
-    def test_deserialises_hs00_message_correctly(self):
-        """
-        Sanity check: checks the combination of libraries work as expected.
-        """
-        data = deserialise_hs00(self.buf)
-
-        assert data["source"] == "just-bin-it"
-        assert data["timestamp"] == 987_654_321
-        assert data["current_shape"] == [50]
-        assert len(data["data"]) == 50
-        assert len(data["dim_metadata"]) == 1
-        assert data["info"] == "hello"
-
-        assert data["dim_metadata"][0]["length"] == 50
-        assert len(data["dim_metadata"][0]["bin_boundaries"]) == 51
-        assert data["dim_metadata"][0]["bin_boundaries"][0] == 0.0
-        assert data["dim_metadata"][0]["bin_boundaries"][50] == 100_000_000.0
+class TestSerialisationHs00:
+    """
+    Sanity check: checks the combination of libraries work as expected.
+    """
 
     def test_if_schema_is_incorrect_then_throws(self):
-        new_buf = self.buf[:4] + b"na12" + self.buf[8:]
+        buf = self._create_buffer()
+        new_buf = buf[:4] + b"na12" + buf[8:]
 
         with pytest.raises(JustBinItException):
             deserialise_hs00(new_buf)
+
+    def test_round_trip(self):
+        buf = self._create_buffer()
+        result = deserialise_hs00(buf)
+
+        assert result["source"] == "just-bin-it"
+        assert result["timestamp"] == 123
+        assert result["current_shape"] == [10]
+        assert result["dim_metadata"][0]["length"] == 10
+        assert np.array_equal(
+            result["dim_metadata"][0]["bin_boundaries"],
+            [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+        )
+        assert np.array_equal(result["data"], [2, 0, 0, 0, 0, 1, 0, 1, 0, 1])
+
+    def _create_buffer(self):
+        h1d = Histogram1d(
+            "::topic::",
+            num_bins=10,
+            tof_range=(0, 100),
+            det_range=(0, 200),
+            source="",
+            identifier="::id::",
+        )
+        h1d.add_data(123, [0, 1, 50, 75, 99], [0, 100, 150, 175, 199])
+        buf = serialise_hs00(h1d, 123)
+        return buf
+
+
+class TestSerialisationHs01:
+    """
+    Sanity check: checks the combination of libraries work as expected.
+    """
+
+    def test_if_schema_is_incorrect_then_throws(self):
+        buf = self._create_buffer()
+        new_buf = buf[:4] + b"na12" + buf[8:]
+
+        with pytest.raises(JustBinItException):
+            deserialise_hs01(new_buf)
+
+    def test_round_trip(self):
+        buf = self._create_buffer()
+        result = deserialise_hs01(buf)
+
+        assert result["source"] == "just-bin-it"
+        assert result["timestamp"] == 123
+        assert result["current_shape"] == [10]
+        assert result["dim_metadata"][0]["length"] == 10
+        assert np.array_equal(
+            result["dim_metadata"][0]["bin_boundaries"],
+            [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+        )
+        assert np.array_equal(result["data"], [2, 0, 0, 0, 0, 1, 0, 1, 0, 1])
+
+    def _create_buffer(self):
+        h1d = Histogram1d(
+            "::topic::",
+            num_bins=10,
+            tof_range=(0, 100),
+            det_range=(0, 200),
+            source="",
+            identifier="::id::",
+        )
+        h1d.add_data(123, [0, 1, 50, 75, 99], [0, 100, 150, 175, 199])
+        buf = serialise_hs01(h1d, 123)
+        return buf

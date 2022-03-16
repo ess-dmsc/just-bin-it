@@ -29,6 +29,19 @@ def deserialise_hs00(buf):
         raise JustBinItException(f"Could not deserialise hs00 buffer: {error}")
 
 
+def deserialise_hs01(buf):
+    """
+    Convert flatbuffer into a histogram.
+
+    :param buf:
+    :return: dict of histogram information
+    """
+    try:
+        return hs01.deserialise_hs01(buf)
+    except Exception as error:
+        raise JustBinItException(f"Could not deserialise hs01 buffer: {error}")
+
+
 def serialise_hs00(histogram, timestamp: int = 0, info_message: str = ""):
     """
     Serialise a histogram as an hs00 FlatBuffers message.
