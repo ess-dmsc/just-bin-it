@@ -7,6 +7,11 @@ from just_bin_it.histograms.histogram_factory import parse_config
 from just_bin_it.histograms.histogram_process import HistogramProcess
 
 
+class ProcessCreator:
+    def create(self, config, start, stop, simulation):
+        return HistogramProcess(config, start, stop, simulation=simulation)
+
+
 def create_histogram_process(config, start, stop, simulation):
     return HistogramProcess(config, start, stop, simulation=simulation)
 
