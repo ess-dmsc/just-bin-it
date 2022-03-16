@@ -31,8 +31,8 @@ def parse_config(configuration, current_time_ms=None):
     :param current_time_ms: The time to use for defining the start time (milliseconds).
     :return: tuple of start time, stop time and the list of histograms
     """
-    start = configuration["start"] if "start" in configuration else None
-    stop = configuration["stop"] if "stop" in configuration else None
+    start = configuration.get("start")
+    stop = configuration.get("stop")
 
     # Interval is configured in seconds but needs to be converted to milliseconds
     interval = (
