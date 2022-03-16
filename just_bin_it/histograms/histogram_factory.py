@@ -22,6 +22,9 @@ from just_bin_it.histograms.histogram2d_roi import (
     validate_hist_2d_roi,
 )
 
+SCHEMAS = {'hs00', 'hs01'}
+DEFAULT_SCHEMA = "hs00"
+
 
 def parse_config(configuration, current_time_ms=None):
     """
@@ -33,6 +36,10 @@ def parse_config(configuration, current_time_ms=None):
     """
     start = configuration.get("start")
     stop = configuration.get("stop")
+
+    schema = configuration.get("output_schema", DEFAULT_SCHEMA)
+    if schema not in SCHEMAS:
+        raise Exception(f"Unknown schema, be one of {SCHEMAS}")
 
     # Interval is configured in seconds but needs to be converted to milliseconds
     interval = (
@@ -71,7 +78,7 @@ def parse_config(configuration, current_time_ms=None):
                 raise Exception("Unexpected histogram type")
             hist_configs.append(hist)
 
-    return start, stop, hist_configs
+    return start, stop, hist_configs, schema
 
 
 class HistogramFactory:
