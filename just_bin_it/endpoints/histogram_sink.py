@@ -1,8 +1,5 @@
-from just_bin_it.endpoints.serialisation import serialise_hs00
-
-
 class HistogramSink:
-    def __init__(self, producer, serialise_function=serialise_hs00):
+    def __init__(self, producer, serialise_function):
         """
         Constructor.
 

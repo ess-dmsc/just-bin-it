@@ -22,7 +22,9 @@ from just_bin_it.histograms.histogram2d_roi import (
     validate_hist_2d_roi,
 )
 
-SCHEMAS = {"hs00", "hs01"}
+from just_bin_it.endpoints.serialisation import serialise_hs00, serialise_hs01
+
+SCHEMAS = {"hs00": serialise_hs00, "hs01": serialise_hs01}
 DEFAULT_SCHEMA = "hs00"
 
 
@@ -39,7 +41,7 @@ def parse_config(configuration, current_time_ms=None):
 
     schema = configuration.get("output_schema", DEFAULT_SCHEMA)
     if schema not in SCHEMAS:
-        raise Exception(f"Unknown schema, be one of {SCHEMAS}")
+        raise Exception(f"Unknown schema, must be one of {list(SCHEMAS.keys())}")
 
     # Interval is configured in seconds but needs to be converted to milliseconds
     interval = (
