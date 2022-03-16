@@ -8,12 +8,11 @@ from just_bin_it.histograms.histogram_process import HistogramProcess
 
 
 class ProcessCreator:
+    def __init__(self, prototype=HistogramProcess):
+        self._class = prototype
+
     def create(self, config, start, stop, simulation):
-        return HistogramProcess(config, start, stop, simulation=simulation)
-
-
-def create_histogram_process(config, start, stop, simulation):
-    return HistogramProcess(config, start, stop, simulation=simulation)
+        return self._class(config, start, stop, simulation=simulation)
 
 
 class ResponsePublisher:
