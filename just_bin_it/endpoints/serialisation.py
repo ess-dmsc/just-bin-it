@@ -125,3 +125,8 @@ def serialise_ev42(source_name, message_id, pulse_time, tofs, det_ids):
     :return: The raw buffer of the FlatBuffers message.
     """
     return ev42.serialise_ev42(source_name, message_id, pulse_time, tofs, det_ids)
+
+
+SCHEMAS_TO_SERIALISERS = {"hs00": serialise_hs00, "hs01": serialise_hs01}
+SCHEMAS_TO_DESERIALISERS = {"hs00": deserialise_hs00, "hs01": deserialise_hs01}
+DEFAULT_SCHEMA = "hs00"

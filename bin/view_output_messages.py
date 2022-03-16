@@ -4,10 +4,8 @@ import sys
 
 from kafka import KafkaConsumer, TopicPartition
 
-from just_bin_it.histograms.histogram_factory import INPUT_SCHEMAS
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from just_bin_it.endpoints.serialisation import get_schema
+from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_schema
 
 
 def main(brokers, topic):
@@ -41,8 +39,8 @@ def main(brokers, topic):
                 )
             )
             schema = get_schema(message.value)
-            if schema in INPUT_SCHEMAS:
-                ans = INPUT_SCHEMAS[schema](message.value)
+            if schema in SCHEMAS_TO_DESERIALISERS:
+                ans = SCHEMAS_TO_DESERIALISERS[schema](message.value)
                 print(f"\nHistogram data:\n{ans}")
                 print(f"Total events: {ans['data'].sum()}")
 

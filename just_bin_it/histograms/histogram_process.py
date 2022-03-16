@@ -6,12 +6,13 @@ from multiprocessing import Process, Queue
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
+from just_bin_it.endpoints.serialisation import SCHEMAS_TO_SERIALISERS
 from just_bin_it.endpoints.sources import (
     EventSource,
     SimulatedEventSource,
     StopTimeStatus,
 )
-from just_bin_it.histograms.histogram_factory import OUTPUT_SCHEMAS, HistogramFactory
+from just_bin_it.histograms.histogram_factory import HistogramFactory
 from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.utilities import time_in_ns
 
@@ -56,7 +57,7 @@ def create_histogrammer(configuration, start, stop, schema):
     :return: The created histogrammer.
     """
     producer = Producer(configuration["data_brokers"])
-    hist_sink = HistogramSink(producer, OUTPUT_SCHEMAS[schema])
+    hist_sink = HistogramSink(producer, SCHEMAS_TO_SERIALISERS[schema])
     histograms = HistogramFactory.generate([configuration])
     return Histogrammer(hist_sink, histograms, start, stop)
 
