@@ -224,6 +224,7 @@ class HistogramProcess:
         configuration,
         start_time,
         stop_time,
+        schema,
         publish_interval=500,
         simulation=False,
     ):
@@ -233,6 +234,7 @@ class HistogramProcess:
         :param configuration: The histogramming configuration.
         :param start_time: The start time.
         :param stop_time: The stop time.
+        :param schema: the output schema to use.
         :param publish_interval: How often to publish histograms and stats in milliseconds.
         :param simulation: Whether to run in simulation.
         """
@@ -251,6 +253,7 @@ class HistogramProcess:
             ),
         )
 
+    def start(self):
         self._process.start()
 
     def stop(self):

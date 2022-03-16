@@ -7,12 +7,9 @@ from just_bin_it.histograms.histogram_factory import parse_config
 from just_bin_it.histograms.histogram_process import HistogramProcess
 
 
-class ProcessCreator:
-    def __init__(self, prototype=HistogramProcess):
-        self._class = prototype
-
-    def create(self, config, start, stop, simulation):
-        return self._class(config, start, stop, simulation=simulation)
+class ProcessFactory:
+    def create(self, config, start, stop, schema, simulation=False):
+        return HistogramProcess(config, start, stop, schema, simulation=simulation)
 
 
 class ResponsePublisher:
@@ -43,11 +40,11 @@ class CommandActioner:
         self,
         response_publisher,
         simulation=False,
-        process_creator=ProcessCreator(),
+        process_factory=ProcessFactory(),
     ):
         self.response_publisher = response_publisher
         self.simulation = simulation
-        self.process_creator = process_creator
+        self.process_factory = process_factory
 
     def handle_command_message(self, message, hist_processes):
         """
@@ -89,7 +86,10 @@ class CommandActioner:
                     ):
                         raise KafkaException("Invalid Kafka settings")
 
-                    process = self.process_creator.create(config, start, stop, self.simulation)
+                    process = self.process_factory.create(
+                        config, start, stop, self.simulation
+                    )
+                    process.start()
                     hist_processes.append(process)
             except Exception as error:
                 # If one fails then close any that were started then rethrow

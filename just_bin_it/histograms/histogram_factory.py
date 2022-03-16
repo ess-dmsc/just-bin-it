@@ -22,7 +22,7 @@ from just_bin_it.histograms.histogram2d_roi import (
     validate_hist_2d_roi,
 )
 
-SCHEMAS = {'hs00', 'hs01'}
+SCHEMAS = {"hs00", "hs01"}
 DEFAULT_SCHEMA = "hs00"
 
 

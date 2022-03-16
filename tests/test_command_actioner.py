@@ -5,8 +5,8 @@ import pytest
 
 from just_bin_it.command_actioner import (
     CommandActioner,
+    ProcessFactory,
     ResponsePublisher,
-    ProcessCreator,
 )
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram_process import HistogramProcess
@@ -33,27 +33,19 @@ STOP_CMD = {"cmd": "stop"}
 RESET_CMD = {"cmd": "reset_counts"}
 
 
-class SpyProcess:
-    def __init__(self):
-        self.stop_called = False
-        self.clear_called = False
-
-    def stop(self):
-        self.stop_called = True
-
-    def clear(self):
-        self.clear_called = True
+class TestProcessFactory:
+    def test_creates_process(self):
+        process_factory = ProcessFactory()
+        process_factory.create({}, 123456, 456789, "::schema::", True)
 
 
 class TestCommandActioner:
     @pytest.fixture(autouse=True)
     def prepare(self):
         self.response_publisher = mock.create_autospec(ResponsePublisher)
-        self.process_factory = mock.create_autospec(ProcessCreator)
+        self.process_factory = mock.create_autospec(ProcessFactory)
         self.process_1 = mock.create_autospec(HistogramProcess)
         self.process_2 = mock.create_autospec(HistogramProcess)
-        self.processes = [self.process_1, self.process_2]
-        self.process_factory.create.side_effect = self.processes
 
         # Put into simulation to avoid kafka checks
         self.actioner = CommandActioner(
@@ -87,32 +79,47 @@ class TestCommandActioner:
 
         self.response_publisher.send_ack_response.assert_called_once()
 
-    def test_on_config_command_new_processes_created(self):
+    def test_on_config_command_new_processes_created_and_started(self):
+        self.process_factory.create.return_value = self.process_1
+
         self.actioner.handle_command_message(CONFIG_CMD, [])
 
         self.process_factory.create.assert_called_once()
+        self.process_1.start.assert_called_once()
 
     def test_on_config_command_existing_processes_stopped(self):
-        self.actioner.handle_command_message(CONFIG_CMD, self.processes)
+        processes = [self.process_1, self.process_2]
+        self.process_factory.create.side_effect = processes
+
+        self.actioner.handle_command_message(CONFIG_CMD, processes)
 
         self.process_1.stop.assert_called_once()
         self.process_2.stop.assert_called_once()
 
     def test_on_unknown_config_command_existing_processes_not_stopped(self):
-        self.actioner.handle_command_message({"cmd": "::unknown::"}, self.processes)
+        processes = [self.process_1, self.process_2]
+        self.process_factory.create.side_effect = processes
+
+        self.actioner.handle_command_message({"cmd": "::unknown::"}, processes)
 
         self.process_1.stop.assert_not_called()
         self.process_2.stop.assert_not_called()
 
     def test_on_stop_command_existing_processes_stopped(self):
-        self.actioner.handle_command_message(STOP_CMD, self.processes)
+        processes = [self.process_1, self.process_2]
+        self.process_factory.create.side_effect = processes
+
+        self.actioner.handle_command_message(STOP_CMD, processes)
 
         self.process_1.stop.assert_called_once()
         self.process_2.stop.assert_called_once()
-        assert len(self.processes) == 0
+        assert len(processes) == 0
 
     def test_on_reset_command_existing_processes_cleared(self):
-        self.actioner.handle_command_message(RESET_CMD, self.processes)
+        processes = [self.process_1, self.process_2]
+        self.process_factory.create.side_effect = processes
+
+        self.actioner.handle_command_message(RESET_CMD, processes)
 
         self.process_1.stop.assert_not_called()
         self.process_2.stop.assert_not_called()
