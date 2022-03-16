@@ -3,8 +3,13 @@ from copy import deepcopy
 import mock
 import pytest
 
-from just_bin_it.command_actioner import CommandActioner, ResponsePublisher
+from just_bin_it.command_actioner import (
+    CommandActioner,
+    ResponsePublisher,
+    ProcessCreator,
+)
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
+from just_bin_it.histograms.histogram_process import HistogramProcess
 
 TEST_TOPIC = "topic1"
 CONFIG_CMD = {
@@ -58,7 +63,7 @@ class TestCommandActioner:
     def test_on_invalid_command_without_id_then_error_response_not_sent(self):
         invalid_cmd = deepcopy(CONFIG_CMD)
         invalid_cmd["cmd"] = "not a recognised command"
-        self.actioner.handle_command_message(invalid_cmd, self.processes)
+        self.actioner.handle_command_message(invalid_cmd, [])
 
         self.response_publisher.send_error_response.assert_not_called()
 
@@ -66,19 +71,19 @@ class TestCommandActioner:
         invalid_cmd = deepcopy(CONFIG_CMD)
         invalid_cmd["cmd"] = "not a recognised command"
         invalid_cmd["msg_id"] = "hello"
-        self.actioner.handle_command_message(invalid_cmd, self.processes)
+        self.actioner.handle_command_message(invalid_cmd, [])
 
         self.response_publisher.send_error_response.assert_called_once()
 
     def test_on_valid_command_without_id_response_not_sent(self):
-        self.actioner.handle_command_message(CONFIG_CMD, self.hist_processes)
+        self.actioner.handle_command_message(CONFIG_CMD, [])
 
         self.response_publisher.send_ack_response.assert_not_called()
 
     def test_on_valid_command_with_id_response_sent(self):
         cmd = deepcopy(CONFIG_CMD)
         cmd["msg_id"] = "hello"
-        self.actioner.handle_command_message(cmd, self.hist_processes)
+        self.actioner.handle_command_message(cmd, [])
 
         self.response_publisher.send_ack_response.assert_called_once()
 
@@ -93,6 +98,12 @@ class TestCommandActioner:
         self.process_1.stop.assert_called_once()
         self.process_2.stop.assert_called_once()
 
+    def test_on_unknown_config_command_existing_processes_not_stopped(self):
+        self.actioner.handle_command_message({"cmd": "::unknown::"}, self.processes)
+
+        self.process_1.stop.assert_not_called()
+        self.process_2.stop.assert_not_called()
+
     def test_on_stop_command_existing_processes_stopped(self):
         self.actioner.handle_command_message(STOP_CMD, self.processes)
 
@@ -103,5 +114,7 @@ class TestCommandActioner:
     def test_on_reset_command_existing_processes_cleared(self):
         self.actioner.handle_command_message(RESET_CMD, self.processes)
 
+        self.process_1.stop.assert_not_called()
+        self.process_2.stop.assert_not_called()
         self.process_1.clear.assert_called_once()
         self.process_2.clear.assert_called_once()
