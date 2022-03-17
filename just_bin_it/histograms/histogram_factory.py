@@ -37,7 +37,9 @@ def parse_config(configuration, current_time_ms=None):
 
     schema = configuration.get("output_schema", DEFAULT_SCHEMA)
     if schema not in SCHEMAS_TO_SERIALISERS:
-        raise Exception(f"Unknown schema, must be one of {list(SCHEMAS_TO_SERIALISERS.keys())}")
+        raise Exception(
+            f"Unknown schema, must be one of {list(SCHEMAS_TO_SERIALISERS.keys())}"
+        )
 
     # Interval is configured in seconds but needs to be converted to milliseconds
     interval = (
