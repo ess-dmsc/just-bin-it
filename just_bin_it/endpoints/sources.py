@@ -12,6 +12,7 @@ from just_bin_it.endpoints.serialisation import (
 )
 from just_bin_it.exceptions import SourceException, TooOldTimeRequestedException
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
+from just_bin_it.histograms.histogram2d_roi import ROI_TYPE
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
@@ -157,10 +158,13 @@ class SimulatedEventSource:
         self.stop = stop
 
         if config["type"] == MAP_TYPE:
-            # Different behaviour for this type of histogram
             self.is_dethist = True
             self.width = config["width"]
             self.height = config["height"]
+        elif config["type"] == ROI_TYPE:
+            self.is_dethist = True
+            self.width = config["width"]
+            self.height = config["left_edges"][~0]
         else:
             # Based on the config, guess gaussian settings.
             self.tof_range = config["tof_range"]
