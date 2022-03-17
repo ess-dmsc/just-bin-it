@@ -36,7 +36,7 @@ def parse_config(configuration, current_time_ms=None):
 
     # Interval is configured in seconds but needs to be converted to milliseconds
     interval = (
-        configuration["interval"] * 10 ** 3 if "interval" in configuration else None
+        configuration["interval"] * 10**3 if "interval" in configuration else None
     )
 
     if interval and (start or stop):

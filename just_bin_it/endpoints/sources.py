@@ -186,7 +186,7 @@ class SimulatedEventSource:
     def _generate_data(self):
         tofs, dets = generate_fake_data(self.tof_range, self.det_range, self.num_events)
         data = EventData(
-            "simulator", 0, math.floor(time.time() * 10 ** 9), tofs, dets, None
+            "simulator", 0, math.floor(time.time() * 10**9), tofs, dets, None
         )
         return [(int(time.time() * self.num_events), 0, data)]
 
@@ -200,7 +200,7 @@ class SimulatedEventSource:
             for det in new_dets:
                 dets.append(h * self.width + det)
         data = EventData(
-            "simulator", 0, math.floor(time.time() * 10 ** 9), [], dets, None
+            "simulator", 0, math.floor(time.time() * 10**9), [], dets, None
         )
         return [(int(time.time() * self.num_events), 0, data)]
 
