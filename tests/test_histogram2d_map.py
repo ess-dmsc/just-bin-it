@@ -17,8 +17,7 @@ def generate_image(width, height):
     count = 1
     for h in range(height):
         for w in range(width):
-            for i in range(count):
-                det_ids.append(count)
+            det_ids.extend([count] * count)
             count += 1
     return det_ids
 
