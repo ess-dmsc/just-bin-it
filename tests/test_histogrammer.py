@@ -18,7 +18,7 @@ from tests.doubles.producers import SpyProducer
 
 START_CONFIG = {
     "cmd": "config",
-    "start": 1000 * 10 ** 3,
+    "start": 1000 * 10**3,
     "histograms": [
         {
             "type": TOF_1D_TYPE,
@@ -43,7 +43,7 @@ START_CONFIG = {
 
 START_2D_CONFIG = {
     "cmd": "config",
-    "start": 1000 * 10 ** 3,
+    "start": 1000 * 10**3,
     "histograms": [
         {
             "type": TOF_2D_TYPE,
@@ -82,12 +82,12 @@ NO_HIST_CONFIG = {
     "cmd": "config",
     "data_brokers": ["fakehost:9092"],
     "data_topics": ["LOQ_events"],
-    "start": 1000 * 10 ** 3,
+    "start": 1000 * 10**3,
 }
 
 STOP_CONFIG = {
     "cmd": "config",
-    "stop": 1001 * 10 ** 3,
+    "stop": 1001 * 10**3,
     "histograms": [
         {
             "data_brokers": ["fakehost:9092"],
@@ -104,32 +104,32 @@ STOP_CONFIG = {
 # Data in each "pulse" increases by factor of 2, that way we can know which
 # messages were consumed by looking at the histogram sum.
 EVENT_DATA = [
-    (998 * 10 ** 3, 0, EventData("simulator", 0, 998 * 10 ** 9, [1], [1], None)),
-    (999 * 10 ** 3, 1, EventData("simulator", 0, 999 * 10 ** 9, [1, 2], [1, 2], None)),
+    (998 * 10**3, 0, EventData("simulator", 0, 998 * 10**9, [1], [1], None)),
+    (999 * 10**3, 1, EventData("simulator", 0, 999 * 10**9, [1, 2], [1, 2], None)),
     (
-        1000 * 10 ** 3,
+        1000 * 10**3,
         2,
-        EventData("simulator", 0, 1000 * 10 ** 9, [1, 2, 3, 4], [1, 2, 3, 4], None),
+        EventData("simulator", 0, 1000 * 10**9, [1, 2, 3, 4], [1, 2, 3, 4], None),
     ),
     (
-        1001 * 10 ** 3,
+        1001 * 10**3,
         3,
         EventData(
             "simulator",
             0,
-            1001 * 10 ** 9,
+            1001 * 10**9,
             [1, 2, 3, 4, 5, 6, 7, 8],
             [1, 2, 3, 4, 5, 6, 7, 8],
             None,
         ),
     ),
     (
-        1002 * 10 ** 3,
+        1002 * 10**3,
         4,
         EventData(
             "simulator",
             0,
-            1002 * 10 ** 9,
+            1002 * 10**9,
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             None,
@@ -139,36 +139,36 @@ EVENT_DATA = [
 
 UNORDERED_EVENT_DATA = [
     (
-        1000 * 10 ** 3,
+        1000 * 10**3,
         0,
-        EventData("simulator", 0, 1000 * 10 ** 9, [1, 2, 3, 4], [1, 2, 3, 4], None),
+        EventData("simulator", 0, 1000 * 10**9, [1, 2, 3, 4], [1, 2, 3, 4], None),
     ),
     (
-        1001 * 10 ** 3,
+        1001 * 10**3,
         1,
         EventData(
             "simulator",
             0,
-            1001 * 10 ** 9,
+            1001 * 10**9,
             [1, 2, 3, 4, 5, 6, 7, 8],
             [1, 2, 3, 4, 5, 6, 7, 8],
             None,
         ),
     ),
     (
-        1002 * 10 ** 3,
+        1002 * 10**3,
         2,
         EventData(
             "simulator",
             0,
-            1002 * 10 ** 9,
+            1002 * 10**9,
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             None,
         ),
     ),
-    (998 * 10 ** 3, 3, EventData("simulator", 0, 998 * 10 ** 9, [1], [1], None)),
-    (999 * 10 ** 3, 4, EventData("simulator", 0, 999 * 10 ** 9, [1, 2], [1, 2], None)),
+    (998 * 10**3, 3, EventData("simulator", 0, 998 * 10**9, [1], [1], None)),
+    (999 * 10**3, 4, EventData("simulator", 0, 999 * 10**9, [1, 2], [1, 2], None)),
 ]
 
 
@@ -205,7 +205,7 @@ class TestHistogrammer:
 
     def test_histograms_are_zero_if_all_data_before_start(self):
         config = copy.deepcopy(START_CONFIG)
-        config["start"] = 1100 * 10 ** 3
+        config["start"] = 1100 * 10**3
         histogrammer = create_histogrammer(self.hist_sink, config)
         histogrammer.add_data(EVENT_DATA)
 
@@ -220,7 +220,7 @@ class TestHistogrammer:
 
     def test_histograms_are_zero_if_all_data_later_than_stop(self):
         config = copy.deepcopy(STOP_CONFIG)
-        config["stop"] = 900 * 10 ** 3
+        config["stop"] = 900 * 10**3
         histogrammer = create_histogrammer(self.hist_sink, config)
         histogrammer.add_data(EVENT_DATA)
 
@@ -292,10 +292,10 @@ class TestHistogrammer:
 
         stats = histogrammer.get_histogram_stats()
 
-        assert stats[0]["last_pulse_time"] == 1002 * 10 ** 9
+        assert stats[0]["last_pulse_time"] == 1002 * 10**9
         assert stats[0]["sum"] == 28
         assert stats[0]["diff"] == 28
-        assert stats[1]["last_pulse_time"] == 1002 * 10 ** 9
+        assert stats[1]["last_pulse_time"] == 1002 * 10**9
         assert stats[1]["sum"] == 28
         assert stats[1]["diff"] == 28
 
@@ -318,15 +318,15 @@ class TestHistogrammer:
 
         stats = histogrammer.get_histogram_stats()
 
-        assert stats[0]["last_pulse_time"] == 1002 * 10 ** 9
+        assert stats[0]["last_pulse_time"] == 1002 * 10**9
         assert stats[0]["sum"] == 28
         assert stats[0]["diff"] == 28
-        assert stats[1]["last_pulse_time"] == 1002 * 10 ** 9
+        assert stats[1]["last_pulse_time"] == 1002 * 10**9
         assert stats[1]["sum"] == 28
         assert stats[1]["diff"] == 28
         assert stats[2]["sum"] == 28
         assert stats[2]["diff"] == 28
-        assert stats[2]["last_pulse_time"] == 1002 * 10 ** 9
+        assert stats[2]["last_pulse_time"] == 1002 * 10**9
 
     def test_get_stats_with_no_histogram_returns_empty(self):
         histogrammer = create_histogrammer(self.hist_sink, NO_HIST_CONFIG)
@@ -372,8 +372,8 @@ class TestHistogrammer:
         self,
     ):
         config = copy.deepcopy(START_CONFIG)
-        config["start"] = 1003 * 10 ** 3
-        config["stop"] = 1005 * 10 ** 3
+        config["start"] = 1003 * 10**3
+        config["stop"] = 1005 * 10**3
 
         histogrammer = create_histogrammer(self.hist_sink, config)
         # Supply a time significantly after the original stop time because of
@@ -388,8 +388,8 @@ class TestHistogrammer:
         self,
     ):
         config = copy.deepcopy(START_CONFIG)
-        config["start"] = 1003 * 10 ** 3
-        config["stop"] = 1005 * 10 ** 3
+        config["start"] = 1003 * 10**3
+        config["stop"] = 1005 * 10**3
 
         histogrammer = create_histogrammer(self.hist_sink, config)
         finished = histogrammer.check_stop_time_exceeded(config["stop"] * 0.9)
@@ -400,14 +400,14 @@ class TestHistogrammer:
 
     def test_if_start_time_and_stop_time_defined_then_they_are_in_the_info(self):
         config = copy.deepcopy(START_CONFIG)
-        config["start"] = 1003 * 10 ** 3
-        config["stop"] = 1005 * 10 ** 3
+        config["start"] = 1003 * 10**3
+        config["stop"] = 1005 * 10**3
 
         histogrammer = create_histogrammer(self.hist_sink, config)
         info = histogrammer._generate_info(histogrammer.histograms[0])
 
-        assert info["start"] == 1003 * 10 ** 3
-        assert info["stop"] == 1005 * 10 ** 3
+        assert info["start"] == 1003 * 10**3
+        assert info["stop"] == 1005 * 10**3
 
     def test_if_start_time_and_stop_time_not_defined_then_they_are_not_in_the_info(
         self,

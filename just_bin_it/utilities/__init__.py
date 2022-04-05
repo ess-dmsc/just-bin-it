@@ -6,7 +6,6 @@ try:
     def time_in_ns():
         return time_ns()
 
-
 except ImportError:
 
     def time_in_ns():

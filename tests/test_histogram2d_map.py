@@ -17,8 +17,7 @@ def generate_image(width, height):
     count = 1
     for h in range(height):
         for w in range(width):
-            for i in range(count):
-                det_ids.append(count)
+            det_ids.extend([count] * count)
             count += 1
     return det_ids
 
@@ -54,6 +53,19 @@ class TestHistogram2dMapFunctionality:
         assert self.hist.y_edges[0] == 0
         assert self.hist.y_edges[-1] == 6
         assert self.hist.data.sum() == 0
+
+    def test_binning(self):
+        self.hist.add_data(self.pulse_time, [], self.data)
+
+        shape = self.hist.shape
+        data = self.hist.data
+
+        # The data should be 1 for the first bin, 2 for the second, and so on...
+        expected = 0
+        for y in range(shape[1]):
+            for x in range(shape[0]):
+                expected += 1
+                assert data[x][y] == expected
 
     def test_adding_data_to_initialised_histogram_new_data_is_added(self):
         self.hist.add_data(self.pulse_time, [], self.data)

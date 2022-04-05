@@ -15,7 +15,7 @@ from just_bin_it.utilities import time_in_ns
 
 
 STATISTICS_TEMPLATE = {
-    "last_pulse_time": 123 * 10 ** 9,  # in ns
+    "last_pulse_time": 123 * 10**9,  # in ns
     "sum": 1000,
     "diff": 200,
 }
@@ -46,8 +46,8 @@ class TestStatisticsPublisher:
 
         mock_process = mock.create_autospec(HistogramProcess)
         mock_process.get_stats.return_value = [
-            generate_stats_message(last_pulse_times[0] * 10 ** 9, sums[0], diffs[0]),
-            generate_stats_message(last_pulse_times[1] * 10 ** 9, sums[1], diffs[1]),
+            generate_stats_message(last_pulse_times[0] * 10**9, sums[0], diffs[0]),
+            generate_stats_message(last_pulse_times[1] * 10**9, sums[1], diffs[1]),
         ]
 
         histogram_processes = [mock_process]
@@ -76,12 +76,12 @@ class TestStatisticsPublisher:
         for t, s, d in zip(last_pulse_times, sums, diffs):
             mock_process = mock.create_autospec(HistogramProcess)
             mock_process.get_stats.return_value = [
-                generate_stats_message(t * 10 ** 9, s, d)
+                generate_stats_message(t * 10**9, s, d)
             ]
             histogram_processes.append(mock_process)
 
         self.publisher.publish_histogram_stats(
-            histogram_processes, current_time_ms=1234 * 10 ** 9
+            histogram_processes, current_time_ms=1234 * 10**9
         )
 
         calls = [
@@ -103,7 +103,7 @@ class TestStatisticsPublisher:
     def test_send_stats_with_no_processes(self):
         histogram_processes = []
         self.publisher.publish_histogram_stats(
-            histogram_processes, current_time_ms=1234 * 10 ** 9
+            histogram_processes, current_time_ms=1234 * 10**9
         )
 
         self.sender.send.assert_not_called()
@@ -115,7 +115,7 @@ class TestStatisticsPublisher:
 
         mock_process = mock.create_autospec(HistogramProcess)
         mock_process.get_stats.return_value = [
-            generate_stats_message(last_pulse_times[0] * 10 ** 9, sums[0], diffs[0])
+            generate_stats_message(last_pulse_times[0] * 10**9, sums[0], diffs[0])
         ]
 
         histogram_processes = [mock_process]
@@ -142,7 +142,7 @@ class TestStatisticsPublisher:
 
         mock_process = mock.create_autospec(HistogramProcess)
         mock_process.get_stats.return_value = [
-            generate_stats_message(last_pulse_times[0] * 10 ** 9, sums[0], diffs[0])
+            generate_stats_message(last_pulse_times[0] * 10**9, sums[0], diffs[0])
         ]
 
         histogram_processes = [mock_process]

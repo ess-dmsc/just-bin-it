@@ -48,7 +48,7 @@ class StatisticsPublisher:
     def _send_stats(self, hist_stats, process_index):
         for i, stat in enumerate(hist_stats):
             # Convert stats from ns to s
-            time_stamp = stat["last_pulse_time"] / 10 ** 9
+            time_stamp = stat["last_pulse_time"] / 10**9
 
             self.sender.send(
                 f"{self.metric}{process_index}-{i}-sum",

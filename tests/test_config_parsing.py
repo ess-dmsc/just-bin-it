@@ -186,14 +186,14 @@ class TestConfigParser:
 
     def test_if_interval_and_start_defined_then_parsing_throws(self):
         config = copy.deepcopy(CONFIG_INTERVAL)
-        config["start"] = 1 * 10 ** 9
+        config["start"] = 1 * 10**9
 
         with pytest.raises(Exception):
             parse_config(config)
 
     def test_if_interval_and_stop_defined_then_parsing_throws(self):
         config = copy.deepcopy(CONFIG_INTERVAL)
-        config["stop"] = 1 * 10 ** 9
+        config["stop"] = 1 * 10**9
 
         with pytest.raises(Exception):
             parse_config(config)
