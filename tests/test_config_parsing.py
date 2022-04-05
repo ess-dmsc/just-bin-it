@@ -98,7 +98,7 @@ class TestConfigParser:
         pass
 
     def test_if_histograms_then_all_settings_added_correctly(self):
-        start, stop, hists = parse_config(CONFIG_FULL)
+        start, stop, hists, _ = parse_config(CONFIG_FULL)
 
         assert len(hists) == 3
         assert start == CONFIG_FULL["start"]
@@ -158,14 +158,14 @@ class TestConfigParser:
         del config["start"]
         del config["stop"]
 
-        start, stop, _ = parse_config(config)
+        start, stop, _, _ = parse_config(config)
 
         assert start is None
         assert stop is None
 
     def test_if_interval_defined_then_start_and_stop_are_initialised(self):
         current_time = 123456
-        start, stop, _ = parse_config(CONFIG_INTERVAL, current_time)
+        start, stop, _, _ = parse_config(CONFIG_INTERVAL, current_time)
 
         assert start == current_time
         assert stop == current_time + CONFIG_INTERVAL["interval"] * 1000
@@ -202,6 +202,28 @@ class TestConfigParser:
         config = copy.deepcopy(CONFIG_FULL)
         del config["histograms"]
 
-        _, _, hists = parse_config(config)
+        _, _, hists, _ = parse_config(config)
 
         assert len(hists) == 0
+
+    def test_if_output_schema_defined_then_found(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        config["output_schema"] = "hs01"
+
+        _, _, _, schema = parse_config(config)
+
+        assert schema == "hs01"
+
+    def test_if_output_schema_not_defined_then_uses_default(self):
+        config = copy.deepcopy(CONFIG_FULL)
+
+        _, _, _, schema = parse_config(config)
+
+        assert schema == "hs00"
+
+    def test_if_schema_unknown_then_parsing_throws(self):
+        config = copy.deepcopy(CONFIG_INTERVAL)
+        config["output_schema"] = ":: unknown ::"
+
+        with pytest.raises(Exception):
+            parse_config(config)

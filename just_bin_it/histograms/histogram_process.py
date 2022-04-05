@@ -6,6 +6,7 @@ from multiprocessing import Process, Queue
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
+from just_bin_it.endpoints.serialisation import SCHEMAS_TO_SERIALISERS
 from just_bin_it.endpoints.sources import (
     EventSource,
     SimulatedEventSource,
@@ -45,17 +46,18 @@ def create_event_source(configuration, start, stop):
     return event_source
 
 
-def create_histogrammer(configuration, start, stop):
+def create_histogrammer(configuration, start, stop, schema):
     """
     Create a histogrammer.
 
     :param configuration: The configuration.
     :param start: The start time.
     :param stop: The stop time.
+    :param schema: The output schema.
     :return: The created histogrammer.
     """
     producer = Producer(configuration["data_brokers"])
-    hist_sink = HistogramSink(producer)
+    hist_sink = HistogramSink(producer, SCHEMAS_TO_SERIALISERS[schema])
     histograms = HistogramFactory.generate([configuration])
     return Histogrammer(hist_sink, histograms, start, stop)
 
@@ -169,6 +171,7 @@ def run_processing(
     configuration,
     start,
     stop,
+    schema,
     publish_interval,
     simulation=False,
 ):
@@ -193,7 +196,7 @@ def run_processing(
     histogrammer = None
     try:
         # Setting up
-        histogrammer = create_histogrammer(configuration, start, stop)
+        histogrammer = create_histogrammer(configuration, start, stop, schema)
 
         if simulation:
             event_source = create_simulated_event_source(configuration, start, stop)
@@ -224,6 +227,7 @@ class HistogramProcess:
         configuration,
         start_time,
         stop_time,
+        schema,
         publish_interval=500,
         simulation=False,
     ):
@@ -233,6 +237,7 @@ class HistogramProcess:
         :param configuration: The histogramming configuration.
         :param start_time: The start time.
         :param stop_time: The stop time.
+        :param schema: the output schema to use.
         :param publish_interval: How often to publish histograms and stats in milliseconds.
         :param simulation: Whether to run in simulation.
         """
@@ -246,11 +251,13 @@ class HistogramProcess:
                 configuration,
                 start_time,
                 stop_time,
+                schema,
                 publish_interval,
                 simulation,
             ),
         )
 
+    def start(self):
         self._process.start()
 
     def stop(self):

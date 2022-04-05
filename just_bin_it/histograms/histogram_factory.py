@@ -1,6 +1,7 @@
 import logging
 import time
 
+from just_bin_it.endpoints.serialisation import DEFAULT_SCHEMA, SCHEMAS_TO_SERIALISERS
 from just_bin_it.histograms.histogram1d import (
     TOF_1D_TYPE,
     Histogram1d,
@@ -31,8 +32,14 @@ def parse_config(configuration, current_time_ms=None):
     :param current_time_ms: The time to use for defining the start time (milliseconds).
     :return: tuple of start time, stop time and the list of histograms
     """
-    start = configuration["start"] if "start" in configuration else None
-    stop = configuration["stop"] if "stop" in configuration else None
+    start = configuration.get("start")
+    stop = configuration.get("stop")
+
+    schema = configuration.get("output_schema", DEFAULT_SCHEMA)
+    if schema not in SCHEMAS_TO_SERIALISERS:
+        raise Exception(
+            f"Unknown schema, must be one of {list(SCHEMAS_TO_SERIALISERS.keys())}"
+        )
 
     # Interval is configured in seconds but needs to be converted to milliseconds
     interval = (
@@ -71,7 +78,7 @@ def parse_config(configuration, current_time_ms=None):
                 raise Exception("Unexpected histogram type")
             hist_configs.append(hist)
 
-    return start, stop, hist_configs
+    return start, stop, hist_configs, schema
 
 
 class HistogramFactory:

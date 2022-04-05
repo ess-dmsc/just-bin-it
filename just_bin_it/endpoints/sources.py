@@ -6,9 +6,10 @@ from enum import Enum
 from typing import Optional
 
 from just_bin_it.endpoints.serialisation import (
+    SCHEMAS_TO_DESERIALISERS,
     EventData,
     deserialise_ev42,
-    deserialise_hs00,
+    get_schema,
 )
 from just_bin_it.exceptions import SourceException, TooOldTimeRequestedException
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
@@ -141,7 +142,9 @@ class EventSource(BaseSource):
 class HistogramSource(BaseSource):
     def _process_record(self, record):
         try:
-            return deserialise_hs00(record)
+            schema = get_schema(record)
+            if schema in SCHEMAS_TO_DESERIALISERS:
+                return SCHEMAS_TO_DESERIALISERS[schema](record)
         except Exception as error:
             raise SourceException(error)
 

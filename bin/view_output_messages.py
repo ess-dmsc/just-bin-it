@@ -5,7 +5,7 @@ import sys
 from kafka import KafkaConsumer, TopicPartition
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from just_bin_it.endpoints.serialisation import deserialise_hs00
+from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_schema
 
 
 def main(brokers, topic):
@@ -38,9 +38,11 @@ def main(brokers, topic):
                     message.value[0:20],
                 )
             )
-            ans = deserialise_hs00(message.value)
-            print(f"\nHistogram data:\n{ans}")
-            print(f"Total events: {ans['data'].sum()}")
+            schema = get_schema(message.value)
+            if schema in SCHEMAS_TO_DESERIALISERS:
+                ans = SCHEMAS_TO_DESERIALISERS[schema](message.value)
+                print(f"\nHistogram data:\n{ans}")
+                print(f"Total events: {ans['data'].sum()}")
 
 
 if __name__ == "__main__":
