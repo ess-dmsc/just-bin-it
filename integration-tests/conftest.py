@@ -39,12 +39,12 @@ def pytest_addoption(parser):
         type=bool,
         action="store",
         default=False,
-        help="Use this flag to cause the system tests to prompt you to attach a debugger to the just-bin-it process",
+        help="Use this flag to cause the integration tests to prompt you to attach a debugger to the just-bin-it process",
     )
 
 
 def wait_until_kafka_ready(docker_cmd, docker_options):
-    print("Waiting for Kafka broker to be ready for system tests...")
+    print("Waiting for Kafka broker to be ready for integration tests...")
     conf = {"bootstrap.servers": "localhost:9092", "api.version.request": True}
     producer = Producer(**conf)
     kafka_ready = False

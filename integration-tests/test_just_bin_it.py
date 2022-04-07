@@ -64,7 +64,7 @@ def create_consumer(topic):
 
 def generate_data(msg_id, time_stamp, num_events):
     tofs, dets = generate_fake_data(TOF_RANGE, DET_RANGE, num_events)
-    return serialise_ev42("system test", msg_id, time_stamp, tofs, dets)
+    return serialise_ev42("integration test", msg_id, time_stamp, tofs, dets)
 
 
 class TestJustBinIt:
