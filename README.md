@@ -393,16 +393,16 @@ From the top directory:
 tox
 ```
 
-### System tests
-There are system tests that tests the whole system with a real instance of Kafka.
-See the system-tests folder for more information on how to run them.
+### Integration tests
+There are integration tests that tests the whole system with a real instance of Kafka.
+See the integration-tests folder for more information on how to run them.
 
 They should be run before modified code is pushed to the code repository.
 
-### Integrated tests
-There are some integrated tests in the system-tests folder that check our code for
+### Kafka client tests
+There are some Kafka client tests in the integration-tests folder that check our code for
 talking to Kafka works as expected.
-See the system-tests folder for more information on how to run them.
+See the integration-tests folder for more information on how to run them.
 
 They should be run before modified code is pushed to the code repository.
 
