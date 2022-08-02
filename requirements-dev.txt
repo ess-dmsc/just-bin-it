@@ -1,6 +1,6 @@
 -r requirements.txt
 black==22.1.0   # Pinned to match pre-commit config
-flake8==4.0.1   # Pinned to match pre-commit config
+flake8==5.0.3   # Pinned to match pre-commit config
 isort==5.10.1    # Pinned to match pre-commit config
 mock
 mutmut
