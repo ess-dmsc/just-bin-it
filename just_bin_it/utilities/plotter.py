@@ -34,7 +34,7 @@ def plot_histograms(histograms, log_scale_for_2d=False):
                     norm=colors.LogNorm(vmin=min_value, vmax=hist.data.max()),
                 )
             else:
-                ax.pcolormesh(x, y, hist.data.T)
+                ax.pcolormesh(x, y, hist.data.T, shading="auto")
             # And flip the y-axis to match ESS geometry definition
             ax.invert_yaxis()
         else:
