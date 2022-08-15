@@ -135,7 +135,7 @@ An example:
       "type": "dethist",
       "data_brokers": ["localhost:9092"],
       "data_topics": ["TEST_events"],
-      "det_range":[1, 6144],
+      "det_range":[1, 6145],
       "width":32,
       "height":192,
       "topic": "output_topic_for_map",
