@@ -34,13 +34,14 @@ CONFIG_2D = [
     }
 ]
 
+IGNORED_VALUE = 123456
 
 CONFIG_2D_MAP = [
     {
         "data_brokers": ["localhost:9092", "someserver:9092"],
         "data_topics": ["my_topic"],
         "type": MAP_TYPE,
-        "det_range": [1, 6144],
+        "det_range": [1, IGNORED_VALUE],
         "width": 32,
         "height": 192,
         "topic": "topic0",
@@ -122,7 +123,7 @@ class TestHistogramFactory:
         histograms = HistogramFactory.generate(CONFIG_2D_MAP)
 
         assert isinstance(histograms[0], DetHistogram)
-        assert histograms[0].det_range == (1, 6144)
+        assert histograms[0].det_range == (1, 6145)
         assert histograms[0].width == 32
         assert histograms[0].height == 192
         assert histograms[0].topic == "topic0"

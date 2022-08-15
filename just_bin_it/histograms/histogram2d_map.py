@@ -81,7 +81,8 @@ class DetHistogram:
         self._histogram = None
         self.x_edges = None
         self.y_edges = None
-        self.det_range = (det_range[0], det_range[1])
+        # Second det range value is calculated, thus the user value is ignored.
+        self.det_range = (det_range[0], det_range[0] + width * height)
         # The number of bins is the number of detectors.
         self.num_bins = width * height
         self.width = width

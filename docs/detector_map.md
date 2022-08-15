@@ -10,7 +10,7 @@ The configuration parameters:
 - "data_brokers": the address of one or more Kafka brokers (list of strings).
 - "data_topics": the Kafka topics on which the event data is found (list of strings).
 - "det_range": the range of detectors to histogram over (array of ints).
-  - typically `det_range[1] = width * height + det_range[0]`
+  - end of the range is calculated using `det_range[1] = width * height + det_range[0]`, so supplied value is ignored.
 - "width": the width of the detector (int).
 - "height": the height of the detector (int).
 - "topic": the topic to write the histogram data to.
