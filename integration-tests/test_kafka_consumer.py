@@ -20,7 +20,7 @@ class TestKafkaConsumer:
     the way we think they do.
 
     Note: on the multiple partition tests it is possible that a partition could
-    be empty which would cause the test to fail. The number messages is quite
+    be empty which would cause the test to fail. The number of messages is quite
     high, so it should be unlikely
     """
 
