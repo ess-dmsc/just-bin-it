@@ -7,7 +7,7 @@ project = "just-bin-it"
 python = "python3.6"
 
 container_build_nodes = [
-  'centos7-release': ContainerBuildNode.getDefaultContainerBuildNode('centos7-gcc8')
+  'centos7': new ContainerBuildNode('dockerregistry.esss.dk/ecdc_group/build-node-images/centos7-build-node:10.0.2-dev', '/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -e -x')
 ]
 
 // Define number of old builds to keep.
@@ -38,8 +38,7 @@ builders = pipeline_builder.createBuilders { container ->
 
   pipeline_builder.stage("${container.key}: Dependencies") {
     container.sh """
-      /opt/miniconda/bin/conda init bash
-      export PATH=/opt/miniconda/bin:\\\$PATH
+      which python
       python --version
       python -m pip install --user -r ${project}/requirements-dev.txt
     """
@@ -48,9 +47,9 @@ builders = pipeline_builder.createBuilders { container ->
   pipeline_builder.stage("${container.key}: Test") {
     def test_output = "TestResults.xml"
     container.sh """
-      export PATH=/opt/miniconda/bin:\\\$PATH
-      python --version
       cd ${project}
+      pyenv local 3.7 3.8 3.9
+      pyenv versions
       python -m tox -- --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
