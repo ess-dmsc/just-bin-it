@@ -4,8 +4,6 @@ import ecdcpipeline.PipelineBuilder
 
 project = "just-bin-it"
 
-python = "python3.6"
-
 container_build_nodes = [
   'centos7': new ContainerBuildNode('dockerregistry.esss.dk/ecdc_group/build-node-images/centos7-build-node:10.0.2-dev', '/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -e -x')
 ]
@@ -87,7 +85,8 @@ def get_integration_tests_pipeline() {
           }  // stage
           stage("Integration tests: Install requirements") {
             sh """
-            ${python} -m venv test_env
+            scl enable rh-python38 -- which python
+            scl enable rh-python38 -- python -m venv test_env
             source test_env/bin/activate
             which python
             pip install --upgrade pip
