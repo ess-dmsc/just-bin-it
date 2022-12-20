@@ -3,7 +3,7 @@
 A lightweight program for histogramming neutron event data.
 
 ## Setup
-Python 3.6+ only.
+Python 3.8+ only.
 
 ```
 >>> pip install -r requirements.txt
