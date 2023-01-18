@@ -23,15 +23,11 @@ class StopTimeStatus(Enum):
     NOT_EXCEEDED = 2
 
 
-class BaseSource:
-    def __init__(self, consumer):
-        """
-        Constructor.
-
-        :param consumer: The underlying consumer.
-        """
-        if consumer is None:
-            raise Exception("Event source must have a consumer")  # pragma: no mutate
+class ConfigSource:
+    def __init__(
+        self,
+        consumer,
+    ):
         self.consumer = consumer
 
     def get_new_data(self):
@@ -52,18 +48,13 @@ class BaseSource:
         return data
 
     def _process_record(self, record):
-        raise NotImplementedError("Processing not implemented.")  # pragma: no mutate
-
-
-class ConfigSource(BaseSource):
-    def _process_record(self, record):
         try:
             return json.loads(record)
         except json.JSONDecodeError as error:
             raise SourceException(error.msg)
 
 
-class EventSource(BaseSource):
+class EventSource:
     def __init__(
         self,
         consumer,
@@ -71,10 +62,27 @@ class EventSource(BaseSource):
         stop_time: Optional[int] = None,
         deserialise_function=deserialise_ev42,
     ):
-        super().__init__(consumer)
+        self.consumer = consumer
         self.start_time = start_time
         self.stop_time = stop_time
         self.deserialise_function = deserialise_function
+
+    def get_new_data(self):
+        """
+        Get the latest data from the consumer.
+
+        :return: The list of data.
+        """
+        data = []
+        msgs = self.consumer.get_new_messages()
+
+        for _, records in msgs.items():
+            for i in records:
+                try:
+                    data.append((i.timestamp, i.offset, self._process_record(i.value)))
+                except Exception as error:
+                    logging.debug("SourceException: %s", error)  # pragma: no mutate
+        return data
 
     def _process_record(self, record):
         try:
@@ -139,7 +147,30 @@ class EventSource(BaseSource):
             return StopTimeStatus.EXCEEDED
 
 
-class HistogramSource(BaseSource):
+class HistogramSource:
+    def __init__(
+        self,
+        consumer,
+    ):
+        self.consumer = consumer
+
+    def get_new_data(self):
+        """
+        Get the latest data from the consumer.
+
+        :return: The list of data.
+        """
+        data = []
+        msgs = self.consumer.get_new_messages()
+
+        for _, records in msgs.items():
+            for i in records:
+                try:
+                    data.append((i.timestamp, i.offset, self._process_record(i.value)))
+                except SourceException as error:
+                    logging.debug("SourceException: %s", error)  # pragma: no mutate
+        return data
+
     def _process_record(self, record):
         try:
             schema = get_schema(record)

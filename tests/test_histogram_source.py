@@ -17,10 +17,6 @@ class TestHistogramSource:
         with open(os.path.join(path, "example_hs00_fb.dat"), "rb") as f:
             self.valid_fb = f.read()
 
-    def test_if_no_consumer_supplied_then_raises(self):
-        with pytest.raises(Exception):
-            HistogramSource(None)
-
     def test_if_no_new_messages_then_no_data(self):
         mock_consumer = StubConsumer(["broker1"], ["topic1"])
         mock_consumer.add_messages([])
