@@ -62,9 +62,6 @@ class Histogram1d:
         """
         Constructor.
 
-        Note on preprocessing functions: this should used for relatively low impact
-        processing, i.e. avoid CPU intense algorithms.
-
         :param topic: The name of the Kafka topic to publish to.
         :param num_bins: The number of bins to divide the time-of-flight up into.
         :param tof_range: The time-of-flight range to histogram over.
