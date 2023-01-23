@@ -1,5 +1,6 @@
+from streaming_data_types.eventdata_ev42 import EventData
+
 from just_bin_it.endpoints.kafka_consumer import Consumer
-from just_bin_it.endpoints.serialisation import EventData
 
 
 class StubConsumerRecord:
@@ -81,7 +82,7 @@ class StubConsumer(Consumer):
         return positions
 
 
-def get_fake_event_messages(num_messages, num_partitions=1):
+def get_fake_ev42_messages(num_messages, num_partitions=1):
     messages = []
     pulse_time = 0
     # The real gap would be 1/14 but we use 1/20 to make things easier.

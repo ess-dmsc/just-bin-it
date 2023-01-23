@@ -1,13 +1,12 @@
 import numpy as np
 import pytest
-from streaming_data_types.eventdata_ev42 import EventData
 
 from just_bin_it.endpoints.sources import (
     EventSource,
     StopTimeStatus,
     TooOldTimeRequestedException,
 )
-from tests.doubles.consumer import StubConsumer, get_fake_event_messages
+from tests.doubles.consumer import StubConsumer, get_fake_ev42_messages
 
 
 def compare_two_messages(sent, received):
@@ -18,17 +17,13 @@ def compare_two_messages(sent, received):
     if sent_offset != rec_offset:
         return False
 
-    if sent_event_data.source_name != rec_event_data.source_name:
+    if sent_event_data.source_name != rec_event_data[0]:
         return False
-    if sent_event_data.pulse_time != rec_event_data.pulse_time:
+    if sent_event_data.pulse_time != rec_event_data[1]:
         return False
-    if sent_event_data.message_id != rec_event_data.message_id:
+    if not np.array_equal(sent_event_data.time_of_flight, rec_event_data[2]):
         return False
-    if not np.array_equal(
-        sent_event_data.time_of_flight, rec_event_data.time_of_flight
-    ):
-        return False
-    if not np.array_equal(sent_event_data.detector_id, rec_event_data.detector_id):
+    if not np.array_equal(sent_event_data.detector_id, rec_event_data[3]):
         return False
 
     return True
@@ -41,9 +36,8 @@ def serialise_messages(messages):
             (
                 ts,  # Represents the Kafka timestamp
                 offset,  # Represents the Kafka offset.
-                EventData(
+                (
                     event_data.source_name,
-                    event_data.message_id,
                     event_data.pulse_time,
                     event_data.time_of_flight,
                     event_data.detector_id,
@@ -58,7 +52,7 @@ class TestEventSourceSinglePartition:
     @classmethod
     def setup_class(cls):
         # Only need to create the messages once
-        cls.messages = get_fake_event_messages(100)
+        cls.messages = get_fake_ev42_messages(100)
         cls.serialised_messages = serialise_messages(cls.messages)
 
     @pytest.fixture(autouse=True)
@@ -191,7 +185,7 @@ class TestEventSourceMultiplePartitions:
     @classmethod
     def setup_class(cls):
         # Only need to create the messages once
-        cls.messages = get_fake_event_messages(150, 3)
+        cls.messages = get_fake_ev42_messages(150, 3)
         cls.serialised_messages = serialise_messages(cls.messages)
 
     @pytest.fixture(autouse=True)
@@ -219,7 +213,7 @@ class TestEventSourceMultiplePartitions:
     def test_if_x_new_messages_on_only_one_partition_then_data_has_x_items(self):
         consumer = StubConsumer(["broker"], ["topic"], num_partitions=3)
         event_source = EventSource(consumer, 0, deserialise_function=lambda x: x)
-        messages = get_fake_event_messages(5)
+        messages = get_fake_ev42_messages(5)
         consumer.add_messages(serialise_messages(messages))
 
         data = event_source.get_new_data()

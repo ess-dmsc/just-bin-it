@@ -7,7 +7,6 @@ from typing import Optional
 
 from just_bin_it.endpoints.serialisation import (
     SCHEMAS_TO_DESERIALISERS,
-    EventData,
     deserialise_ev42,
     get_schema,
 )
@@ -188,9 +187,7 @@ class SimulatedEventSource:
 
     def _generate_data(self):
         tofs, dets = generate_fake_data(self.tof_range, self.det_range, self.num_events)
-        data = EventData(
-            "simulator", 0, math.floor(time.time() * 10**9), tofs, dets, None
-        )
+        data = ("simulator", math.floor(time.time() * 10**9), tofs, dets, None)
         return [(int(time.time() * self.num_events), 0, data)]
 
     def _generate_dethist_data(self):
@@ -202,9 +199,7 @@ class SimulatedEventSource:
             )
             for det in new_dets:
                 dets.append(h * self.width + det)
-        data = EventData(
-            "simulator", 0, math.floor(time.time() * 10**9), [], dets, None
-        )
+        data = ("simulator", math.floor(time.time() * 10**9), [], dets, None)
         return [(int(time.time() * self.num_events), 0, data)]
 
     def seek_to_start_time(self):
