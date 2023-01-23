@@ -6,6 +6,7 @@ import pytest
 import tests
 from just_bin_it.endpoints.serialisation import (
     deserialise_ev42,
+    deserialise_ev44,
     deserialise_hs00,
     deserialise_hs01,
     get_schema,
@@ -47,6 +48,39 @@ class TestDeserialisationEv42:
 
         with pytest.raises(Exception):
             deserialise_ev42(new_buf)
+
+
+class TestDeserialisationEv44:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        # Trick to get path of test data
+        path = os.path.dirname(tests.__file__)
+        with open(os.path.join(path, "example_ev44_fb.dat"), "rb") as f:
+            self.buf = f.read()
+
+    def test_deserialises_ev44_message_correctly(self):
+        """
+        Sanity check: checks the combination of libraries work as expected.
+        """
+        source, pulse_time, tofs, det_ids = deserialise_ev44(self.buf)
+
+        assert pulse_time == 1_673_942_576_096_540_000
+        assert source == "grace"
+        assert len(det_ids) == 1577
+        assert len(tofs) == 1577
+        assert det_ids[0] == 128880
+        assert tofs[0] == 128880
+
+    def test_can_extract_the_schema_type(self):
+        schema = get_schema(self.buf)
+
+        assert schema == "ev44"
+
+    def test_if_schema_is_incorrect_then_throws(self):
+        new_buf = self.buf[:4] + b"na12" + self.buf[8:]
+
+        with pytest.raises(Exception):
+            deserialise_ev44(new_buf)
 
 
 class TestSerialisationHs00:

@@ -1,4 +1,5 @@
 import streaming_data_types.eventdata_ev42 as ev42
+import streaming_data_types.eventdata_ev44 as ev44
 import streaming_data_types.histogram_hs00 as hs00
 import streaming_data_types.histogram_hs01 as hs01
 
@@ -130,6 +131,25 @@ def serialise_ev42(source_name, message_id, pulse_time, tofs, det_ids):
     :return: The raw buffer of the FlatBuffers message.
     """
     return ev42.serialise_ev42(source_name, message_id, pulse_time, tofs, det_ids)
+
+
+def deserialise_ev44(buf):
+    """
+    Deserialise an ev44 FlatBuffers message.
+
+    :param buf: The raw buffer of the FlatBuffers message.
+    :return: A tuple of the deserialised values.
+    """
+    try:
+        result = ev44.deserialise_ev44(buf)
+        return (
+            result.source_name,
+            result.reference_time[0],
+            result.time_of_flight,
+            result.pixel_id,
+        )
+    except Exception as error:
+        raise JustBinItException(f"Could not deserialise ev44 buffer: {error}")
 
 
 SCHEMAS_TO_SERIALISERS = {"hs00": serialise_hs00, "hs01": serialise_hs01}
