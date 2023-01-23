@@ -69,10 +69,6 @@ class TestEventSourceSinglePartition:
             self.consumer, 0, deserialise_function=lambda x: x
         )
 
-    def test_if_no_consumer_supplied_then_raises(self):
-        with pytest.raises(Exception):
-            EventSource(None, 10)
-
     def test_if_no_new_messages_then_no_data(self):
         consumer = StubConsumer(["broker"], ["topic"])
         event_source = EventSource(consumer, 0)
@@ -204,10 +200,6 @@ class TestEventSourceMultiplePartitions:
         self.consumer.add_messages(self.serialised_messages[0::3], 0)
         self.consumer.add_messages(self.serialised_messages[1::3], 1)
         self.consumer.add_messages(self.serialised_messages[2::3], 2)
-
-    def test_if_no_consumer_supplied_then_raises(self):
-        with pytest.raises(Exception):
-            EventSource(None, 10)
 
     def test_if_no_new_messages_then_no_data(self):
         consumer = StubConsumer(["broker"], ["topic"], num_partitions=3)

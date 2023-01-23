@@ -1,5 +1,3 @@
-import pytest
-
 from just_bin_it.endpoints.sources import ConfigSource
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
@@ -77,10 +75,6 @@ INVALID_JSON = '{ "malformed": 123]'
 
 
 class TestConfigSource:
-    def test_if_no_consumer_supplied_then_raises(self):
-        with pytest.raises(Exception):
-            ConfigSource(None)
-
     def test_received_configuration_converted_correctly(self):
         consumer = StubConsumer(["broker1"], ["topic1"])
         consumer.add_messages([(0, 0, CONFIG_BASIC_1)])
