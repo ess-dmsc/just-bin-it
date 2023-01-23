@@ -1,7 +1,6 @@
 import streaming_data_types.eventdata_ev42 as ev42
 import streaming_data_types.histogram_hs00 as hs00
 import streaming_data_types.histogram_hs01 as hs01
-from streaming_data_types.eventdata_ev42 import EventData
 
 from just_bin_it.exceptions import JustBinItException
 
@@ -100,7 +99,7 @@ def serialise_hs01(histogram, timestamp: int = 0, info_message: str = ""):
     return hs01.serialise_hs01(data)
 
 
-def deserialise_ev42(buf) -> EventData:
+def deserialise_ev42(buf):
     """
     Deserialise an ev42 FlatBuffers message.
 
@@ -108,7 +107,13 @@ def deserialise_ev42(buf) -> EventData:
     :return: A tuple of the deserialised values.
     """
     try:
-        return ev42.deserialise_ev42(buf)
+        result = ev42.deserialise_ev42(buf)
+        return (
+            result.source_name,
+            result.pulse_time,
+            result.time_of_flight,
+            result.detector_id,
+        )
     except Exception as error:
         raise JustBinItException(f"Could not deserialise ev42 buffer: {error}")
 

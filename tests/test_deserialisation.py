@@ -28,15 +28,14 @@ class TestDeserialisationEv42:
         """
         Sanity check: checks the combination of libraries work as expected.
         """
-        data = deserialise_ev42(self.buf)
+        source, pulse_time, tofs, det_ids = deserialise_ev42(self.buf)
 
-        assert data.message_id == 300
-        assert data.pulse_time == 1_542_876_129_940_000_057
-        assert data.source_name == "NeXus-Streamer"
-        assert len(data.detector_id) == 794
-        assert len(data.time_of_flight) == 794
-        assert data.detector_id[0] == 99406
-        assert data.time_of_flight[0] == 11_660_506
+        assert pulse_time == 1_542_876_129_940_000_057
+        assert source == "NeXus-Streamer"
+        assert len(det_ids) == 794
+        assert len(tofs) == 794
+        assert det_ids[0] == 99406
+        assert tofs[0] == 11_660_506
 
     def test_can_extract_the_schema_type(self):
         schema = get_schema(self.buf)
