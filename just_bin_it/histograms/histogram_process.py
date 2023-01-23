@@ -6,7 +6,7 @@ from multiprocessing import Process, Queue
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
-from just_bin_it.endpoints.serialisation import SCHEMAS_TO_SERIALISERS
+from just_bin_it.endpoints.serialisation import SCHEMAS_TO_SERIALISERS, deserialise_ev42
 from just_bin_it.endpoints.sources import (
     EventSource,
     SimulatedEventSource,
@@ -21,7 +21,7 @@ def create_simulated_event_source(configuration, start, stop):
     """
     Create a simulated event source.
 
-    :param configuration The configuration.
+    :param configuration: The configuration.
     :param start: The start time.
     :param stop: The stop time.
     :return: The created event source.
@@ -29,17 +29,18 @@ def create_simulated_event_source(configuration, start, stop):
     return SimulatedEventSource(configuration, start, stop)
 
 
-def create_event_source(configuration, start, stop):
+def create_event_source(configuration, start, stop, deserialise_func=deserialise_ev42):
     """
     Create an event source.
 
-    :param configuration The configuration.
+    :param configuration: The configuration.
     :param start: The start time.
     :param stop: The stop time.
+    :param deserilise_func: The FlatBuffers deserialisation function.
     :return: The created event source.
     """
     consumer = Consumer(configuration["data_brokers"], configuration["data_topics"])
-    event_source = EventSource(consumer, start, stop)
+    event_source = EventSource(consumer, start, stop, deserialise_func)
 
     if start:
         event_source.seek_to_start_time()
