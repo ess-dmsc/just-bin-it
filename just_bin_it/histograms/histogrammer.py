@@ -106,7 +106,8 @@ class Histogrammer:
             self._previous_sum[i] = total_counts
             results.append(
                 {
-                    "last_pulse_time": hist.last_pulse_time,
+                    # numpy int64 cannot be converted to JSON.
+                    "last_pulse_time": int(hist.last_pulse_time),
                     "sum": total_counts,
                     "diff": diff,
                 }
