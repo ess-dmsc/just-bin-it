@@ -172,7 +172,7 @@ def create_histogrammer(hist_sink, configuration):
     :param configuration: The configuration message.
     :return: The created histogrammer.
     """
-    start, stop, hist_configs, schema = parse_config(configuration)
+    start, stop, hist_configs, _, _ = parse_config(configuration)
     histograms = HistogramFactory.generate(hist_configs)
 
     return Histogrammer(hist_sink, histograms, start, stop)

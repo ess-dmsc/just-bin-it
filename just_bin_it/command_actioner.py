@@ -74,7 +74,7 @@ class CommandActioner:
             self._stop_processes(hist_processes)
         elif message["cmd"] == "config":
             logging.info("Config command received")
-            start, stop, hist_configs, schema = parse_config(message)
+            start, stop, hist_configs, hist_schema, event_schema = parse_config(message)
 
             self._stop_processes(hist_processes)
 
@@ -87,7 +87,7 @@ class CommandActioner:
                         raise KafkaException("Invalid Kafka settings")
 
                     process = self.process_factory.create(
-                        config, start, stop, schema, self.simulation
+                        config, start, stop, hist_schema, self.simulation
                     )
                     process.start()
                     hist_processes.append(process)

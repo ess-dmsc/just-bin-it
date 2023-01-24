@@ -1,7 +1,6 @@
 import logging
 import time
 
-from just_bin_it.endpoints.serialisation import DEFAULT_SCHEMA, SCHEMAS_TO_SERIALISERS
 from just_bin_it.histograms.histogram1d import (
     TOF_1D_TYPE,
     Histogram1d,
@@ -23,6 +22,11 @@ from just_bin_it.histograms.histogram2d_roi import (
     validate_hist_2d_roi,
 )
 
+DEFAULT_OUTPUT_SCHEMA = "hs00"
+DEFAULT_INPUT_SCHEMA = "ev42"
+VALID_INPUT_SCHEMA = ["ev42", "ev44"]
+VALID_OUTPUT_SCHEMA = ["hs00", "hs01"]
+
 
 def parse_config(configuration, current_time_ms=None):
     """
@@ -30,15 +34,21 @@ def parse_config(configuration, current_time_ms=None):
 
     :param configuration: The dictionary containing the configuration.
     :param current_time_ms: The time to use for defining the start time (milliseconds).
-    :return: tuple of start time, stop time and the list of histograms
+    :return: tuple of config details.
     """
     start = configuration.get("start")
     stop = configuration.get("stop")
 
-    schema = configuration.get("output_schema", DEFAULT_SCHEMA)
-    if schema not in SCHEMAS_TO_SERIALISERS:
+    input_schema = configuration.get("input_schema", DEFAULT_INPUT_SCHEMA)
+    if input_schema not in VALID_INPUT_SCHEMA:
         raise Exception(
-            f"Unknown schema, must be one of {list(SCHEMAS_TO_SERIALISERS.keys())}"
+            f"Unknown input schema {input_schema}, must be one of {VALID_INPUT_SCHEMA}"
+        )
+
+    output_schema = configuration.get("output_schema", DEFAULT_OUTPUT_SCHEMA)
+    if output_schema not in VALID_OUTPUT_SCHEMA:
+        raise Exception(
+            f"Unknown output schema {output_schema}, must be one of {VALID_OUTPUT_SCHEMA}"
         )
 
     # Interval is configured in seconds but needs to be converted to milliseconds
@@ -78,7 +88,7 @@ def parse_config(configuration, current_time_ms=None):
                 raise Exception("Unexpected histogram type")
             hist_configs.append(hist)
 
-    return start, stop, hist_configs, schema
+    return start, stop, hist_configs, output_schema, input_schema
 
 
 class HistogramFactory:

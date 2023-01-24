@@ -153,5 +153,9 @@ def deserialise_ev44(buf):
 
 
 SCHEMAS_TO_SERIALISERS = {"hs00": serialise_hs00, "hs01": serialise_hs01}
-SCHEMAS_TO_DESERIALISERS = {"hs00": deserialise_hs00, "hs01": deserialise_hs01}
-DEFAULT_SCHEMA = "hs00"
+SCHEMAS_TO_DESERIALISERS = {
+    "hs00": deserialise_hs00,
+    "hs01": deserialise_hs01,
+    "ev42": deserialise_ev42,
+    "ev44": deserialise_ev44,
+}
