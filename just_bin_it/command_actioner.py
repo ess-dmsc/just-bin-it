@@ -8,8 +8,10 @@ from just_bin_it.histograms.histogram_process import HistogramProcess
 
 
 class ProcessFactory:
-    def create(self, config, start, stop, schema, simulation=False):
-        return HistogramProcess(config, start, stop, schema, simulation=simulation)
+    def create(self, config, start, stop, hist_schema, event_schema, simulation=False):
+        return HistogramProcess(
+            config, start, stop, hist_schema, event_schema, simulation=simulation
+        )
 
 
 class ResponsePublisher:

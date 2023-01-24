@@ -36,7 +36,7 @@ RESET_CMD = {"cmd": "reset_counts"}
 class TestProcessFactory:
     def test_creates_process(self):
         process_factory = ProcessFactory()
-        process_factory.create({}, 123456, 456789, "::schema::", True)
+        process_factory.create({}, 123456, 456789, "::schema::", "::schema::", True)
 
 
 class TestCommandActioner:

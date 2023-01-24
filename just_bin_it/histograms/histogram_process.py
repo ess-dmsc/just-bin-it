@@ -6,7 +6,10 @@ from multiprocessing import Process, Queue
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_producer import Producer
-from just_bin_it.endpoints.serialisation import SCHEMAS_TO_SERIALISERS, deserialise_ev42
+from just_bin_it.endpoints.serialisation import (
+    SCHEMAS_TO_DESERIALISERS,
+    SCHEMAS_TO_SERIALISERS,
+)
 from just_bin_it.endpoints.sources import (
     EventSource,
     SimulatedEventSource,
@@ -29,7 +32,7 @@ def create_simulated_event_source(configuration, start, stop):
     return SimulatedEventSource(configuration, start, stop)
 
 
-def create_event_source(configuration, start, stop, deserialise_func=deserialise_ev42):
+def create_event_source(configuration, start, stop, deserialise_func):
     """
     Create an event source.
 
@@ -47,18 +50,18 @@ def create_event_source(configuration, start, stop, deserialise_func=deserialise
     return event_source
 
 
-def create_histogrammer(configuration, start, stop, write_schema):
+def create_histogrammer(configuration, start, stop, hist_schema):
     """
     Create a histogrammer.
 
     :param configuration: The configuration.
     :param start: The start time.
     :param stop: The stop time.
-    :param write_schema: The output schema.
+    :param hist_schema: The output schema.
     :return: The created histogrammer.
     """
     producer = Producer(configuration["data_brokers"])
-    hist_sink = HistogramSink(producer, SCHEMAS_TO_SERIALISERS[write_schema])
+    hist_sink = HistogramSink(producer, SCHEMAS_TO_SERIALISERS[hist_schema])
     histograms = HistogramFactory.generate([configuration])
     return Histogrammer(hist_sink, histograms, start, stop)
 
@@ -172,7 +175,8 @@ def run_processing(
     configuration,
     start,
     stop,
-    write_schema,
+    hist_schema,
+    event_schema,
     publish_interval,
     simulation=False,
 ):
@@ -191,19 +195,23 @@ def run_processing(
     :param configuration: The histogramming configuration.
     :param start: The start time.
     :param stop: The stop time.
-    :param write_schema: The schema to use for writing histograms.
+    :param hist_schema: The schema to use for writing histograms.
+    :param event_schema: The schema of the event messages.
     :param publish_interval: How often to publish histograms and stats in milliseconds.
     :param simulation: Whether to run in simulation.
     """
     histogrammer = None
     try:
         # Setting up
-        histogrammer = create_histogrammer(configuration, start, stop, write_schema)
+        histogrammer = create_histogrammer(configuration, start, stop, hist_schema)
 
         if simulation:
             event_source = create_simulated_event_source(configuration, start, stop)
         else:
-            event_source = create_event_source(configuration, start, stop)
+            deserialise_func = SCHEMAS_TO_DESERIALISERS[event_schema]
+            event_source = create_event_source(
+                configuration, start, stop, deserialise_func
+            )
 
         processor = Processor(
             histogrammer, event_source, msg_queue, stats_queue, publish_interval
@@ -229,7 +237,8 @@ class HistogramProcess:
         configuration,
         start_time,
         stop_time,
-        write_schema,
+        hist_schema,
+        event_schema,
         publish_interval=500,
         simulation=False,
     ):
@@ -239,7 +248,7 @@ class HistogramProcess:
         :param configuration: The histogramming configuration.
         :param start_time: The start time.
         :param stop_time: The stop time.
-        :param write_schema: the output schema to use.
+        :param hist_schema: the output schema to use.
         :param publish_interval: How often to publish histograms and stats in milliseconds.
         :param simulation: Whether to run in simulation.
         """
@@ -253,7 +262,8 @@ class HistogramProcess:
                 configuration,
                 start_time,
                 stop_time,
-                write_schema,
+                hist_schema,
+                event_schema,
                 publish_interval,
                 simulation,
             ),
