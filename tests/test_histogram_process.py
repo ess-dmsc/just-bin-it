@@ -3,18 +3,7 @@ from multiprocessing import Queue
 
 import pytest
 
-from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram_process import Processor, StopTimeStatus
-
-VALID_CONFIG = {
-    "data_brokers": ["localhost:9092", "someserver:9092"],
-    "data_topics": ["my_topic"],
-    "type": TOF_1D_TYPE,
-    "tof_range": [20, 2000],
-    "num_bins": 50,
-    "topic": "topic0",
-    "source": "source1",
-}
 
 
 class MockHistogrammer:
