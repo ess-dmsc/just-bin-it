@@ -28,6 +28,7 @@ RESPONSE_TOPIC = "hist_responses"
 
 CONFIG_CMD = {
     "cmd": "config",
+    "input_schema": "ev44",
     "output_schema": "hs01",
     "histograms": [
         {
@@ -413,3 +414,41 @@ class TestJustBinIt:
         assert msg["msg_id"] == config["msg_id"]
         assert msg["response"] == "ERR"
         assert "message" in msg
+
+    @pytest.mark.flaky(reruns=5)
+    def test_legacy_schemas(self, just_bin_it):
+        self.ensure_topic_is_not_empty_on_startup()
+
+        # Config just-bin-it
+        interval_length = 5
+        config = self.create_basic_config()
+        config["interval"] = interval_length
+        config["input_schema"] = "ev42"
+        config["output_schema"] = "hs00"
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send fake data
+        num_msgs = 12
+
+        for i in range(num_msgs):
+            self.generate_and_send_data(i + 1)
+            time.sleep(0.5)
+
+        time.sleep(interval_length * 3)
+
+        self.check_offsets_have_advanced()
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        info = json.loads(hist_data["info"])
+        total_events = 0
+        for ts, num in zip(self.time_stamps, self.num_events_per_msg):
+            if info["start"] <= ts <= info["stop"]:
+                total_events += num
+
+        assert hist_data["data"].sum() == total_events
+        assert info["state"] == "FINISHED"
