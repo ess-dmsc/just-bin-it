@@ -105,17 +105,13 @@ class TestSerialisationEv42:
         Sanity check: checks the combination of libraries work as expected.
         """
         source = "just-bin-it"
-        message_id = 123456
         pulse_time = 1234567890000000000
         tofs = [1, 2, 3, 4, 5]
         dets = [10, 20, 30, 40, 50]
-        buf = serialise_ev42(source, message_id, pulse_time, tofs, dets)
+        buf = serialise_ev42(source, 123456, pulse_time, tofs, dets)
 
         info = deserialise_ev42(buf)
-        assert info.source_name == source
-        assert info.message_id == message_id
-        assert info.pulse_time == pulse_time
-        assert len(info.time_of_flight) == len(tofs)
-        assert len(info.detector_id) == len(dets)
-        assert np.array_equal(info.time_of_flight, tofs)
-        assert np.array_equal(info.detector_id, dets)
+        assert info[0] == source
+        assert info[1] == pulse_time
+        assert np.array_equal(info[2], tofs)
+        assert np.array_equal(info[3], dets)

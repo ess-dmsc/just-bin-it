@@ -7,7 +7,6 @@ from typing import Optional
 
 from just_bin_it.endpoints.serialisation import (
     SCHEMAS_TO_DESERIALISERS,
-    EventData,
     deserialise_ev42,
     get_schema,
 )
@@ -23,6 +22,18 @@ class StopTimeStatus(Enum):
     NOT_EXCEEDED = 2
 
 
+def convert_messages(messages, converter):
+    data = []
+
+    for _, records in messages.items():
+        for record in records:
+            try:
+                data.append((record.timestamp, record.offset, converter(record.value)))
+            except Exception as error:
+                logging.debug("SourceException: %s", error)  # pragma: no mutate
+    return data
+
+
 class ConfigSource:
     def __init__(
         self,
@@ -36,22 +47,8 @@ class ConfigSource:
 
         :return: The list of data.
         """
-        data = []
         msgs = self.consumer.get_new_messages()
-
-        for _, records in msgs.items():
-            for i in records:
-                try:
-                    data.append((i.timestamp, i.offset, self._process_record(i.value)))
-                except SourceException as error:
-                    logging.debug("SourceException: %s", error)  # pragma: no mutate
-        return data
-
-    def _process_record(self, record):
-        try:
-            return json.loads(record)
-        except json.JSONDecodeError as error:
-            raise SourceException(error.msg)
+        return convert_messages(msgs, json.loads)
 
 
 class EventSource:
@@ -73,22 +70,8 @@ class EventSource:
 
         :return: The list of data.
         """
-        data = []
         msgs = self.consumer.get_new_messages()
-
-        for _, records in msgs.items():
-            for i in records:
-                try:
-                    data.append((i.timestamp, i.offset, self._process_record(i.value)))
-                except Exception as error:
-                    logging.debug("SourceException: %s", error)  # pragma: no mutate
-        return data
-
-    def _process_record(self, record):
-        try:
-            return self.deserialise_function(record)
-        except Exception as error:
-            raise SourceException(error)
+        return convert_messages(msgs, self.deserialise_function)
 
     def seek_to_start_time(self):
         """
@@ -160,16 +143,8 @@ class HistogramSource:
 
         :return: The list of data.
         """
-        data = []
         msgs = self.consumer.get_new_messages()
-
-        for _, records in msgs.items():
-            for i in records:
-                try:
-                    data.append((i.timestamp, i.offset, self._process_record(i.value)))
-                except SourceException as error:
-                    logging.debug("SourceException: %s", error)  # pragma: no mutate
-        return data
+        return convert_messages(msgs, self._process_record)
 
     def _process_record(self, record):
         try:
@@ -219,9 +194,7 @@ class SimulatedEventSource:
 
     def _generate_data(self):
         tofs, dets = generate_fake_data(self.tof_range, self.det_range, self.num_events)
-        data = EventData(
-            "simulator", 0, math.floor(time.time() * 10**9), tofs, dets, None
-        )
+        data = ("simulator", math.floor(time.time() * 10**9), tofs, dets, None)
         return [(int(time.time() * self.num_events), 0, data)]
 
     def _generate_dethist_data(self):
@@ -233,9 +206,7 @@ class SimulatedEventSource:
             )
             for det in new_dets:
                 dets.append(h * self.width + det)
-        data = EventData(
-            "simulator", 0, math.floor(time.time() * 10**9), [], dets, None
-        )
+        data = ("simulator", math.floor(time.time() * 10**9), [], dets, None)
         return [(int(time.time() * self.num_events), 0, data)]
 
     def seek_to_start_time(self):

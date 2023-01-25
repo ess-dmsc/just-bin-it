@@ -49,8 +49,8 @@ class Histogrammer:
                         continue
 
                 self._started = True
-                src = msg.source_name if not simulation else hist.source
-                hist.add_data(msg.pulse_time, msg.time_of_flight, msg.detector_id, src)
+                src = msg[0] if not simulation else hist.source
+                hist.add_data(msg[1], msg[2], msg[3], src)
 
     def publish_histograms(self, timestamp=0):
         """
@@ -106,7 +106,8 @@ class Histogrammer:
             self._previous_sum[i] = total_counts
             results.append(
                 {
-                    "last_pulse_time": hist.last_pulse_time,
+                    # numpy int64 cannot be converted to JSON.
+                    "last_pulse_time": int(hist.last_pulse_time),
                     "sum": total_counts,
                     "diff": diff,
                 }

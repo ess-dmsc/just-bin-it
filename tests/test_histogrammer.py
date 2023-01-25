@@ -4,11 +4,7 @@ import json
 import pytest
 
 from just_bin_it.endpoints.histogram_sink import HistogramSink
-from just_bin_it.endpoints.serialisation import (
-    EventData,
-    deserialise_hs00,
-    serialise_hs00,
-)
+from just_bin_it.endpoints.serialisation import deserialise_hs00, serialise_hs00
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
@@ -104,19 +100,18 @@ STOP_CONFIG = {
 # Data in each "pulse" increases by factor of 2, that way we can know which
 # messages were consumed by looking at the histogram sum.
 EVENT_DATA = [
-    (998 * 10**3, 0, EventData("simulator", 0, 998 * 10**9, [1], [1], None)),
-    (999 * 10**3, 1, EventData("simulator", 0, 999 * 10**9, [1, 2], [1, 2], None)),
+    (998 * 10**3, 0, ("simulator", 998 * 10**9, [1], [1], None)),
+    (999 * 10**3, 1, ("simulator", 999 * 10**9, [1, 2], [1, 2], None)),
     (
         1000 * 10**3,
         2,
-        EventData("simulator", 0, 1000 * 10**9, [1, 2, 3, 4], [1, 2, 3, 4], None),
+        ("simulator", 1000 * 10**9, [1, 2, 3, 4], [1, 2, 3, 4], None),
     ),
     (
         1001 * 10**3,
         3,
-        EventData(
+        (
             "simulator",
-            0,
             1001 * 10**9,
             [1, 2, 3, 4, 5, 6, 7, 8],
             [1, 2, 3, 4, 5, 6, 7, 8],
@@ -126,9 +121,8 @@ EVENT_DATA = [
     (
         1002 * 10**3,
         4,
-        EventData(
+        (
             "simulator",
-            0,
             1002 * 10**9,
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
@@ -141,14 +135,13 @@ UNORDERED_EVENT_DATA = [
     (
         1000 * 10**3,
         0,
-        EventData("simulator", 0, 1000 * 10**9, [1, 2, 3, 4], [1, 2, 3, 4], None),
+        ("simulator", 1000 * 10**9, [1, 2, 3, 4], [1, 2, 3, 4], None),
     ),
     (
         1001 * 10**3,
         1,
-        EventData(
+        (
             "simulator",
-            0,
             1001 * 10**9,
             [1, 2, 3, 4, 5, 6, 7, 8],
             [1, 2, 3, 4, 5, 6, 7, 8],
@@ -158,17 +151,16 @@ UNORDERED_EVENT_DATA = [
     (
         1002 * 10**3,
         2,
-        EventData(
+        (
             "simulator",
-            0,
             1002 * 10**9,
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             None,
         ),
     ),
-    (998 * 10**3, 3, EventData("simulator", 0, 998 * 10**9, [1], [1], None)),
-    (999 * 10**3, 4, EventData("simulator", 0, 999 * 10**9, [1, 2], [1, 2], None)),
+    (998 * 10**3, 3, ("simulator", 998 * 10**9, [1], [1], None)),
+    (999 * 10**3, 4, ("simulator", 999 * 10**9, [1, 2], [1, 2], None)),
 ]
 
 
@@ -180,7 +172,7 @@ def create_histogrammer(hist_sink, configuration):
     :param configuration: The configuration message.
     :return: The created histogrammer.
     """
-    start, stop, hist_configs, schema = parse_config(configuration)
+    start, stop, hist_configs, _, _ = parse_config(configuration)
     histograms = HistogramFactory.generate(hist_configs)
 
     return Histogrammer(hist_sink, histograms, start, stop)
@@ -314,7 +306,7 @@ class TestHistogrammer:
 
     def test_get_stats_returns_correct_stats_2d(self):
         histogrammer = create_histogrammer(self.hist_sink, START_2D_CONFIG)
-        histogrammer.add_data(EVENT_DATA, EVENT_DATA)
+        histogrammer.add_data(EVENT_DATA)
 
         stats = histogrammer.get_histogram_stats()
 

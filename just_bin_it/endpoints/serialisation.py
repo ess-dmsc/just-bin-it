@@ -1,7 +1,7 @@
 import streaming_data_types.eventdata_ev42 as ev42
+import streaming_data_types.eventdata_ev44 as ev44
 import streaming_data_types.histogram_hs00 as hs00
 import streaming_data_types.histogram_hs01 as hs01
-from streaming_data_types.eventdata_ev42 import EventData
 
 from just_bin_it.exceptions import JustBinItException
 
@@ -100,7 +100,7 @@ def serialise_hs01(histogram, timestamp: int = 0, info_message: str = ""):
     return hs01.serialise_hs01(data)
 
 
-def deserialise_ev42(buf) -> EventData:
+def deserialise_ev42(buf):
     """
     Deserialise an ev42 FlatBuffers message.
 
@@ -108,7 +108,13 @@ def deserialise_ev42(buf) -> EventData:
     :return: A tuple of the deserialised values.
     """
     try:
-        return ev42.deserialise_ev42(buf)
+        result = ev42.deserialise_ev42(buf)
+        return (
+            result.source_name,
+            result.pulse_time,
+            result.time_of_flight,
+            result.detector_id,
+        )
     except Exception as error:
         raise JustBinItException(f"Could not deserialise ev42 buffer: {error}")
 
@@ -127,6 +133,45 @@ def serialise_ev42(source_name, message_id, pulse_time, tofs, det_ids):
     return ev42.serialise_ev42(source_name, message_id, pulse_time, tofs, det_ids)
 
 
+def deserialise_ev44(buf):
+    """
+    Deserialise an ev44 FlatBuffers message.
+
+    :param buf: The raw buffer of the FlatBuffers message.
+    :return: A tuple of the deserialised values.
+    """
+    try:
+        result = ev44.deserialise_ev44(buf)
+        return (
+            result.source_name,
+            result.reference_time[0],
+            result.time_of_flight,
+            result.pixel_id,
+        )
+    except Exception as error:
+        raise JustBinItException(f"Could not deserialise ev44 buffer: {error}")
+
+
+def serialise_ev44(source_name, message_id, pulse_time, tofs, det_ids):
+    """
+    Serialise into an ev44 FlatBuffers message.
+
+    :param source_name: The source name.
+    :param message_id: The message ID.
+    :param pulse_time: The pulse_time.
+    :param tofs: The time-of-flights for the events.
+    :param det_ids: The detector IDs for the events.
+    :return: The raw buffer of the FlatBuffers message.
+    """
+    return ev44.serialise_ev44(
+        source_name, message_id, [pulse_time], [0], tofs, det_ids
+    )
+
+
 SCHEMAS_TO_SERIALISERS = {"hs00": serialise_hs00, "hs01": serialise_hs01}
-SCHEMAS_TO_DESERIALISERS = {"hs00": deserialise_hs00, "hs01": deserialise_hs01}
-DEFAULT_SCHEMA = "hs00"
+SCHEMAS_TO_DESERIALISERS = {
+    "hs00": deserialise_hs00,
+    "hs01": deserialise_hs01,
+    "ev42": deserialise_ev42,
+    "ev44": deserialise_ev44,
+}
