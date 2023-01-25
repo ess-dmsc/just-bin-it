@@ -22,6 +22,18 @@ class StopTimeStatus(Enum):
     NOT_EXCEEDED = 2
 
 
+def convert_messages(messages, converter):
+    data = []
+
+    for _, records in messages.items():
+        for record in records:
+            try:
+                data.append((record.timestamp, record.offset, converter(record.value)))
+            except Exception as error:
+                logging.debug("SourceException: %s", error)  # pragma: no mutate
+    return data
+
+
 class ConfigSource:
     def __init__(
         self,
@@ -35,22 +47,8 @@ class ConfigSource:
 
         :return: The list of data.
         """
-        data = []
         msgs = self.consumer.get_new_messages()
-
-        for _, records in msgs.items():
-            for i in records:
-                try:
-                    data.append((i.timestamp, i.offset, self._process_record(i.value)))
-                except SourceException as error:
-                    logging.debug("SourceException: %s", error)  # pragma: no mutate
-        return data
-
-    def _process_record(self, record):
-        try:
-            return json.loads(record)
-        except json.JSONDecodeError as error:
-            raise SourceException(error.msg)
+        return convert_messages(msgs, json.loads)
 
 
 class EventSource:
@@ -72,22 +70,8 @@ class EventSource:
 
         :return: The list of data.
         """
-        data = []
         msgs = self.consumer.get_new_messages()
-
-        for _, records in msgs.items():
-            for i in records:
-                try:
-                    data.append((i.timestamp, i.offset, self._process_record(i.value)))
-                except Exception as error:
-                    logging.debug("SourceException: %s", error)  # pragma: no mutate
-        return data
-
-    def _process_record(self, record):
-        try:
-            return self.deserialise_function(record)
-        except Exception as error:
-            raise SourceException(error)
+        return convert_messages(msgs, self.deserialise_function)
 
     def seek_to_start_time(self):
         """
@@ -159,16 +143,8 @@ class HistogramSource:
 
         :return: The list of data.
         """
-        data = []
         msgs = self.consumer.get_new_messages()
-
-        for _, records in msgs.items():
-            for i in records:
-                try:
-                    data.append((i.timestamp, i.offset, self._process_record(i.value)))
-                except SourceException as error:
-                    logging.debug("SourceException: %s", error)  # pragma: no mutate
-        return data
+        return convert_messages(msgs, self._process_record)
 
     def _process_record(self, record):
         try:
