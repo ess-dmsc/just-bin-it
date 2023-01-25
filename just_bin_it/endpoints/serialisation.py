@@ -152,6 +152,22 @@ def deserialise_ev44(buf):
         raise JustBinItException(f"Could not deserialise ev44 buffer: {error}")
 
 
+def serialise_ev44(source_name, message_id, pulse_time, tofs, det_ids):
+    """
+    Serialise into an ev44 FlatBuffers message.
+
+    :param source_name: The source name.
+    :param message_id: The message ID.
+    :param pulse_time: The pulse_time.
+    :param tofs: The time-of-flights for the events.
+    :param det_ids: The detector IDs for the events.
+    :return: The raw buffer of the FlatBuffers message.
+    """
+    return ev44.serialise_ev44(
+        source_name, message_id, [pulse_time], [0], tofs, det_ids
+    )
+
+
 SCHEMAS_TO_SERIALISERS = {"hs00": serialise_hs00, "hs01": serialise_hs01}
 SCHEMAS_TO_DESERIALISERS = {
     "hs00": deserialise_hs00,
