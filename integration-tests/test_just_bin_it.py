@@ -14,6 +14,7 @@ from just_bin_it.endpoints.serialisation import (
     SCHEMAS_TO_DESERIALISERS,
     get_schema,
     serialise_ev42,
+    serialise_ev44,
 )
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.utilities import time_in_ns
@@ -65,6 +66,11 @@ def create_consumer(topic):
 
 def generate_data(msg_id, time_stamp, num_events):
     tofs, dets = generate_fake_data(TOF_RANGE, DET_RANGE, num_events)
+    return serialise_ev44("integration test", msg_id, time_stamp, tofs, dets)
+
+
+def generate_data_ev42(msg_id, time_stamp, num_events):
+    tofs, dets = generate_fake_data(TOF_RANGE, DET_RANGE, num_events)
     return serialise_ev42("integration test", msg_id, time_stamp, tofs, dets)
 
 
@@ -111,12 +117,15 @@ class TestJustBinIt:
             self.producer.send(topic, message)
         self.producer.flush()
 
-    def generate_and_send_data(self, msg_id):
+    def generate_and_send_data(self, msg_id, schema="ev44"):
         time_stamp = time_in_ns()
         # Generate a random number of events so we can be sure the correct data matches
         # up at the end.
         num_events = random.randint(500, 1500)
-        data = generate_data(msg_id, time_stamp, num_events)
+        if schema == "ev42":
+            data = generate_data_ev42(msg_id, time_stamp, num_events)
+        else:
+            data = generate_data(msg_id, time_stamp, num_events)
 
         # Need timestamp in ms
         self.time_stamps.append(time_stamp // 1_000_000)
@@ -434,7 +443,7 @@ class TestJustBinIt:
         num_msgs = 12
 
         for i in range(num_msgs):
-            self.generate_and_send_data(i + 1)
+            self.generate_and_send_data(i + 1, "ev42")
             time.sleep(0.5)
 
         time.sleep(interval_length * 3)
