@@ -7,5 +7,5 @@ mutmut
 pre-commit
 pytest
 pytest-cov
-tox==3.28.0  # tox 4 seems to be broken at the moment
+tox==4.4.6  # tox 4 seems to be broken at the moment
 tox-pyenv
