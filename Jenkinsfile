@@ -46,7 +46,7 @@ builders = pipeline_builder.createBuilders { container ->
     def test_output = "TestResults.xml"
     container.sh """
       cd ${project}
-      pyenv local 3.8 3.9
+      pyenv global 3.8 3.9
       pyenv versions
       python -m tox -- --junitxml=${test_output}
     """
