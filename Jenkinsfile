@@ -47,10 +47,8 @@ builders = pipeline_builder.createBuilders { container ->
     container.sh """
       cd ${project}
       pyenv global 3.8 3.9 3.10
-      which python
       pyenv versions
       export PATH="/home/jenkins/.pyenv/shims:$PATH"
-      echo $PATH
       python -m nox -- --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
