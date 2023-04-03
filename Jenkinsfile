@@ -48,6 +48,7 @@ builders = pipeline_builder.createBuilders { container ->
       cd ${project}
       pyenv global 3.8 3.9 3.10
       pyenv local 3.9
+      pyenv root
       which python
       pyenv versions
       python -m nox -- --junitxml=${test_output}

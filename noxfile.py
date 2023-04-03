@@ -12,7 +12,7 @@ def tests(session):
 
 
 @nox.session(
-    python=["3.10", "3.9"]
+    python=["3.9"]
 )
 def flake8(session):
     session.install("-r", "requirements-dev.txt")
