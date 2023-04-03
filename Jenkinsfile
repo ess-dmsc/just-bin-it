@@ -47,8 +47,6 @@ builders = pipeline_builder.createBuilders { container ->
     container.sh """
       cd ${project}
       pyenv global 3.8 3.9 3.10
-      pyenv local 3.9
-      pyenv root
       which python
       pyenv versions
       export PATH="/home/jenkins/.pyenv/shims:$PATH"
