@@ -51,8 +51,7 @@ builders = pipeline_builder.createBuilders { container ->
       pyenv root
       which python
       pyenv versions
-      export PYENV_ROOT="$HOME/.pyenv"
-      export PATH="$PYENV_ROOT/bin:$PATH"
+      export PATH="/home/jenkins/.pyenv/shims:$PATH"
       echo $PATH
       python -m nox -- --junitxml=${test_output}
     """
