@@ -48,7 +48,7 @@ builders = pipeline_builder.createBuilders { container ->
       cd ${project}
       pyenv global 3.8 3.9
       pyenv versions
-      python -m tox -- --junitxml=${test_output}
+      python -m nox -- --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
     xunit thresholds: [failed(unstableThreshold: '0')], tools: [JUnit(deleteOutputFiles: true, pattern: '*.xml', skipNoTestFiles: false, stopProcessingIfError: true)]
