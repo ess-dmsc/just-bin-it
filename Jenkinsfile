@@ -46,13 +46,13 @@ builders = pipeline_builder.createBuilders { container ->
     def test_output = "TestResults.xml"
     container.sh """
       cd ${project}
-      export PATH=/home/jenkins/.pyenv/shims:$PATH
-      ls /home/jenkins/.pyenv/shims
       pyenv global 3.8 3.9 3.10
       pyenv local 3.9
       pyenv root
       which python
       pyenv versions
+      export PATH=/home/jenkins/.pyenv/shims:$PATH
+      $PATH
       python -m nox -- --junitxml=${test_output}
     """
     container.copyFrom("${project}/${test_output}", ".")
