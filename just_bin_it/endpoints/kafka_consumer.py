@@ -1,10 +1,10 @@
 import logging
 from typing import List
 
-from kafka import KafkaConsumer, TopicPartition
-from kafka.errors import KafkaError
+from confluent_kafka import Consumer, TopicPartition, KafkaException
 
-from just_bin_it.exceptions import KafkaException
+# what is this?
+# from just_bin_it.exceptions import KafkaException
 
 
 class Consumer:
@@ -28,31 +28,32 @@ class Consumer:
         try:
             self.consumer = self._create_consumer(brokers)
             self._assign_topics(topics)
-        except KafkaError as error:
+        except KafkaException as error:
             raise KafkaException(error)
 
     def _create_consumer(self, brokers):
-        return KafkaConsumer(bootstrap_servers=brokers)
+        return Consumer({"bootstrap.servers": brokers, "group.id": "mygroup"})
 
     def _assign_topics(self, topics):
         # Only use the first topic
         topic = topics[0]
 
-        available_topics = self.consumer.topics()
+        metadata = self.consumer.list_topics(timeout=10)
+        available_topics = set(metadata.topics.keys())
 
         if topic not in available_topics:
             raise KafkaException(f"Requested topic {topic} not available")
 
-        partition_numbers = self.consumer.partitions_for_topic(topic)
+        partition_numbers = metadata.topics[topic].partitions.keys()
 
         for pn in partition_numbers:
             self.topic_partitions.append(TopicPartition(topic, pn))
 
         self.consumer.assign(self.topic_partitions)
-        self.consumer.seek_to_end()
+        self.consumer.seek_to_end(self.topic_partitions)
 
     def _get_new_messages(self):
-        data = self.consumer.poll(5)
+        data = self.consumer.consume(timeout=5)
         for tp in self.topic_partitions:
             logging.debug(
                 "%s - current position: %s", tp.topic, self.consumer.position(tp)
@@ -129,5 +130,14 @@ class Consumer:
     def _get_positions(self):
         positions = []
         for tp in self.topic_partitions:
-            positions.append(self.consumer.position(tp))
+            try:
+                positions.append(self.consumer.position(tp))
+            except KafkaException as error:
+                logging.error("Could not get position for topic-partition %s: %s", tp, error)
         return positions
+
+    def close(self):
+        """
+        Close the consumer.
+        """
+        self.consumer.close()

@@ -1,8 +1,6 @@
 import logging
 
-from kafka import KafkaConsumer
-from kafka.errors import KafkaError
-
+from confluent_kafka import Consumer, KafkaException
 
 def are_kafka_settings_valid(brokers, topics):
     """
@@ -20,8 +18,8 @@ def are_kafka_settings_valid(brokers, topics):
 
 def _are_brokers_present(brokers):
     try:
-        return KafkaConsumer(bootstrap_servers=brokers)
-    except KafkaError as error:
+        return Consumer({"bootstrap.servers": brokers, "group.id": "mygroup"})
+    except KafkaException as error:
         logging.error("Could not connect to Kafka brokers: %s", error)
         return None
 
@@ -29,12 +27,13 @@ def _are_brokers_present(brokers):
 def _are_topics_present(consumer, topics):
     result = True
     try:
-        existing_topics = consumer.topics()
+        metadata = consumer.list_topics(timeout=10)
+        existing_topics = set(metadata.topics.keys())
         for tp in topics:
             if tp not in existing_topics:
                 logging.error("Could not find topic: %s", tp)
                 result = False
-    except KafkaError as error:
+    except KafkaException as error:
         logging.error("Could not get topics from Kafka: %s", error)
         return False
 
