@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from confluent_kafka import Consumer, TopicPartition, KafkaException as KafkaError
+from confluent_kafka import Consumer as KafkaConsumer, TopicPartition, KafkaException as KafkaError, OFFSET_END
 
 from just_bin_it.exceptions import KafkaException
 
@@ -31,7 +31,7 @@ class Consumer:
             raise KafkaException(error)
 
     def _create_consumer(self, brokers):
-        return Consumer({"bootstrap.servers": brokers, "group.id": "mygroup"})
+        return KafkaConsumer({"bootstrap.servers": ','.join(brokers), "group.id": "mygroup"})
 
     def _assign_topics(self, topics):
         # Only use the first topic
@@ -49,13 +49,15 @@ class Consumer:
             self.topic_partitions.append(TopicPartition(topic, pn))
 
         self.consumer.assign(self.topic_partitions)
-        self.consumer.seek_to_end(self.topic_partitions)
+        # Seek to the end of each partition
+        for tp in self.topic_partitions:
+            self.consumer.seek(TopicPartition(tp.topic, tp.partition, OFFSET_END))
 
     def _get_new_messages(self):
         data = self.consumer.consume(timeout=5)
         for tp in self.topic_partitions:
             logging.debug(
-                "%s - current position: %s", tp.topic, self.consumer.position(tp)
+                "%s - current position: %s", tp.topic, self.consumer.position([tp])[0].offset
             )
         return data
 
@@ -99,7 +101,7 @@ class Consumer:
 
     def _seek_by_offsets(self, offsets):
         for tp, offset in zip(self.topic_partitions, offsets):
-            self.consumer.seek(tp, offset)
+            self.consumer.seek(TopicPartition(tp.topic, tp.partition, offset))
 
     def get_offset_range(self):
         """
@@ -110,12 +112,13 @@ class Consumer:
         return self._get_offset_range()
 
     def _get_offset_range(self):
-        lowest = self.consumer.beginning_offsets(self.topic_partitions)
-        highest = self.consumer.end_offsets(self.topic_partitions)
         offset_ranges = []
         for tp in self.topic_partitions:
-            offset_ranges.append((lowest[tp], highest[tp]))
-
+            try:
+                (low, high) = self.consumer.get_watermark_offsets(tp, timeout=1)
+                offset_ranges.append((low, high))
+            except KafkaError as error:
+                logging.error("Could not get watermark offsets for topic-partition %s: %s", tp, error)
         return offset_ranges
 
     def get_positions(self):
@@ -130,7 +133,7 @@ class Consumer:
         positions = []
         for tp in self.topic_partitions:
             try:
-                positions.append(self.consumer.position(tp))
+                positions.append(self.consumer.position([tp])[0].offset)
             except KafkaError as error:
                 logging.error("Could not get position for topic-partition %s: %s", tp, error)
         return positions

@@ -1,4 +1,4 @@
-from confluent_kafka import Producer, KafkaException as KafkaError
+from confluent_kafka import Producer as KafkaProducer, KafkaException as KafkaError
 
 from just_bin_it.exceptions import KafkaException
 
@@ -18,7 +18,7 @@ class Producer:
         :param brokers: The brokers to connect to.
         """
         try:
-            self.producer = Producer(
+            self.producer = KafkaProducer(
                 {'bootstrap.servers': brokers, 'message.max.bytes': 100_000_000}
             )
         except KafkaError as error:

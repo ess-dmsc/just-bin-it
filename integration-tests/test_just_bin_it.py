@@ -6,8 +6,8 @@ import sys
 import time
 
 import pytest
+from confluent_kafka import Consumer, Producer, TopicPartition, OFFSET_END
 from confluent_kafka.admin import AdminClient, NewTopic
-from kafka import KafkaConsumer, KafkaProducer, TopicPartition
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import (
@@ -45,22 +45,28 @@ CONFIG_CMD = {
     ],
 }
 
-
 STOP_CMD = {"cmd": "stop"}
 
 
 def create_consumer(topic):
-    consumer = KafkaConsumer(bootstrap_servers=BROKERS)
+    consumer_conf = {
+        'bootstrap.servers': ','.join(BROKERS),
+        'group.id': 'test-group',
+        'auto.offset.reset': 'earliest',
+    }
+    consumer = Consumer(consumer_conf)
     topic_partitions = []
 
-    partition_numbers = consumer.partitions_for_topic(topic)
+    metadata = consumer.list_topics(topic)
+    partition_numbers = [p.id for p in metadata.topics[topic].partitions.values()]
 
     for pn in partition_numbers:
         topic_partitions.append(TopicPartition(topic, pn))
 
     consumer.assign(topic_partitions)
     # Move to end
-    consumer.seek_to_end()
+    for tp in topic_partitions:
+        consumer.seek(TopicPartition(tp.topic, tp.partition, OFFSET_END))
     return consumer, topic_partitions
 
 
@@ -87,7 +93,7 @@ class TestJustBinIt:
         data_topic = NewTopic(self.data_topic_name, 2, 1)
         admin_client.create_topics([hist_topic, data_topic])
 
-        self.producer = KafkaProducer(bootstrap_servers=BROKERS)
+        self.producer = Producer(conf)
         time.sleep(1)
         self.consumer, topic_partitions = create_consumer(self.hist_topic_name)
         # Only one partition for histogram topic
@@ -105,16 +111,16 @@ class TestJustBinIt:
     def check_offsets_have_advanced(self):
         # Check that end offset has changed otherwise we could be looking at old test
         # data
-        self.consumer.seek_to_end(self.topic_part)
+        self.consumer.seek(TopicPartition(self.topic_part.topic, self.topic_part.partition, OFFSET_END))
         final_offset = self.consumer.position(self.topic_part)
         if final_offset <= self.initial_offset:
             raise Exception("No new data found on the topic - is just-bin-it running?")
 
     def send_message(self, topic, message, timestamp=None):
         if timestamp:
-            self.producer.send(topic, message, timestamp_ms=timestamp)
+            self.producer.produce(topic, message, timestamp_ms=timestamp)
         else:
-            self.producer.send(topic, message)
+            self.producer.produce(topic, message)
         self.producer.flush()
 
     def generate_and_send_data(self, msg_id, schema="ev44"):
@@ -136,32 +142,36 @@ class TestJustBinIt:
     def get_hist_data_from_kafka(self):
         data = []
         # Move it to one from the end so we can read the final histogram
-        self.consumer.seek_to_end(self.topic_part)
+        self.consumer.seek(TopicPartition(self.topic_part.topic, self.topic_part.partition, OFFSET_END))
         end_pos = self.consumer.position(self.topic_part)
-        self.consumer.seek(self.topic_part, end_pos - 1)
+        self.consumer.seek(TopicPartition(self.topic_part.topic, self.topic_part.partition, end_pos - 1))
 
         while not data:
-            data = self.consumer.poll(5)
+            msg = self.consumer.poll(5)
+            if msg:
+                data.append(msg)
 
-        msg = data[self.topic_part][-1]
-        schema = get_schema(msg.value)
+        last_msg = data[-1]
+        schema = get_schema(last_msg.value())
         if schema in SCHEMAS_TO_DESERIALISERS:
-            return SCHEMAS_TO_DESERIALISERS[schema](msg.value)
+            return SCHEMAS_TO_DESERIALISERS[schema](last_msg.value())
 
     def get_response_message_from_kafka(self):
         data = []
         consumer, topic_partitions = create_consumer(RESPONSE_TOPIC)
         topic_part = topic_partitions[0]
         # Move it to one from the end so we can read the final message
-        consumer.seek_to_end(topic_part)
+        consumer.seek(TopicPartition(topic_part.topic, topic_part.partition, OFFSET_END))
         end_pos = consumer.position(topic_part)
-        consumer.seek(topic_part, end_pos - 1)
+        consumer.seek(TopicPartition(topic_part.topic, topic_part.partition, end_pos - 1))
 
         while not data:
-            data = consumer.poll(5)
+            msg = consumer.poll(5)
+            if msg:
+                data.append(msg)
 
-        msg = data[topic_part][-1]
-        return msg.value
+        last_msg = data[-1]
+        return last_msg.value()
 
     def ensure_topic_is_not_empty_on_startup(self):
         #  Put some data in it, so jbi doesn't complain about an empty topic

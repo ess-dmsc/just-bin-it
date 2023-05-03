@@ -3,8 +3,8 @@ import sys
 import time
 
 import pytest
+from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient, NewTopic
-from kafka import KafkaProducer
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_consumer import Consumer
@@ -36,7 +36,7 @@ class TestKafkaConsumer:
         three_partition_topic = NewTopic(self.three_partition_topic_name, 3, 1)
         admin_client.create_topics([one_partition_topic, three_partition_topic])
 
-        self.producer = KafkaProducer(bootstrap_servers=BROKERS)
+        self.producer = Producer(conf)
 
         self.num_messages = 50
         # Ugly: give everything a chance to get going
@@ -46,7 +46,7 @@ class TestKafkaConsumer:
         # Put messages in
         for i in range(number_messages):
             msg = f"msg-{i}"
-            self.producer.send(topic_name, msg.encode())
+            self.producer.produce(topic_name, msg.encode())
         self.producer.flush()
 
     def test_all_data_retrieved_when_one_partition(self):
@@ -148,7 +148,7 @@ class TestKafkaTools:
         three_partition_topic = NewTopic(self.three_partition_topic_name, 3, 1)
         admin_client.create_topics([one_partition_topic, three_partition_topic])
 
-        self.producer = KafkaProducer(bootstrap_servers=BROKERS)
+        self.producer = Producer(conf)
 
     def test_checking_for_non_existent_broker_is_not_valid(self):
         assert not are_kafka_settings_valid(
