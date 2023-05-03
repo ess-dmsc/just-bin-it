@@ -1,10 +1,9 @@
 import logging
 from typing import List
 
-from confluent_kafka import Consumer, TopicPartition, KafkaException
+from confluent_kafka import Consumer, TopicPartition, KafkaException as KafkaError
 
-# what is this?
-# from just_bin_it.exceptions import KafkaException
+from just_bin_it.exceptions import KafkaException
 
 
 class Consumer:
@@ -28,7 +27,7 @@ class Consumer:
         try:
             self.consumer = self._create_consumer(brokers)
             self._assign_topics(topics)
-        except KafkaException as error:
+        except KafkaError as error:
             raise KafkaException(error)
 
     def _create_consumer(self, brokers):
@@ -132,7 +131,7 @@ class Consumer:
         for tp in self.topic_partitions:
             try:
                 positions.append(self.consumer.position(tp))
-            except KafkaException as error:
+            except KafkaError as error:
                 logging.error("Could not get position for topic-partition %s: %s", tp, error)
         return positions
 
