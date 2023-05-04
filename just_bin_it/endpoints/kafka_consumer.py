@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import List
 
 from confluent_kafka import Consumer as KafkaConsumer, TopicPartition, KafkaException as KafkaError, OFFSET_END
@@ -25,13 +26,13 @@ class Consumer:
         """
         self.topic_partitions = []
         try:
-            self.consumer = self._create_consumer(brokers)
+            self.consumer = self._create_consumer(brokers[0])
             self._assign_topics(topics)
         except KafkaError as error:
             raise KafkaException(error)
 
     def _create_consumer(self, brokers):
-        return KafkaConsumer({"bootstrap.servers": ','.join(brokers), "group.id": "mygroup"})
+        return KafkaConsumer({"bootstrap.servers": brokers, "group.id": "mygroup"})
 
     def _assign_topics(self, topics):
         # Only use the first topic
@@ -48,17 +49,32 @@ class Consumer:
         for pn in partition_numbers:
             self.topic_partitions.append(TopicPartition(topic, pn))
 
-        self.consumer.assign(self.topic_partitions)
+
         # Seek to the end of each partition
         for tp in self.topic_partitions:
-            self.consumer.seek(TopicPartition(tp.topic, tp.partition, OFFSET_END))
+            high_watermark = self.consumer.get_watermark_offsets(tp, timeout=10.0, cached=False)[1]
+            logging.error(high_watermark)
+            tp.offset = high_watermark
+            # self.consumer.seek(TopicPartition(tp.topic, tp.partition, OFFSET_END))
+        self.consumer.assign(self.topic_partitions)
 
     def _get_new_messages(self):
-        data = self.consumer.consume(timeout=5)
-        for tp in self.topic_partitions:
-            logging.debug(
-                "%s - current position: %s", tp.topic, self.consumer.position([tp])[0].offset
-            )
+        data = {}
+        while True:
+            messages = self.consumer.consume(timeout=5)
+            if not messages:
+                break
+            for message in messages:
+                partition = message.partition()
+                if partition not in data:
+                    data[partition] = []
+                data[partition].append(message)
+
+            for tp in self.topic_partitions:
+                logging.debug(
+                    "%s - current position: %s", tp.topic, self.consumer.position([tp])[0].offset
+                )
+
         return data
 
     def get_new_messages(self):
@@ -79,16 +95,17 @@ class Consumer:
         return self._offset_for_time(start_time)
 
     def _offset_for_time(self, start_time):
-        partitions = {tp: start_time for tp in self.topic_partitions}
+        partitions = [TopicPartition(tp.topic, tp.partition, start_time) for tp in self.topic_partitions]
         offsets = self.consumer.offsets_for_times(partitions)
         result = []
         for tp in self.topic_partitions:
-            if offsets[tp] is None:
+            offset_and_timestamp = offsets[offsets.index(tp)]
+            if offset_and_timestamp is None:
                 # Either the topic is empty or the requested time is greater than
-                # highest message time in the topic.
+                # the highest message time in the topic.
                 result.append(None)
             else:
-                result.append(offsets[tp].offset)
+                result.append(offset_and_timestamp.offset)
         return result
 
     def seek_by_offsets(self, offsets):
@@ -101,7 +118,20 @@ class Consumer:
 
     def _seek_by_offsets(self, offsets):
         for tp, offset in zip(self.topic_partitions, offsets):
-            self.consumer.seek(TopicPartition(tp.topic, tp.partition, offset))
+            tp.offset = offset
+
+        logging.error(self.topic_partitions)
+
+        for tp in self.topic_partitions:
+            seeked = False
+            while not seeked:
+                try:
+                    self.consumer.seek(tp)
+                    seeked = True
+                except:
+                    time.sleep(0.5)
+
+        # self.consumer.poll(50)
 
     def get_offset_range(self):
         """
@@ -132,6 +162,7 @@ class Consumer:
     def _get_positions(self):
         positions = []
         for tp in self.topic_partitions:
+            logging.error(self.consumer.position([tp]))
             try:
                 positions.append(self.consumer.position([tp])[0].offset)
             except KafkaError as error:
