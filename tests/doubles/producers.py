@@ -2,7 +2,7 @@ from just_bin_it.exceptions import KafkaException
 
 
 class SpyProducer:
-    def __init__(self, brokers=None):
+    def __init__(self, brokers=None, security_config=None):
         self.messages = []
 
     def publish_message(self, topic, message):

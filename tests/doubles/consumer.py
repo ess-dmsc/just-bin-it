@@ -24,7 +24,7 @@ class StubConsumer(Consumer):
     def topics(self):
         return self.topic_names
 
-    def _create_consumer(self, brokers):
+    def _create_consumer(self, brokers, security_config):
         return {"brokers": brokers}
 
     def _assign_topics(self, topics):

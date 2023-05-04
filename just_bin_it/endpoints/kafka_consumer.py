@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import Dict, List
 
 from kafka import KafkaConsumer, TopicPartition
 from kafka.errors import KafkaError
@@ -17,22 +17,32 @@ class Consumer:
     Note: Can only handle one topic.
     """
 
-    def __init__(self, brokers: List[str], topics: List[str]):
+    def __init__(
+        self,
+        brokers: List[str],
+        topics: List[str],
+        security_config: Dict[str, str] = None,
+    ):
         """
         Constructor.
 
         :param brokers: The names of the brokers to connect to.
         :param topics: The names of the data topics.
+        :param security_config: Security configuration.
         """
         self.topic_partitions = []
+
+        if security_config is None:
+            security_config = {}
+
         try:
-            self.consumer = self._create_consumer(brokers)
+            self.consumer = self._create_consumer(brokers, security_config)
             self._assign_topics(topics)
         except KafkaError as error:
             raise KafkaException(error)
 
-    def _create_consumer(self, brokers):
-        return KafkaConsumer(bootstrap_servers=brokers)
+    def _create_consumer(self, brokers, security_config):
+        return KafkaConsumer(bootstrap_servers=brokers, **security_config)
 
     def _assign_topics(self, topics):
         # Only use the first topic
