@@ -11,6 +11,7 @@ def get_kafka_security_config(
 ):
     """
     Create security configuration for kafka-python from just-bin-it options.
+    If no protocol is passed, PLAINTEXT is returned in the configuration.
 
     :param protocol: Protocol used to communicate with brokers.
     :param mechanism: SASL mechanism.
@@ -24,7 +25,9 @@ def get_kafka_security_config(
 
     config = {}
 
-    if protocol not in supported_security_protocols:
+    if protocol is None:
+        protocol = "PLAINTEXT"
+    elif protocol not in supported_security_protocols:
         raise Exception(
             f"Kafka security protocol {protocol} not supported, use {supported_security_protocols}"
         )

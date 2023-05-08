@@ -4,6 +4,11 @@ from just_bin_it.endpoints.kafka_security import get_kafka_security_config
 
 
 class TestKafkaSecurity:
+    def test_no_protocol_returns_plaintext(self):
+        c = get_kafka_security_config()
+        assert len(c) == 1
+        assert "PLAINTEXT" in c.values()
+
     def test_unsupported_protocol_throws(self):
         with pytest.raises(Exception):
             get_kafka_security_config(
