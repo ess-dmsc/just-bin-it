@@ -19,7 +19,7 @@ class Producer:
         """
         try:
             self.producer = KafkaProducer(
-                {'bootstrap.servers': brokers, 'message.max.bytes': 100_000_000}
+                {'bootstrap.servers': ','.join(brokers), 'message.max.bytes': 100_000_000}
             )
         except KafkaError as error:
             raise KafkaException(error)

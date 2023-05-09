@@ -18,7 +18,7 @@ def are_kafka_settings_valid(brokers, topics):
 
 def _are_brokers_present(brokers):
     try:
-        return Consumer({"bootstrap.servers": brokers, "group.id": "mygroup"})
+        return Consumer({"bootstrap.servers": ",".join(brokers), "group.id": "mygroup"})
     except KafkaError as error:
         logging.error("Could not connect to Kafka brokers: %s", error)
         return None
@@ -29,6 +29,7 @@ def _are_topics_present(consumer, topics):
     try:
         metadata = consumer.list_topics(timeout=10)
         existing_topics = set(metadata.topics.keys())
+        logging.error(existing_topics)
         for tp in topics:
             if tp not in existing_topics:
                 logging.error("Could not find topic: %s", tp)
