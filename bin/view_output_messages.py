@@ -1,15 +1,16 @@
-import argparse
 import os
 import sys
 
+import configargparse as argparse
 from kafka import KafkaConsumer, TopicPartition
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from just_bin_it.endpoints.kafka_security import get_kafka_security_config
 from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_schema
 
 
-def main(brokers, topic):
-    consumer = KafkaConsumer(bootstrap_servers=brokers)
+def main(brokers, topic, kafka_security_config):
+    consumer = KafkaConsumer(bootstrap_servers=brokers, **kafka_security_config)
     print(f"Topics = {consumer.topics()}")
 
     tp = TopicPartition(topic, 0)
@@ -66,6 +67,53 @@ if __name__ == "__main__":
         required=True,
     )
 
+    kafka_sec_args = parser.add_argument_group("Kafka security arguments")
+
+    kafka_sec_args.add_argument(
+        "-kc",
+        "--kafka-config-file",
+        is_config_file=True,
+        help="Kafka security configuration file",
+    )
+
+    kafka_sec_args.add_argument(
+        "--security-protocol",
+        type=str,
+        help="Kafka security protocol",
+    )
+
+    kafka_sec_args.add_argument(
+        "--sasl-mechanism",
+        type=str,
+        help="Kafka SASL mechanism",
+    )
+
+    kafka_sec_args.add_argument(
+        "--sasl-username",
+        type=str,
+        help="Kafka SASL username",
+    )
+
+    kafka_sec_args.add_argument(
+        "--sasl-password",
+        type=str,
+        help="Kafka SASL password",
+    )
+
+    kafka_sec_args.add_argument(
+        "--ssl-cafile",
+        type=str,
+        help="Kafka SSL CA certificate path",
+    )
+
     args = parser.parse_args()
 
-    main(args.brokers, args.topic)
+    kafka_security_config = get_kafka_security_config(
+        args.security_protocol,
+        args.sasl_mechanism,
+        args.sasl_username,
+        args.sasl_password,
+        args.ssl_cafile,
+    )
+
+    main(args.brokers, args.topic, kafka_security_config)

@@ -1,10 +1,12 @@
-import argparse
 import os
 import sys
 import time
 
+import configargparse as argparse
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_producer import Producer
+from just_bin_it.endpoints.kafka_security import get_kafka_security_config
 from just_bin_it.endpoints.serialisation import serialise_ev42
 from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
@@ -38,8 +40,10 @@ def generate_dethist_data(source, message_id, num_points):
     return time_stamp, data
 
 
-def main(brokers, topic, num_msgs, num_points, det_hist=False):
-    producer = Producer(brokers)
+def main(
+    brokers, topic, num_msgs, num_points, det_hist=False, kafka_security_config=None
+):
+    producer = Producer(brokers, kafka_security_config)
     count = 0
     message_id = 1
     start_time = None
@@ -103,6 +107,53 @@ if __name__ == "__main__":
         "-dh", "--det-hist", action="store_true", help="output the data as a det hist"
     )
 
+    kafka_sec_args = parser.add_argument_group("Kafka security arguments")
+
+    kafka_sec_args.add_argument(
+        "-kc",
+        "--kafka-config-file",
+        is_config_file=True,
+        help="Kafka security configuration file",
+    )
+
+    kafka_sec_args.add_argument(
+        "--security-protocol",
+        type=str,
+        help="Kafka security protocol",
+    )
+
+    kafka_sec_args.add_argument(
+        "--sasl-mechanism",
+        type=str,
+        help="Kafka SASL mechanism",
+    )
+
+    kafka_sec_args.add_argument(
+        "--sasl-username",
+        type=str,
+        help="Kafka SASL username",
+    )
+
+    kafka_sec_args.add_argument(
+        "--sasl-password",
+        type=str,
+        help="Kafka SASL password",
+    )
+
+    kafka_sec_args.add_argument(
+        "--ssl-cafile",
+        type=str,
+        help="Kafka SSL CA certificate path",
+    )
+
     args = parser.parse_args()
+
+    kafka_security_config = get_kafka_security_config(
+        args.security_protocol,
+        args.sasl_mechanism,
+        args.sasl_username,
+        args.sasl_password,
+        args.ssl_cafile,
+    )
 
     main(args.brokers, args.topic, args.num_messages, args.num_events, args.det_hist)

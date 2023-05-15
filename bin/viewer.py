@@ -1,11 +1,12 @@
-import argparse
 import os
 import sys
 
+import configargparse as argparse
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_consumer import Consumer
+from just_bin_it.endpoints.kafka_security import get_kafka_security_config
 from just_bin_it.endpoints.sources import HistogramSource
 from just_bin_it.utilities.plotter import plot_histograms
 
@@ -35,15 +36,16 @@ def convert_for_plotting(histogram_data):
     return [hist]
 
 
-def main(brokers, topic, log_scale_for_2d):
+def main(brokers, topic, log_scale_for_2d, kafka_security_config):
     """
 
     :param brokers: The brokers to listen for data on.
     :param topic: The topic to listen for data on.
-    :param log_scale_for_2d: Whether to plot 2D images on a log scale
+    :param log_scale_for_2d: Whether to plot 2D images on a log scale.
+    :param kafka_security_config: Dict with Kafka security configuration.
     """
     # Create the listener
-    hist_consumer = Consumer(brokers, [topic])
+    hist_consumer = Consumer(brokers, [topic], kafka_security_config)
     hist_source = HistogramSource(hist_consumer)
 
     buffs = []
@@ -79,5 +81,51 @@ if __name__ == "__main__":
         "-l", "--log-scale", type=bool, help="the histogram data topic", default=False
     )
 
+    kafka_sec_args = parser.add_argument_group("Kafka security arguments")
+
+    kafka_sec_args.add_argument(
+        "-kc",
+        "--kafka-config-file",
+        is_config_file=True,
+        help="Kafka security configuration file",
+    )
+
+    kafka_sec_args.add_argument(
+        "--security-protocol",
+        type=str,
+        help="Kafka security protocol",
+    )
+
+    kafka_sec_args.add_argument(
+        "--sasl-mechanism",
+        type=str,
+        help="Kafka SASL mechanism",
+    )
+
+    kafka_sec_args.add_argument(
+        "--sasl-username",
+        type=str,
+        help="Kafka SASL username",
+    )
+
+    kafka_sec_args.add_argument(
+        "--sasl-password",
+        type=str,
+        help="Kafka SASL password",
+    )
+
+    kafka_sec_args.add_argument(
+        "--ssl-cafile",
+        type=str,
+        help="Kafka SSL CA certificate path",
+    )
+
     args = parser.parse_args()
-    main(args.brokers, args.topic, args.log_scale)
+    kafka_security_config = get_kafka_security_config(
+        args.security_protocol,
+        args.sasl_mechanism,
+        args.sasl_username,
+        args.sasl_password,
+        args.ssl_cafile,
+    )
+    main(args.brokers, args.topic, args.log_scale, kafka_security_config)
