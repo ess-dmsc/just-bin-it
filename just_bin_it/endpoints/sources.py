@@ -28,7 +28,7 @@ def convert_messages(messages, converter):
     for _, records in messages.items():
         for record in records:
             try:
-                data.append((record.timestamp, record.offset, converter(record.value)))
+                data.append((record.timestamp(), record.offset(), converter(record.value())))
             except Exception as error:
                 logging.debug("SourceException: %s", error)  # pragma: no mutate
     return data
@@ -87,7 +87,7 @@ class EventSource:
         offsets = self.consumer.offset_for_time(self.start_time)
 
         for i, (lowest, highest) in enumerate(offset_ranges):
-            if offsets[i] is None:
+            if offsets[i] == -1:
                 logging.warning(
                     "Could not find corresponding offset for start time, so set "
                     "position to latest message"
@@ -122,9 +122,10 @@ class EventSource:
             return StopTimeStatus.UNKNOWN
         else:
             # Check to see if the consumer is past the offsets
+            self.consumer.consumer.poll(0.01)
             positions = self.consumer.get_positions()
             for offset, pos in zip(offsets, positions):
-                if offset is not None:
+                if offset != -1:
                     if pos < offset:
                         return StopTimeStatus.NOT_EXCEEDED
             return StopTimeStatus.EXCEEDED

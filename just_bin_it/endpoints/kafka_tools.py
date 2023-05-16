@@ -1,4 +1,5 @@
 import logging
+import time
 
 from confluent_kafka import Consumer, KafkaException as KafkaError
 
@@ -18,7 +19,7 @@ def are_kafka_settings_valid(brokers, topics):
 
 def _are_brokers_present(brokers):
     try:
-        return Consumer({"bootstrap.servers": ",".join(brokers), "group.id": "mygroup"})
+        return Consumer({"bootstrap.servers": ",".join(brokers), "group.id": f"group{str(time.time_ns())[-6::]}"})
     except KafkaError as error:
         logging.error("Could not connect to Kafka brokers: %s", error)
         return None

@@ -43,6 +43,7 @@ def create_event_source(configuration, start, stop, deserialise_func):
     :return: The created event source.
     """
     consumer = Consumer(configuration["data_brokers"], configuration["data_topics"])
+    time.sleep(5)
     event_source = EventSource(consumer, start, stop, deserialise_func)
 
     if start:
@@ -100,12 +101,18 @@ class Processor:
             self.processing_finished |= self.process_command_message()
 
         event_buffer = self.event_source.get_new_data()
-        self.processing_finished |= self.stop_time_exceeded(time_in_ns())
+
 
         if event_buffer:
             # Even if the stop time has been exceeded there still may be data
             # in the buffer to add.
             self.histogrammer.add_data(event_buffer)
+
+            if self.histogrammer._stop_time_exceeded:
+                self.processing_finished = True
+
+        else:
+            self.processing_finished |= self.histogrammer.check_stop_time_exceeded(time_in_ns() // 1_000_000)
 
         if self.processing_finished:
             self.histogrammer.set_finished()

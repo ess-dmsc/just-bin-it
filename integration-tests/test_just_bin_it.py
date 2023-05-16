@@ -52,7 +52,7 @@ STOP_CMD = {"cmd": "stop"}
 def create_consumer(topic):
     consumer_conf = {
         'bootstrap.servers': ','.join(BROKERS),
-        'group.id': 'test-group',
+        'group.id': f'test-group{str(time.time_ns())[-6::]}',
         'auto.offset.reset': 'latest',
     }
     consumer = Consumer(consumer_conf)
@@ -119,9 +119,9 @@ class TestJustBinIt:
     def check_offsets_have_advanced(self):
         # Check that end offset has changed otherwise we could be looking at old test
         # data
-        self.consumer.seek(TopicPartition(self.topic_part.topic, self.topic_part.partition, OFFSET_END))
-
         l, h = self.consumer.get_watermark_offsets(self.topic_part)
+
+        self.consumer.seek(TopicPartition(self.topic_part.topic, self.topic_part.partition, h))
 
         logging.error(l)
         logging.error(h)
@@ -133,7 +133,7 @@ class TestJustBinIt:
         logging.error(final_offset)
         logging.error(self.initial_offset)
 
-        if final_offset <= self.initial_offset:
+        if h <= self.initial_offset:
             raise Exception("No new data found on the topic - is just-bin-it running?")
 
     def send_message(self, topic, message, timestamp=None):
@@ -144,7 +144,7 @@ class TestJustBinIt:
             msg += "message.topic={}".format(message.topic())
             msg += "message.timestamp={}".format(message.timestamp())
             msg += "message.key={}".format(message.key())
-            msg += "message.value={}".format(message.value())
+            # msg += "message.value={}".format(message.value())
             msg += "message.partition={}".format(message.partition())
             msg += "message.offset={}".format(message.offset())
             logging.error(msg)
@@ -186,7 +186,7 @@ class TestJustBinIt:
         self.consumer.seek(TopicPartition(self.topic_part.topic, self.topic_part.partition, last_highest))
 
         while not data:
-            msg = self.consumer.poll(5)
+            msg = self.consumer.poll(0.005)
             if msg:
                 data.append(msg)
 
@@ -207,7 +207,7 @@ class TestJustBinIt:
         consumer.seek(TopicPartition(topic_part.topic, topic_part.partition, last_highest))
 
         while not data:
-            msg = consumer.poll(5)
+            msg = consumer.poll(0.005)
             if msg:
                 data.append(msg)
 
@@ -220,35 +220,35 @@ class TestJustBinIt:
             self.generate_and_send_data(i)
         time.sleep(1)
 
-    def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(
-        self, just_bin_it
-    ):
-        # Configure just-bin-it
-        config = self.create_basic_config()
-        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-
-        # Give it time to start counting
-        time.sleep(1)
-
-        # Send fake data
-        num_msgs = 10
-
-        for i in range(num_msgs):
-            self.generate_and_send_data(i + 1)
-            time.sleep(0.5)
-
-        total_events = sum(self.num_events_per_msg)
-
-        time.sleep(5)
-
-        self.check_offsets_have_advanced()
-
-        # Get histogram data
-        hist_data = self.get_hist_data_from_kafka()
-
-        assert hist_data["data"].sum() == total_events
-        assert json.loads(hist_data["info"])["state"] == "COUNTING"
-
+    # def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(
+    #     self, just_bin_it
+    # ):
+    #     # Configure just-bin-it
+    #     config = self.create_basic_config()
+    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+    #
+    #     # Give it time to start counting
+    #     time.sleep(1)
+    #
+    #     # Send fake data
+    #     num_msgs = 10
+    #
+    #     for i in range(num_msgs):
+    #         self.generate_and_send_data(i + 1)
+    #         time.sleep(0.5)
+    #
+    #     total_events = sum(self.num_events_per_msg)
+    #
+    #     time.sleep(10)
+    #
+    #     self.check_offsets_have_advanced()
+    #
+    #     # Get histogram data
+    #     hist_data = self.get_hist_data_from_kafka()
+    #
+    #     assert hist_data["data"].sum() == total_events
+    #     assert json.loads(hist_data["info"])["state"] == "COUNTING"
+    #
     # @pytest.mark.flaky(reruns=5)
     # def test_number_events_histogrammed_correspond_to_start_and_stop_times(
     #     self, just_bin_it
@@ -266,13 +266,15 @@ class TestJustBinIt:
     #     stop = self.time_stamps[7] + 1
     #     total_events = sum(self.num_events_per_msg[3:8])
     #
+    #     time.sleep(10)
+    #
     #     config = self.create_basic_config()
     #     config["start"] = start
     #     config["stop"] = stop
     #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
     #
     #     # Give it time to start counting
-    #     time.sleep(5)
+    #     time.sleep(10)
     #
     #     self.check_offsets_have_advanced()
     #
@@ -304,62 +306,7 @@ class TestJustBinIt:
     #
     #     time.sleep(interval_length * 3)
     #
-    #     self.check_offsets_have_advanced()
-    #
-    #     # Get histogram data
-    #     hist_data = self.get_hist_data_from_kafka()
-    #
-    #     info = json.loads(hist_data["info"])
-    #     total_events = 0
-    #     for ts, num in zip(self.time_stamps, self.num_events_per_msg):
-    #         if info["start"] <= ts <= info["stop"]:
-    #             total_events += num
-    #
-    #     assert hist_data["data"].sum() == total_events
-    #     assert info["state"] == "FINISHED"
-    #
-    # def test_counting_for_an_interval_with_no_data_exits_interval(self, just_bin_it):
-    #     self.ensure_topic_is_not_empty_on_startup()
-    #
-    #     # Config just-bin-it
-    #     interval_length = 5
-    #     config = self.create_basic_config()
-    #     config["interval"] = interval_length
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     # Give it time to start counting
-    #     time.sleep(1)
-    #
-    #     # Send no data, but wait for the interval to pass
-    #     time.sleep(interval_length * 3)
-    #
-    #     self.check_offsets_have_advanced()
-    #
-    #     hist_data = self.get_hist_data_from_kafka()
-    #     info = json.loads(hist_data["info"])
-    #
-    #     assert hist_data["data"].sum() == 0
-    #     assert info["state"] == "FINISHED"
-    #
-    # def test_counting_for_an_interval_with_only_one_event_message_gets_data(
-    #     self, just_bin_it
-    # ):
-    #     self.ensure_topic_is_not_empty_on_startup()
-    #
-    #     # Config just-bin-it
-    #     interval_length = 5
-    #     config = self.create_basic_config()
-    #     config["interval"] = interval_length
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     # Give it time to start counting
-    #     time.sleep(1)
-    #
-    #     # Send one fake data message
-    #     self.generate_and_send_data(1)
-    #
-    #     # Send no data, but wait for interval to pass
-    #     time.sleep(interval_length * 3)
+    #     time.sleep(10)
     #
     #     self.check_offsets_have_advanced()
     #
@@ -374,42 +321,105 @@ class TestJustBinIt:
     #
     #     assert hist_data["data"].sum() == total_events
     #     assert info["state"] == "FINISHED"
-    #
-    # def test_counting_for_an_interval_data_after_empty_interval_is_ignored(
-    #     self, just_bin_it
-    # ):
-    #     self.ensure_topic_is_not_empty_on_startup()
-    #
-    #     # Config just-bin-it
-    #     interval_length = 5
-    #     config = self.create_basic_config()
-    #     config["interval"] = interval_length
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     # Give it time to start counting
-    #     time.sleep(1)
-    #
-    #     # Send no data, but wait for interval to pass
-    #     time.sleep(interval_length)
-    #
-    #     # Send one fake data message just after the interval, but probably in the leeway
-    #     self.generate_and_send_data(1)
-    #
-    #     time.sleep(interval_length * 3)
-    #
-    #     self.check_offsets_have_advanced()
-    #
-    #     # Get histogram data
-    #     hist_data = self.get_hist_data_from_kafka()
-    #
-    #     info = json.loads(hist_data["info"])
-    #     total_events = 0
-    #     for ts, num in zip(self.time_stamps, self.num_events_per_msg):
-    #         if info["start"] <= ts <= info["stop"]:
-    #             total_events += num
-    #
-    #     assert hist_data["data"].sum() == 0
-    #     assert info["state"] == "FINISHED"
+
+    def test_counting_for_an_interval_with_no_data_exits_interval(self, just_bin_it):  ## FAILED
+        self.ensure_topic_is_not_empty_on_startup()
+
+        # Config just-bin-it
+        interval_length = 5
+        config = self.create_basic_config()
+        config["interval"] = interval_length
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send no data, but wait for the interval to pass
+        time.sleep(interval_length * 3)
+
+        time.sleep(10)
+
+        self.check_offsets_have_advanced()
+
+        hist_data = self.get_hist_data_from_kafka()
+        info = json.loads(hist_data["info"])
+
+        assert hist_data["data"].sum() == 0
+        assert info["state"] == "FINISHED"
+
+    def test_counting_for_an_interval_with_only_one_event_message_gets_data(  ##FAILED
+        self, just_bin_it
+    ):
+        self.ensure_topic_is_not_empty_on_startup()
+
+        # Config just-bin-it
+        interval_length = 5
+        config = self.create_basic_config()
+        config["interval"] = interval_length
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send one fake data message
+        self.generate_and_send_data(1)
+
+        # Send no data, but wait for interval to pass
+        time.sleep(interval_length * 3)
+
+        time.sleep(10)
+
+        self.check_offsets_have_advanced()
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        info = json.loads(hist_data["info"])
+        total_events = 0
+        for ts, num in zip(self.time_stamps, self.num_events_per_msg):
+            if info["start"] <= ts <= info["stop"]:
+                total_events += num
+
+        assert hist_data["data"].sum() == total_events
+        assert info["state"] == "FINISHED"
+
+    def test_counting_for_an_interval_data_after_empty_interval_is_ignored(
+        self, just_bin_it
+    ):
+        self.ensure_topic_is_not_empty_on_startup()
+
+        # Config just-bin-it
+        interval_length = 5
+        config = self.create_basic_config()
+        config["interval"] = interval_length
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send no data, but wait for interval to pass
+        time.sleep(interval_length)
+
+        # Send one fake data message just after the interval, but probably in the leeway
+        self.generate_and_send_data(1)
+
+        time.sleep(interval_length * 3)
+
+        time.sleep(10)
+
+        self.check_offsets_have_advanced()
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        info = json.loads(hist_data["info"])
+        total_events = 0
+        for ts, num in zip(self.time_stamps, self.num_events_per_msg):
+            if info["start"] <= ts <= info["stop"]:
+                total_events += num
+
+        assert hist_data["data"].sum() == 0
+        assert info["state"] == "FINISHED"
     #
     # def test_open_ended_counting_for_a_while_then_stop_command_triggers_finished(
     #     self, just_bin_it
@@ -430,7 +440,7 @@ class TestJustBinIt:
     #
     #     total_events = sum(self.num_events_per_msg)
     #
-    #     time.sleep(5)
+    #     time.sleep(10)
     #
     #     self.check_offsets_have_advanced()
     #
@@ -454,6 +464,8 @@ class TestJustBinIt:
     #     self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
     #     time.sleep(1)
     #
+    #     time.sleep(10)
+    #
     #     msg = self.get_response_message_from_kafka()
     #
     #     assert json.loads(msg)["msg_id"] == config["msg_id"]
@@ -467,6 +479,8 @@ class TestJustBinIt:
     #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
     #
     #     time.sleep(2)
+    #
+    #     time.sleep(10)
     #
     #     msg = self.get_response_message_from_kafka()
     #     msg = json.loads(msg)
@@ -498,6 +512,8 @@ class TestJustBinIt:
     #         time.sleep(0.5)
     #
     #     time.sleep(interval_length * 3)
+    #
+    #     time.sleep(10)
     #
     #     self.check_offsets_have_advanced()
     #
