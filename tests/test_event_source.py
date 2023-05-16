@@ -3,7 +3,6 @@ import pytest
 
 from just_bin_it.endpoints.sources import (
     EventSource,
-    StopTimeStatus,
     TooOldTimeRequestedException,
 )
 from tests.doubles.consumer import StubConsumer, get_fake_ev42_messages
@@ -126,56 +125,6 @@ class TestEventSourceSinglePartition:
 
         assert offset == [expected_offset]
 
-    def test_if_stop_time_ahead_of_latest_message_in_kafka_then_unknown(self):
-        start_time, _, _ = self.messages[-1]
-        stop_time = start_time + 10
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.UNKNOWN
-
-    def test_if_current_msg_time_well_before_stop_time_then_not_exceeded(self):
-        start_time, _, _ = self.messages[10]
-        stop_time, _, _ = self.messages[100]
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.NOT_EXCEEDED
-
-    def test_if_current_msg_time_just_before_stop_time_then_not_exceeded(self):
-        start_time, _, _ = self.messages[99]
-        stop_time, _, _ = self.messages[100]
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.NOT_EXCEEDED
-
-    def test_if_current_msg_time_on_stop_time_then_exceeded(self):
-        start_time, _, _ = self.messages[100]
-        stop_time, _, _ = self.messages[100]
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.EXCEEDED
-
-    def test_if_current_msg_time_just_after_stop_time_then_exceeded(self):
-        start_time, _, _ = self.messages[101]
-        stop_time, _, _ = self.messages[100]
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.EXCEEDED
-
 
 class TestEventSourceMultiplePartitions:
     @classmethod
@@ -266,53 +215,3 @@ class TestEventSourceMultiplePartitions:
         offsets = self.event_source.seek_to_start_time()
 
         assert offsets == [50, 50, 49]
-
-    def test_if_stop_time_ahead_of_latest_message_in_kafka_then_unknown(self):
-        start_time, _, _ = self.messages[-1]
-        stop_time = start_time + 10
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.UNKNOWN
-
-    def test_if_current_msg_time_well_before_stop_time_then_not_exceeded(self):
-        start_time, _, _ = self.messages[10]
-        stop_time, _, _ = self.messages[100]
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.NOT_EXCEEDED
-
-    def test_if_current_msg_time_just_before_stop_time_then_not_exceeded(self):
-        start_time, _, _ = self.messages[99]
-        stop_time, _, _ = self.messages[100]
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.NOT_EXCEEDED
-
-    def test_if_current_msg_time_on_stop_time_then_exceeded(self):
-        start_time, _, _ = self.messages[100]
-        stop_time, _, _ = self.messages[100]
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.EXCEEDED
-
-    def test_if_current_msg_time_just_after_stop_time_then_exceeded(self):
-        start_time, _, _ = self.messages[101]
-        stop_time, _, _ = self.messages[100]
-        self.event_source.start_time = start_time
-        self.event_source.stop_time = stop_time
-
-        self.event_source.seek_to_start_time()
-
-        assert self.event_source.stop_time_exceeded() == StopTimeStatus.EXCEEDED

@@ -13,7 +13,6 @@ from just_bin_it.endpoints.serialisation import (
 from just_bin_it.endpoints.sources import (
     EventSource,
     SimulatedEventSource,
-    StopTimeStatus,
 )
 from just_bin_it.histograms.histogram_factory import HistogramFactory
 from just_bin_it.histograms.histogrammer import Histogrammer
@@ -101,7 +100,6 @@ class Processor:
 
         event_buffer = self.event_source.get_new_data()
 
-
         if event_buffer:
             # Even if the stop time has been exceeded there still may be data
             # in the buffer to add.
@@ -109,9 +107,11 @@ class Processor:
 
             if self.histogrammer.is_finished():
                 self.processing_finished = True
-
         else:
-            self.processing_finished |= self.histogrammer.check_stop_time_exceeded(time_in_ns() // 1_000_000)
+            self.processing_finished |= self.is_stop_time_exceeded(
+                time_in_ns() // 1_000_000,
+                self.histogrammer.stop
+            )
 
         if self.processing_finished:
             self.histogrammer.set_finished()
@@ -123,29 +123,12 @@ class Processor:
             self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
             self.time_to_publish -= self.time_to_publish % self.publish_interval
 
-    def stop_time_exceeded(self, wall_clock):
-        """
-        Check whether the requested stop time has been exceeded.
+    def is_stop_time_exceeded(self, current_time_ms, stop_time_ms, stop_leeway_ms=5000):
+        if stop_time_ms is None:
+            return False
 
-        If Kafka says the stop time has been exceeded or not exceeded then
-        that is treated as the truth.
-        If Kafka has no opinion (due to a lack of event messages) then the
-        histogrammer makes a decision based on the wall-clock time.
-
-        :param wall_clock: current time in ns
-        :return: True, if stop time has been exceeded.
-        """
-        event_source_status = self.event_source.stop_time_exceeded()
-
-        if event_source_status == StopTimeStatus.EXCEEDED:
-            # According to Kafka the stop time has been exceeded.
-            logging.info("Stop time exceeded according to Kafka")
+        if current_time_ms > stop_time_ms + stop_leeway_ms:
             return True
-        elif event_source_status == StopTimeStatus.UNKNOWN:
-            # See if the stop time has been exceeded by the wall-clock.
-            if self.histogrammer.check_stop_time_exceeded(wall_clock // 1_000_000):
-                logging.info("Stop time exceeded according to wall-clock")
-                return True
         return False
 
     def process_command_message(self):
