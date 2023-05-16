@@ -28,7 +28,7 @@ def _are_brokers_present(brokers):
 def _are_topics_present(consumer, topics):
     result = True
     try:
-        metadata = consumer.list_topics(timeout=10)
+        metadata = consumer.list_topics()
         existing_topics = set(metadata.topics.keys())
         logging.error(existing_topics)
         for tp in topics:

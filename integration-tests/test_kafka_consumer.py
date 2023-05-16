@@ -133,6 +133,8 @@ class TestKafkaConsumer:
 
         consumer.seek_by_offsets(new_offsets)
 
+        time.sleep(5)
+
         num_messages_since_offset = sum([len(val) for val in consumer.get_new_messages().values()])
 
         assert num_messages_since_offset == self.num_messages - sum(new_offsets)
