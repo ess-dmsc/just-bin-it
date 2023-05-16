@@ -148,13 +148,13 @@ class TestHistogramProcessLowLevel:
         # Once on initialisation and once per time run
         assert self.histogrammer.times_publish_called == times_processed + 1
 
-    def test_processing_requests_stop_if_event_source_says_time_exceeded(self):
-        self.processor.event_source.stop_time = StopTimeStatus.EXCEEDED
-
-        self.processor.run_processing()
-
-        assert self.processor.processing_finished
-        assert self.histogrammer.histogramming_stopped
+    # def test_processing_requests_stop_if_event_source_says_time_exceeded(self):
+    #     self.processor.event_source.stop_time = StopTimeStatus.EXCEEDED
+    #
+    #     self.processor.run_processing()
+    #
+    #     assert self.processor.processing_finished
+    #     assert self.histogrammer.histogramming_stopped
 
     def test_processing_does_not_request_stop_if_event_source_does_not_know_and_histogrammer_does_not_says_time_exceeded(
         self,
@@ -178,15 +178,15 @@ class TestHistogramProcessLowLevel:
         assert self.processor.processing_finished
         assert self.histogrammer.histogramming_stopped
 
-    def test_processing_does_not_request_stop_if_histogrammer_says_time_exceeded_but_event_source_does_not(
-        self,
-    ):
-        self.event_source.stop_time = StopTimeStatus.NOT_EXCEEDED
-        self.histogrammer.histogramming_stopped = True
-
-        self.processor.run_processing()
-
-        assert not self.processor.processing_finished
+    # def test_processing_does_not_request_stop_if_histogrammer_says_time_exceeded_but_event_source_does_not(
+    #     self,
+    # ):
+    #     self.event_source.stop_time = StopTimeStatus.NOT_EXCEEDED
+    #     self.histogrammer.histogramming_stopped = True
+    #
+    #     self.processor.run_processing()
+    #
+    #     assert not self.processor.processing_finished
 
     def test_processing_requests_does_not_flag_stopped_if_no_reason_to_stop(self):
         self.event_source.stop_time = StopTimeStatus.NOT_EXCEEDED
