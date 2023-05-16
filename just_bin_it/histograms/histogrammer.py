@@ -140,6 +140,9 @@ class Histogrammer:
     def set_finished(self):
         self._stop_time_exceeded = True
 
+    def is_finished(self):
+        return self._stop_time_exceeded
+
     def send_failure_message(self, timestamp, message):
         for h in self.histograms:
             info = self._generate_info(h)

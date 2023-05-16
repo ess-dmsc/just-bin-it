@@ -3,7 +3,7 @@ from multiprocessing import Queue
 
 import pytest
 
-from just_bin_it.histograms.histogram_process import Processor, StopTimeStatus
+from just_bin_it.histograms.histogram_process import Processor
 
 
 class MockHistogrammer:
@@ -11,13 +11,11 @@ class MockHistogrammer:
         self.cleared = False
         self.histogramming_stopped = False
         self.times_publish_called = 0
+        self.stop = None
         self.data_received = []
 
     def clear_histograms(self):
         self.cleared = True
-
-    def check_stop_time_exceeded(self, timestamp: int):
-        return self.histogramming_stopped
 
     def publish_histograms(self, timestamp=0):
         self.times_publish_called += 1
@@ -38,7 +36,6 @@ class MockHistogrammer:
 
 class MockEventSource:
     def __init__(self):
-        self.stop_time = StopTimeStatus.NOT_EXCEEDED
         self.data = []
 
     def get_new_data(self):
@@ -46,9 +43,6 @@ class MockEventSource:
 
     def seek_to_start_time(self):
         pass
-
-    def stop_time_exceeded(self):
-        return self.stop_time
 
 
 @pytest.mark.slow
@@ -147,58 +141,3 @@ class TestHistogramProcessLowLevel:
 
         # Once on initialisation and once per time run
         assert self.histogrammer.times_publish_called == times_processed + 1
-
-    def test_processing_requests_stop_if_event_source_says_time_exceeded(self):
-        self.processor.event_source.stop_time = StopTimeStatus.EXCEEDED
-
-        self.processor.run_processing()
-
-        assert self.processor.processing_finished
-        assert self.histogrammer.histogramming_stopped
-
-    def test_processing_does_not_request_stop_if_event_source_does_not_know_and_histogrammer_does_not_says_time_exceeded(
-        self,
-    ):
-        self.event_source.stop_time = StopTimeStatus.UNKNOWN
-        self.histogrammer.histogramming_stopped = False
-
-        self.processor.run_processing()
-
-        assert not self.processor.processing_finished
-        assert not self.histogrammer.histogramming_stopped
-
-    def test_processing_requests_stop_if_event_source_does_not_know_and_histogrammer_says_time_exceeded(
-        self,
-    ):
-        self.event_source.stop_time = StopTimeStatus.UNKNOWN
-        self.histogrammer.histogramming_stopped = True
-
-        self.processor.run_processing()
-
-        assert self.processor.processing_finished
-        assert self.histogrammer.histogramming_stopped
-
-    def test_processing_does_not_request_stop_if_histogrammer_says_time_exceeded_but_event_source_does_not(
-        self,
-    ):
-        self.event_source.stop_time = StopTimeStatus.NOT_EXCEEDED
-        self.histogrammer.histogramming_stopped = True
-
-        self.processor.run_processing()
-
-        assert not self.processor.processing_finished
-
-    def test_processing_requests_does_not_flag_stopped_if_no_reason_to_stop(self):
-        self.event_source.stop_time = StopTimeStatus.NOT_EXCEEDED
-
-        self.processor.run_processing()
-
-        assert not self.processor.processing_finished
-        assert not self.histogrammer.histogramming_stopped
-
-    def test_if_event_data_present_then_it_is_histogrammed(self):
-        self.event_source.data = [x for x in range(10)]
-
-        self.processor.run_processing()
-
-        assert self.histogrammer.data_received
