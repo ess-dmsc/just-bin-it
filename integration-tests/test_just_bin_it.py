@@ -220,107 +220,107 @@ class TestJustBinIt:
             self.generate_and_send_data(i)
         time.sleep(1)
 
-    # def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(
-    #     self, just_bin_it
-    # ):
-    #     # Configure just-bin-it
-    #     config = self.create_basic_config()
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     # Give it time to start counting
-    #     time.sleep(1)
-    #
-    #     # Send fake data
-    #     num_msgs = 10
-    #
-    #     for i in range(num_msgs):
-    #         self.generate_and_send_data(i + 1)
-    #         time.sleep(0.5)
-    #
-    #     total_events = sum(self.num_events_per_msg)
-    #
-    #     time.sleep(10)
-    #
-    #     self.check_offsets_have_advanced()
-    #
-    #     # Get histogram data
-    #     hist_data = self.get_hist_data_from_kafka()
-    #
-    #     assert hist_data["data"].sum() == total_events
-    #     assert json.loads(hist_data["info"])["state"] == "COUNTING"
-    #
-    # @pytest.mark.flaky(reruns=5)
-    # def test_number_events_histogrammed_correspond_to_start_and_stop_times(
-    #     self, just_bin_it
-    # ):
-    #     # Send fake data
-    #     num_msgs = 10
-    #
-    #     for i in range(num_msgs):
-    #         self.generate_and_send_data(i + 1)
-    #         time.sleep(0.5)
-    #
-    #     # Configure just-bin-it with start and stop times
-    #     # Include only 5 messages in the interval
-    #     start = self.time_stamps[3] - 1
-    #     stop = self.time_stamps[7] + 1
-    #     total_events = sum(self.num_events_per_msg[3:8])
-    #
-    #     time.sleep(10)
-    #
-    #     config = self.create_basic_config()
-    #     config["start"] = start
-    #     config["stop"] = stop
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     # Give it time to start counting
-    #     time.sleep(10)
-    #
-    #     self.check_offsets_have_advanced()
-    #
-    #     # Get histogram data
-    #     hist_data = self.get_hist_data_from_kafka()
-    #
-    #     assert hist_data["data"].sum() == total_events
-    #     assert json.loads(hist_data["info"])["state"] == "FINISHED"
-    #
-    # @pytest.mark.flaky(reruns=5)
-    # def test_counting_for_an_interval_gets_all_data_during_interval(self, just_bin_it):
-    #     self.ensure_topic_is_not_empty_on_startup()
-    #
-    #     # Config just-bin-it
-    #     interval_length = 5
-    #     config = self.create_basic_config()
-    #     config["interval"] = interval_length
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     # Give it time to start counting
-    #     time.sleep(1)
-    #
-    #     # Send fake data
-    #     num_msgs = 12
-    #
-    #     for i in range(num_msgs):
-    #         self.generate_and_send_data(i + 1)
-    #         time.sleep(0.5)
-    #
-    #     time.sleep(interval_length * 3)
-    #
-    #     time.sleep(10)
-    #
-    #     self.check_offsets_have_advanced()
-    #
-    #     # Get histogram data
-    #     hist_data = self.get_hist_data_from_kafka()
-    #
-    #     info = json.loads(hist_data["info"])
-    #     total_events = 0
-    #     for ts, num in zip(self.time_stamps, self.num_events_per_msg):
-    #         if info["start"] <= ts <= info["stop"]:
-    #             total_events += num
-    #
-    #     assert hist_data["data"].sum() == total_events
-    #     assert info["state"] == "FINISHED"
+    def test_number_events_histogrammed_equals_number_events_generated_for_open_ended(
+        self, just_bin_it
+    ):
+        # Configure just-bin-it
+        config = self.create_basic_config()
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send fake data
+        num_msgs = 10
+
+        for i in range(num_msgs):
+            self.generate_and_send_data(i + 1)
+            time.sleep(0.5)
+
+        total_events = sum(self.num_events_per_msg)
+
+        time.sleep(10)
+
+        self.check_offsets_have_advanced()
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        assert hist_data["data"].sum() == total_events
+        assert json.loads(hist_data["info"])["state"] == "COUNTING"
+
+    @pytest.mark.flaky(reruns=5)
+    def test_number_events_histogrammed_correspond_to_start_and_stop_times(
+        self, just_bin_it
+    ):
+        # Send fake data
+        num_msgs = 10
+
+        for i in range(num_msgs):
+            self.generate_and_send_data(i + 1)
+            time.sleep(0.5)
+
+        # Configure just-bin-it with start and stop times
+        # Include only 5 messages in the interval
+        start = self.time_stamps[3] - 1
+        stop = self.time_stamps[7] + 1
+        total_events = sum(self.num_events_per_msg[3:8])
+
+        time.sleep(10)
+
+        config = self.create_basic_config()
+        config["start"] = start
+        config["stop"] = stop
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(10)
+
+        self.check_offsets_have_advanced()
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        assert hist_data["data"].sum() == total_events
+        assert json.loads(hist_data["info"])["state"] == "FINISHED"
+
+    @pytest.mark.flaky(reruns=5)
+    def test_counting_for_an_interval_gets_all_data_during_interval(self, just_bin_it):
+        self.ensure_topic_is_not_empty_on_startup()
+
+        # Config just-bin-it
+        interval_length = 5
+        config = self.create_basic_config()
+        config["interval"] = interval_length
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send fake data
+        num_msgs = 12
+
+        for i in range(num_msgs):
+            self.generate_and_send_data(i + 1)
+            time.sleep(0.5)
+
+        time.sleep(interval_length * 3)
+
+        time.sleep(10)
+
+        self.check_offsets_have_advanced()
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        info = json.loads(hist_data["info"])
+        total_events = 0
+        for ts, num in zip(self.time_stamps, self.num_events_per_msg):
+            if info["start"] <= ts <= info["stop"]:
+                total_events += num
+
+        assert hist_data["data"].sum() == total_events
+        assert info["state"] == "FINISHED"
 
     def test_counting_for_an_interval_with_no_data_exits_interval(self, just_bin_it):  ## FAILED
         self.ensure_topic_is_not_empty_on_startup()
@@ -405,8 +405,6 @@ class TestJustBinIt:
 
         time.sleep(interval_length * 3)
 
-        time.sleep(10)
-
         self.check_offsets_have_advanced()
 
         # Get histogram data
@@ -420,111 +418,111 @@ class TestJustBinIt:
 
         assert hist_data["data"].sum() == 0
         assert info["state"] == "FINISHED"
-    #
-    # def test_open_ended_counting_for_a_while_then_stop_command_triggers_finished(
-    #     self, just_bin_it
-    # ):
-    #     # Configure just-bin-it
-    #     config = self.create_basic_config()
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     # Give it time to start counting
-    #     time.sleep(1)
-    #
-    #     # Send fake data
-    #     num_msgs = 10
-    #
-    #     for i in range(num_msgs):
-    #         self.generate_and_send_data(i + 1)
-    #         time.sleep(0.5)
-    #
-    #     total_events = sum(self.num_events_per_msg)
-    #
-    #     time.sleep(10)
-    #
-    #     self.check_offsets_have_advanced()
-    #
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
-    #     time.sleep(1)
-    #
-    #     # Get histogram data
-    #     hist_data = self.get_hist_data_from_kafka()
-    #
-    #     assert hist_data["data"].sum() == total_events
-    #     assert json.loads(hist_data["info"])["state"] == "FINISHED"
-    #
-    # def test_supplying_msg_id_get_acknowledgement_response(self, just_bin_it):
-    #     # Configure just-bin-it
-    #     config = self.create_basic_config()
-    #     config["msg_id"] = f"{time_in_ns() // 1000}"
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     # Give it some time before stopping it
-    #     time.sleep(5)
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
-    #     time.sleep(1)
-    #
-    #     time.sleep(10)
-    #
-    #     msg = self.get_response_message_from_kafka()
-    #
-    #     assert json.loads(msg)["msg_id"] == config["msg_id"]
-    #     assert json.loads(msg)["response"] == "ACK"
-    #
-    # def test_supplying_msg_id_get_error_response(self, just_bin_it):
-    #     # Configure just-bin-it
-    #     config = self.create_basic_config()
-    #     config["cmd"] = "not a valid command"
-    #     config["msg_id"] = f"{time_in_ns() // 1000}"
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     time.sleep(2)
-    #
-    #     time.sleep(10)
-    #
-    #     msg = self.get_response_message_from_kafka()
-    #     msg = json.loads(msg)
-    #
-    #     assert msg["msg_id"] == config["msg_id"]
-    #     assert msg["response"] == "ERR"
-    #     assert "message" in msg
-    #
-    # @pytest.mark.flaky(reruns=5)
-    # def test_legacy_schemas(self, just_bin_it):
-    #     self.ensure_topic_is_not_empty_on_startup()
-    #
-    #     # Config just-bin-it
-    #     interval_length = 5
-    #     config = self.create_basic_config()
-    #     config["interval"] = interval_length
-    #     config["input_schema"] = "ev42"
-    #     config["output_schema"] = "hs00"
-    #     self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-    #
-    #     # Give it time to start counting
-    #     time.sleep(1)
-    #
-    #     # Send fake data
-    #     num_msgs = 12
-    #
-    #     for i in range(num_msgs):
-    #         self.generate_and_send_data(i + 1, "ev42")
-    #         time.sleep(0.5)
-    #
-    #     time.sleep(interval_length * 3)
-    #
-    #     time.sleep(10)
-    #
-    #     self.check_offsets_have_advanced()
-    #
-    #     # Get histogram data
-    #     hist_data = self.get_hist_data_from_kafka()
-    #
-    #     info = json.loads(hist_data["info"])
-    #     total_events = 0
-    #     for ts, num in zip(self.time_stamps, self.num_events_per_msg):
-    #         if info["start"] <= ts <= info["stop"]:
-    #             total_events += num
-    #
-    #     assert hist_data["data"].sum() == total_events
-    #     assert info["state"] == "FINISHED"
+
+    def test_open_ended_counting_for_a_while_then_stop_command_triggers_finished(
+        self, just_bin_it
+    ):
+        # Configure just-bin-it
+        config = self.create_basic_config()
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send fake data
+        num_msgs = 10
+
+        for i in range(num_msgs):
+            self.generate_and_send_data(i + 1)
+            time.sleep(0.5)
+
+        total_events = sum(self.num_events_per_msg)
+
+        time.sleep(10)
+
+        self.check_offsets_have_advanced()
+
+        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
+        time.sleep(1)
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        assert hist_data["data"].sum() == total_events
+        assert json.loads(hist_data["info"])["state"] == "FINISHED"
+
+    def test_supplying_msg_id_get_acknowledgement_response(self, just_bin_it):
+        # Configure just-bin-it
+        config = self.create_basic_config()
+        config["msg_id"] = f"{time_in_ns() // 1000}"
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it some time before stopping it
+        time.sleep(5)
+        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
+        time.sleep(1)
+
+        time.sleep(10)
+
+        msg = self.get_response_message_from_kafka()
+
+        assert json.loads(msg)["msg_id"] == config["msg_id"]
+        assert json.loads(msg)["response"] == "ACK"
+
+    def test_supplying_msg_id_get_error_response(self, just_bin_it):
+        # Configure just-bin-it
+        config = self.create_basic_config()
+        config["cmd"] = "not a valid command"
+        config["msg_id"] = f"{time_in_ns() // 1000}"
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        time.sleep(2)
+
+        time.sleep(10)
+
+        msg = self.get_response_message_from_kafka()
+        msg = json.loads(msg)
+
+        assert msg["msg_id"] == config["msg_id"]
+        assert msg["response"] == "ERR"
+        assert "message" in msg
+
+    @pytest.mark.flaky(reruns=5)
+    def test_legacy_schemas(self, just_bin_it):
+        self.ensure_topic_is_not_empty_on_startup()
+
+        # Config just-bin-it
+        interval_length = 5
+        config = self.create_basic_config()
+        config["interval"] = interval_length
+        config["input_schema"] = "ev42"
+        config["output_schema"] = "hs00"
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send fake data
+        num_msgs = 12
+
+        for i in range(num_msgs):
+            self.generate_and_send_data(i + 1, "ev42")
+            time.sleep(0.5)
+
+        time.sleep(interval_length * 3)
+
+        time.sleep(10)
+
+        self.check_offsets_have_advanced()
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        info = json.loads(hist_data["info"])
+        total_events = 0
+        for ts, num in zip(self.time_stamps, self.num_events_per_msg):
+            if info["start"] <= ts <= info["stop"]:
+                total_events += num
+
+        assert hist_data["data"].sum() == total_events
+        assert info["state"] == "FINISHED"
