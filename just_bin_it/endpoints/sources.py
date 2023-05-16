@@ -2,7 +2,6 @@ import json
 import logging
 import math
 import time
-from enum import Enum
 from typing import Optional
 
 from just_bin_it.endpoints.serialisation import (
