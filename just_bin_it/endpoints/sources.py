@@ -16,12 +16,6 @@ from just_bin_it.histograms.histogram2d_roi import ROI_TYPE
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
-class StopTimeStatus(Enum):
-    UNKNOWN = 0
-    EXCEEDED = 1
-    NOT_EXCEEDED = 2
-
-
 def convert_messages(messages, converter):
     data = []
 
@@ -104,31 +98,6 @@ class EventSource:
         self.consumer.seek_by_offsets(offsets)
 
         return offsets
-
-    def stop_time_exceeded(self):
-        """
-        Has the defined stop time been exceeded in Kafka.
-
-        :return: A StopTimeStatus.
-        """
-        if not self.stop_time:
-            # If the stop time is not defined then it cannot be exceeded
-            return StopTimeStatus.NOT_EXCEEDED
-        offsets = self.consumer.offset_for_time(self.stop_time)
-
-        if not any(offsets):
-            # If all the offsets are None then the stop_time is later than the
-            # latest message in Kafka
-            return StopTimeStatus.UNKNOWN
-        else:
-            # Check to see if the consumer is past the offsets
-            self.consumer.consumer.poll(0.01)
-            positions = self.consumer.get_positions()
-            for offset, pos in zip(offsets, positions):
-                if offset != -1:
-                    if pos < offset:
-                        return StopTimeStatus.NOT_EXCEEDED
-            return StopTimeStatus.EXCEEDED
 
 
 class HistogramSource:
@@ -220,10 +189,3 @@ class SimulatedEventSource:
         :return:
         """
         return 0
-
-    def stop_time_exceeded(self):
-        current_time_ms = int(time.time() * 1000)
-        if self.stop and current_time_ms > self.stop:
-            return StopTimeStatus.EXCEEDED
-
-        return StopTimeStatus.NOT_EXCEEDED

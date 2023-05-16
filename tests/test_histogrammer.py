@@ -257,6 +257,20 @@ class TestHistogrammer:
         info = json.loads(data["info"])
         assert info["state"] == HISTOGRAM_STATES["FINISHED"]
 
+    def test_message_time_exceeds_stop_time_then_is_finished(self):
+        histogrammer = create_histogrammer(self.hist_sink, STOP_CONFIG)
+        histogrammer.add_data(EVENT_DATA)
+
+        assert histogrammer.is_finished()
+
+    def test_message_time_before_stop_time_then_is_finished(self):
+        config = copy.deepcopy(STOP_CONFIG)
+        config["stop"] = 1003 * 10**3
+        histogrammer = create_histogrammer(self.hist_sink, config)
+        histogrammer.add_data(EVENT_DATA)
+
+        assert not histogrammer.is_finished()
+
     def test_after_stop_publishing_final_histograms_published_once_only(self):
         histogrammer = create_histogrammer(self.hist_sink, STOP_CONFIG)
         histogrammer.add_data(EVENT_DATA)
