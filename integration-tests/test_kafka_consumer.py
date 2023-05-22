@@ -60,16 +60,13 @@ class TestKafkaConsumer:
         while not data:
             data = consumer.get_new_messages()
 
-        assert isinstance(data, dict)
-        # One partition
-        assert len(data) == 1
-        partition_data = data[list(data.keys())[0]]
+        assert isinstance(data, list)
         # Total messages
-        assert len(partition_data) == self.num_messages
+        assert len(data) == self.num_messages
         # Check the types
-        assert isinstance(partition_data[0].offset(), int)
-        assert isinstance(partition_data[0].timestamp()[1], int)
-        assert isinstance(partition_data[0].value(), bytes)
+        assert isinstance(data[0].offset(), int)
+        assert isinstance(data[0].timestamp()[1], int)
+        assert isinstance(data[0].value(), bytes)
 
     def test_all_data_retrieved_when_three_partitions(self):
         self.put_messages_in(self.three_partition_topic_name, self.num_messages)
@@ -81,16 +78,13 @@ class TestKafkaConsumer:
         while not data:
             data = consumer.get_new_messages()
 
-        assert isinstance(data, dict)
-        # Three partitions
-        assert len(data) == 3
+        assert isinstance(data, list)
         # Total messages across all partitions
-        assert sum([len(val) for val in data.values()]) == self.num_messages
+        assert len(data) == self.num_messages
         # Check the types
-        partition_data = data[list(data.keys())[0]]
-        assert isinstance(partition_data[0].offset(), int)
-        assert isinstance(partition_data[0].timestamp()[1], int)
-        assert isinstance(partition_data[0].value(), bytes)
+        assert isinstance(data[0].offset(), int)
+        assert isinstance(data[0].timestamp()[1], int)
+        assert isinstance(data[0].value(), bytes)
 
     def test_get_offsets_for_time_after_last_message(self):
         self.put_messages_in(self.three_partition_topic_name, self.num_messages)
@@ -135,7 +129,7 @@ class TestKafkaConsumer:
 
         time.sleep(5)
 
-        num_messages_since_offset = sum([len(val) for val in consumer.get_new_messages().values()])
+        num_messages_since_offset = len(consumer.get_new_messages())
 
         assert num_messages_since_offset == self.num_messages - sum(new_offsets)
 

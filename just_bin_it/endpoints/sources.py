@@ -16,16 +16,16 @@ from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
 def convert_messages(messages, converter):
-    data = []
-
-    for _, records in messages.items():
-        for record in records:
-            try:
-                data.append((record.timestamp(), record.offset(), converter(record.value())))
-            except Exception as error:
-                logging.debug("SourceException: %s", error)  # pragma: no mutate
-    return data
-
+    # data = []
+    #
+    # for _, records in messages.items():
+    #     for record in records:
+    #         try:
+    #             data.append((record.timestamp(), record.offset(), converter(record.value())))
+    #         except Exception as error:
+    #             logging.debug("SourceException: %s", error)  # pragma: no mutate
+    # return data
+    return [(msg.timestamp(), msg.offset(), converter(msg.value())) for msg in messages]
 
 class ConfigSource:
     def __init__(

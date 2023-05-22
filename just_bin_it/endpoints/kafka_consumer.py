@@ -69,18 +69,32 @@ class Consumer:
             # self.consumer.seek(TopicPartition(tp.topic, tp.partition, OFFSET_END))
         self.consumer.assign(self.topic_partitions)
 
+    # def _get_new_messages(self):
+    #     data = {}
+    #     while True:
+    #         messages = self.consumer.consume(timeout=0.005)
+    #         # messages = self.consumer.poll(timeout=1)
+    #         if not messages:
+    #             break
+    #         for message in messages:
+    #             partition = message.partition()
+    #             if partition not in data:
+    #                 data[partition] = []
+    #             data[partition].append(message)
+    #
+    #         for tp in self.topic_partitions:
+    #             logging.debug(
+    #                 "%s - current position: %s", tp.topic, self.consumer.position([tp])[0].offset
+    #             )
+    #     return data
     def _get_new_messages(self):
-        data = {}
+        data = []
         while True:
             messages = self.consumer.consume(timeout=0.005)
-            # messages = self.consumer.poll(timeout=1)
             if not messages:
                 break
             for message in messages:
-                partition = message.partition()
-                if partition not in data:
-                    data[partition] = []
-                data[partition].append(message)
+                data.append(message)
 
             for tp in self.topic_partitions:
                 logging.debug(
