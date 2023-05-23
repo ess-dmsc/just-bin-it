@@ -15,17 +15,17 @@ from just_bin_it.histograms.histogram2d_roi import ROI_TYPE
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
+def safe_convert(msg, converter):
+    try:
+        return (msg.timestamp(), msg.offset(), converter(msg.value()))
+    except Exception as error:
+        logging.debug("SourceException: %s", error)  # pragma: no mutate
+        return None
+
+
 def convert_messages(messages, converter):
-    # data = []
-    #
-    # for _, records in messages.items():
-    #     for record in records:
-    #         try:
-    #             data.append((record.timestamp(), record.offset(), converter(record.value())))
-    #         except Exception as error:
-    #             logging.debug("SourceException: %s", error)  # pragma: no mutate
-    # return data
-    return [(msg.timestamp(), msg.offset(), converter(msg.value())) for msg in messages]
+    return [res for res in (safe_convert(msg, converter) for msg in messages) if res is not None]
+
 
 class ConfigSource:
     def __init__(

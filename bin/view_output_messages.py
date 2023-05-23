@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import uuid
 
 from confluent_kafka import Consumer, TopicPartition, OFFSET_END
 
@@ -11,19 +12,20 @@ from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_sc
 
 
 def main(brokers, topic):
-    consumer = Consumer({"bootstrap.servers": ','.join(brokers), "group.id": "mygroup"})
+    consumer = Consumer({"bootstrap.servers": ','.join(brokers), "group.id": uuid.uuid4()})
     print(f"Topics = {consumer.list_topics().topics.keys()}")
 
     tp = TopicPartition(topic, 0)
-    consumer.assign([tp])
 
     # Move to one from the end
-    consumer.seek(TopicPartition(tp.topic, tp.partition, OFFSET_END))
-    end = consumer.position([tp])[0].offset
-    consumer.seek(TopicPartition(tp.topic, tp.partition, end - 1))
+    _, high_wm = consumer.get_watermark_offsets(tp)
+    last_highest = max(0, high_wm - 1)
+    tp.offset = last_highest
+
+    consumer.assign([tp])
 
     while True:
-        msg = consumer.poll(5)
+        msg = consumer.poll(0.005)
         if msg is None:
             continue
         if msg.error():

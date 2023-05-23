@@ -1,5 +1,6 @@
 import logging
 import time
+import uuid
 from typing import List
 
 from confluent_kafka import Consumer as KafkaConsumer, TopicPartition, KafkaException as KafkaError, OFFSET_END
@@ -27,24 +28,24 @@ class Consumer:
         self.topic_partitions = []
         try:
             self.consumer = self._create_consumer(brokers)
-            self._check_consumer_running()
+            # self._check_consumer_running()
             self._assign_topics(topics)
         except KafkaError as error:
             raise KafkaException(error)
 
-    def _check_consumer_running(self, timeout_s=20):
-        start = time.monotonic()
-        while time.monotonic() < start + timeout_s:
-            try:
-                self.consumer.list_topics(timeout=5)
-                break
-            except KafkaException:
-                time.sleep(0.1)
+    # def _check_consumer_running(self, timeout_s=20):
+    #     start = time.monotonic()
+    #     while time.monotonic() < start + timeout_s:
+    #         try:
+    #             self.consumer.list_topics(timeout=5)
+    #             break
+    #         except KafkaException:
+    #             time.sleep(0.1)
 
     def _create_consumer(self, brokers):
         servers = ','.join(brokers)
         print(servers)
-        return KafkaConsumer({"bootstrap.servers": ",".join(brokers), "group.id": f"mygroup{str(time.time_ns())[-6::]}"})
+        return KafkaConsumer({"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()})
 
     def _assign_topics(self, topics):
         # Only use the first topic

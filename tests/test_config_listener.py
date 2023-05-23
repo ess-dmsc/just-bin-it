@@ -1,7 +1,7 @@
 import pytest
 
 from just_bin_it.endpoints.config_listener import ConfigListener
-from tests.doubles.consumer import StubConsumer
+from tests.doubles.consumer import StubConsumer, StubConsumerRecord
 
 
 class TestConfigListener:
@@ -14,27 +14,31 @@ class TestConfigListener:
         assert not self.config_listener.check_for_messages()
 
     def test_when_message_waiting_then_checking_returns_that_message_waiting(self):
-        self.consumer.add_messages([(0, 0, '"message1"')])
+        mock_record = StubConsumerRecord(0, 0, '"message1"')
+        self.consumer.add_messages([mock_record])
 
         assert self.config_listener.check_for_messages()
 
     def test_when_waiting_message_not_consumed_checking_again_still_returns_message_waiting(
         self,
     ):
-        self.consumer.add_messages([(0, 0, '"message1"')])
+        mock_record = StubConsumerRecord(0, 0, '"message1"')
+        self.consumer.add_messages([mock_record])
         self.config_listener.check_for_messages()
 
         assert self.config_listener.check_for_messages()
 
     def test_consuming_waiting_message_get_message(self):
-        self.consumer.add_messages([(0, 0, '"message1"')])
+        mock_record = StubConsumerRecord(0, 0, '"message1"')
+        self.consumer.add_messages([mock_record])
         self.config_listener.check_for_messages()
 
         msg = self.config_listener.consume_message()
         assert msg == "message1"
 
     def test_consuming_waiting_message_clears_message_waiting(self):
-        self.consumer.add_messages([(0, 0, '"message1"')])
+        mock_record = StubConsumerRecord(0, 0, '"message1"')
+        self.consumer.add_messages([mock_record])
         self.config_listener.check_for_messages()
 
         _ = self.config_listener.consume_message()
@@ -42,9 +46,8 @@ class TestConfigListener:
         assert not self.config_listener.check_for_messages()
 
     def test_consuming_waiting_message_gets_latest_message(self):
-        self.consumer.add_messages(
-            [(0, 0, '"message1"'), (1, 1, '"message2"'), (2, 2, '"message3"')]
-        )
+        mock_record = [StubConsumerRecord(i, i, f'"message{i+1}"') for i in range(3)]
+        self.consumer.add_messages(mock_record)
         self.config_listener.check_for_messages()
 
         msg = self.config_listener.consume_message()

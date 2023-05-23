@@ -5,10 +5,18 @@ from just_bin_it.endpoints.kafka_consumer import Consumer
 
 class StubConsumerRecord:
     def __init__(self, timestamp, offset, value):
-        self.timestamp = timestamp
-        self.offset = offset
-        self.value = value
+        self._timestamp = timestamp
+        self._offset = offset
+        self._value = value
 
+    def timestamp(self):
+        return self._timestamp
+
+    def offset(self):
+        return self._offset
+
+    def value(self):
+        return self._value
 
 class StubConsumer(Consumer):
     def __init__(self, brokers, topics, num_partitions=1):
@@ -34,15 +42,13 @@ class StubConsumer(Consumer):
         # From Kafka we get a dictionary of topics which contains a list of
         # consumer records which we want 'value' from.
         # Recreate the structure here to match that.
-        data = {}
+        data = []
 
         for k, v in self.topic_partitions.items():
-            records = []
             while v["offset"] < len(v["messages"]):
                 msg = v["messages"][v["offset"]]
-                records.append(StubConsumerRecord(msg[0], v["offset"], msg[2]))
+                data.append(msg)
                 v["offset"] += 1
-            data[k] = records
         return data
 
     def _seek_by_offsets(self, offsets):
@@ -65,7 +71,8 @@ class StubConsumer(Consumer):
             count = 0
             found = False
             for msg in tp["messages"]:
-                if msg[0] >= requested_time:
+                print(msg)
+                if msg.timestamp() >= requested_time:
                     result.append(count)
                     found = True
                     break

@@ -5,7 +5,7 @@ from just_bin_it.endpoints.sources import (
     EventSource,
     TooOldTimeRequestedException,
 )
-from tests.doubles.consumer import StubConsumer, get_fake_ev42_messages
+from tests.doubles.consumer import StubConsumer, get_fake_ev42_messages, StubConsumerRecord
 
 
 def compare_two_messages(sent, received):
@@ -33,15 +33,26 @@ def serialise_messages(messages):
     for ts, offset, event_data in messages:
         result.append(
             (
-                ts,  # Represents the Kafka timestamp
-                offset,  # Represents the Kafka offset.
-                (
-                    event_data.source_name,
-                    event_data.pulse_time,
-                    event_data.time_of_flight,
-                    event_data.detector_id,
-                    None,
-                ),
+                # ts,  # Represents the Kafka timestamp
+                # offset,  # Represents the Kafka offset.
+                # (
+                #     event_data.source_name,
+                #     event_data.pulse_time,
+                #     event_data.time_of_flight,
+                #     event_data.detector_id,
+                #     None,
+                # ),
+                StubConsumerRecord(
+                    ts,
+                    offset,
+                    (
+                        event_data.source_name,
+                        event_data.pulse_time,
+                        event_data.time_of_flight,
+                        event_data.detector_id,
+                        None,
+                    )
+                )
             )
         )
     return result
