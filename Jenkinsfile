@@ -93,6 +93,7 @@ def get_integration_tests_pipeline() {
             pip install --upgrade pip
             pip install -r requirements-dev.txt
             pip install -r integration-tests/requirements.txt
+            pip install 'requests<2.30.0'
             """
           }  // stage
           stage("Integration tests: Run") {
