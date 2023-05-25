@@ -35,6 +35,7 @@ WAIT_FOR_DEBUGGER_ATTACH = "--wait-to-attach-debugger"
 
 BROKERS = ["localhost:9092"]
 
+
 def pytest_addoption(parser):
     parser.addoption(
         WAIT_FOR_DEBUGGER_ATTACH,
@@ -47,7 +48,7 @@ def pytest_addoption(parser):
 
 def wait_until_kafka_ready(docker_cmd, docker_options):
     print("Waiting for Kafka broker to be ready for integration tests...")
-    conf = {"bootstrap.servers": ','.join(BROKERS)}
+    conf = {"bootstrap.servers": ",".join(BROKERS)}
     producer = Producer(conf)
     kafka_ready = False
 

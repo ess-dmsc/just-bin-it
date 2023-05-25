@@ -126,8 +126,8 @@ class TestConfigSource:
         mock_record = [
             StubConsumerRecord(0, 0, CONFIG_BASIC_1),
             StubConsumerRecord(1, 1, CONFIG_BASIC_1),
-            StubConsumerRecord(2, 2, CONFIG_BASIC_2)
-            ]
+            StubConsumerRecord(2, 2, CONFIG_BASIC_2),
+        ]
         consumer.add_messages(mock_record)
         src = ConfigSource(consumer)
 
@@ -148,8 +148,8 @@ class TestConfigSource:
         mock_record = [
             StubConsumerRecord(0, 0, CONFIG_BASIC_1),
             StubConsumerRecord(1, 1, CONFIG_BASIC_2),
-            StubConsumerRecord(2, 2, INVALID_JSON)
-            ]
+            StubConsumerRecord(2, 2, INVALID_JSON),
+        ]
         consumer.add_messages(mock_record)
         src = ConfigSource(consumer)
 

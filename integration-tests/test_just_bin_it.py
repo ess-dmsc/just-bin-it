@@ -1,13 +1,13 @@
-import logging
 import copy
 import json
 import os
 import random
 import sys
 import time
+import uuid
 
 import pytest
-from confluent_kafka import Consumer, Producer, TopicPartition, OFFSET_END
+from confluent_kafka import Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -51,9 +51,9 @@ STOP_CMD = {"cmd": "stop"}
 
 def create_consumer(topic):
     consumer_conf = {
-        'bootstrap.servers': ','.join(BROKERS),
-        'group.id': f'test-group{str(time.time_ns())[-6::]}',
-        'auto.offset.reset': 'latest',
+        "bootstrap.servers": ",".join(BROKERS),
+        "group.id": uuid.uuid4(),
+        "auto.offset.reset": "latest",
     }
     consumer = Consumer(consumer_conf)
     topic_partitions = []
@@ -64,13 +64,13 @@ def create_consumer(topic):
     for pn in partition_numbers:
         topic_partitions.append(TopicPartition(topic, pn))
 
-    # Seek to the end of each partition
-
+    # make sure offsets are at the end
     for tp in topic_partitions:
-        high_watermark = consumer.get_watermark_offsets(tp, timeout=10.0, cached=False)[1]
+        high_watermark = consumer.get_watermark_offsets(tp, timeout=10.0, cached=False)[
+            1
+        ]
         tp.offset = high_watermark
 
-        # self.consumer.seek(TopicPartition(tp.topic, tp.partition, OFFSET_END))
     consumer.assign(topic_partitions)
     return consumer, topic_partitions
 
@@ -89,7 +89,7 @@ class TestJustBinIt:
     @pytest.fixture(autouse=True)
     def prepare(self):
         # Create unique topics for each test
-        conf = {"bootstrap.servers": ','.join(BROKERS)}
+        conf = {"bootstrap.servers": ",".join(BROKERS)}
         admin_client = AdminClient(conf)
         uid = time_in_ns() // 1000
         self.hist_topic_name = f"hist_{uid}"
@@ -101,14 +101,13 @@ class TestJustBinIt:
         admin_client.create_topics([hist_topic, data_topic])
 
         self.producer = Producer(
-            {'bootstrap.servers': ','.join(BROKERS), 'message.max.bytes': 100_000_000}
+            {"bootstrap.servers": ",".join(BROKERS), "message.max.bytes": 100_000_000}
         )
         time.sleep(5)
 
         self.consumer, topic_partitions = create_consumer(self.hist_topic_name)
         # Only one partition for histogram topic
         self.topic_part = topic_partitions[0]
-        self.initial_offset = topic_partitions[0].offset
         self.time_stamps = []
         self.num_events_per_msg = []
 
@@ -118,47 +117,12 @@ class TestJustBinIt:
         config["histograms"][0]["data_topics"] = [self.data_topic_name]
         return config
 
-    # def check_offsets_have_advanced(self):
-    #     # Check that end offset has changed otherwise we could be looking at old test
-    #     # data
-    #     l, h = self.consumer.get_watermark_offsets(self.topic_part)
-    #
-    #     self.consumer.seek(TopicPartition(self.topic_part.topic, self.topic_part.partition, h))
-    #
-    #     logging.error(l)
-    #     logging.error(h)
-    #
-    #     tp = self.consumer.assignment()[0]
-    #     final_offset = tp.offset
-    #     # final_offset = self.consumer.position([self.topic_part])[0].offset
-    #
-    #     logging.error(final_offset)
-    #     logging.error(self.initial_offset)
-    #
-    #     if h <= self.initial_offset:
-    #         raise Exception("No new data found on the topic - is just-bin-it running?")
-
     def send_message(self, topic, message, timestamp=None):
-
-        def delivery_callback(error, message):
-            msg = ''
-            msg += "delivery_callback. error={}. message={}".format(error, message)
-            msg += "message.topic={}".format(message.topic())
-            msg += "message.timestamp={}".format(message.timestamp())
-            msg += "message.key={}".format(message.key())
-            # msg += "message.value={}".format(message.value())
-            msg += "message.partition={}".format(message.partition())
-            msg += "message.offset={}".format(message.offset())
-            logging.error(msg)
-
         if timestamp:
-            self.producer.produce(topic, message, timestamp=timestamp, on_delivery=delivery_callback)
+            self.producer.produce(topic, message, timestamp=timestamp)
         else:
-            self.producer.produce(topic, message, on_delivery=delivery_callback)
+            self.producer.produce(topic, message)
         self.producer.flush()
-
-
-
 
     def generate_and_send_data(self, msg_id, schema="ev44"):
         time_stamp = time_in_ns()
@@ -170,8 +134,6 @@ class TestJustBinIt:
         else:
             data = generate_data(msg_id, time_stamp, num_events)
 
-
-
         # Need timestamp in ms
         self.time_stamps.append(time_stamp // 1_000_000)
         self.num_events_per_msg.append(num_events)
@@ -181,11 +143,13 @@ class TestJustBinIt:
     def get_hist_data_from_kafka(self):
         data = []
         # Move it to one from the end so we can read the final histogram
-        # self.consumer.seek(TopicPartition(self.topic_part.topic, self.topic_part.partition, OFFSET_END))
-        # end_pos = self.consumer.position(self.topic_part)
         _, high_wm = self.consumer.get_watermark_offsets(self.topic_part)
         last_highest = max(0, high_wm - 1)
-        self.consumer.seek(TopicPartition(self.topic_part.topic, self.topic_part.partition, last_highest))
+        self.consumer.seek(
+            TopicPartition(
+                self.topic_part.topic, self.topic_part.partition, last_highest
+            )
+        )
 
         while not data:
             msg = self.consumer.poll(0.005)
@@ -202,11 +166,11 @@ class TestJustBinIt:
         consumer, topic_partitions = create_consumer(RESPONSE_TOPIC)
         topic_part = topic_partitions[0]
         # Move it to one from the end so we can read the final message
-        # consumer.seek(TopicPartition(topic_part.topic, topic_part.partition, OFFSET_END))
-        # end_pos = consumer.position(topic_part)
         _, high_wm = consumer.get_watermark_offsets(topic_part)
         last_highest = max(0, high_wm - 1)
-        consumer.seek(TopicPartition(topic_part.topic, topic_part.partition, last_highest))
+        consumer.seek(
+            TopicPartition(topic_part.topic, topic_part.partition, last_highest)
+        )
 
         while not data:
             msg = consumer.poll(0.005)
@@ -318,7 +282,7 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert info["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_with_no_data_exits_interval(self, just_bin_it):  ## FAILED
+    def test_counting_for_an_interval_with_no_data_exits_interval(self, just_bin_it):
         self.ensure_topic_is_not_empty_on_startup()
 
         # Config just-bin-it
@@ -341,7 +305,7 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == 0
         assert info["state"] == "FINISHED"
 
-    def test_counting_for_an_interval_with_only_one_event_message_gets_data(  ##FAILED
+    def test_counting_for_an_interval_with_only_one_event_message_gets_data(
         self, just_bin_it
     ):
         self.ensure_topic_is_not_empty_on_startup()

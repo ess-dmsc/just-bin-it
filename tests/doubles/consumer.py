@@ -18,6 +18,7 @@ class StubConsumerRecord:
     def value(self):
         return self._value
 
+
 class StubConsumer(Consumer):
     def __init__(self, brokers, topics, num_partitions=1):
         super().__init__(brokers, topics)
@@ -71,7 +72,6 @@ class StubConsumer(Consumer):
             count = 0
             found = False
             for msg in tp["messages"]:
-                print(msg)
                 if msg.timestamp() >= requested_time:
                     result.append(count)
                     found = True

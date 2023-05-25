@@ -3,7 +3,7 @@ import os
 import sys
 import uuid
 
-from confluent_kafka import Consumer, TopicPartition, OFFSET_END
+from confluent_kafka import Consumer, TopicPartition
 
 from just_bin_it.exceptions import KafkaException
 
@@ -12,7 +12,9 @@ from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_sc
 
 
 def main(brokers, topic):
-    consumer = Consumer({"bootstrap.servers": ','.join(brokers), "group.id": uuid.uuid4()})
+    consumer = Consumer(
+        {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
+    )
     print(f"Topics = {consumer.list_topics().topics.keys()}")
 
     tp = TopicPartition(topic, 0)

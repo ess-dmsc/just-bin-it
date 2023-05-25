@@ -1,8 +1,9 @@
 import logging
-import time
 import uuid
 
-from confluent_kafka import Consumer, KafkaException as KafkaError
+from confluent_kafka import Consumer
+from confluent_kafka import KafkaException as KafkaError
+
 
 def are_kafka_settings_valid(brokers, topics):
     """
@@ -20,7 +21,9 @@ def are_kafka_settings_valid(brokers, topics):
 
 def _are_brokers_present(brokers):
     try:
-        return Consumer({"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()})
+        return Consumer(
+            {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
+        )
     except KafkaError as error:
         logging.error("Could not connect to Kafka brokers: %s", error)
         return None
