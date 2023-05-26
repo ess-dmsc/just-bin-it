@@ -1,4 +1,3 @@
-import logging
 import os.path
 import signal
 import sys
@@ -75,9 +74,8 @@ def wait_until_kafka_ready(docker_cmd, docker_options):
     topics_ready = False
 
     n_polls = 0
-    while n_polls < 6 and not topics_ready:
+    while n_polls < 10 and not topics_ready:
         topics = set(client.list_topics().topics.keys())
-        logging.error(topics)
         topics_needed = ["hist_commands"]
         present = [t in topics for t in topics_needed]
         if all(present):

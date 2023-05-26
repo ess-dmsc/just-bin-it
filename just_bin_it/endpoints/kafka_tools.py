@@ -34,7 +34,6 @@ def _are_topics_present(consumer, topics):
     try:
         metadata = consumer.list_topics(timeout=10)
         existing_topics = set(metadata.topics.keys())
-        logging.error(existing_topics)
         for tp in topics:
             if tp not in existing_topics:
                 logging.error("Could not find topic: %s", tp)

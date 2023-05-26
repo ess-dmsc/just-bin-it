@@ -92,7 +92,7 @@ class TestKafkaConsumer:
 
         offsets = consumer.offset_for_time(current_time)
 
-        # For times after the last message, the offsets should be -1 ???
+        # For times after the last message, the offsets should be -1
         assert offsets == [-1, -1, -1]
 
     def test_get_offsets_for_time_before_first_message(self):

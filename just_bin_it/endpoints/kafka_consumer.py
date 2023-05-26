@@ -57,7 +57,7 @@ class Consumer:
         for tp in self.topic_partitions:
             high_watermark = self.consumer.get_watermark_offsets(tp, cached=False)[1]
             tp.offset = high_watermark
-            # self.consumer.seek(TopicPartition(tp.topic, tp.partition, OFFSET_END))
+
         self.consumer.assign(self.topic_partitions)
 
     def _get_new_messages(self):
