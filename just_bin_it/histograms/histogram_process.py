@@ -105,6 +105,7 @@ class Processor:
             # Even if the stop time has been exceeded there still may be data
             # in the buffer to add.
             self.histogrammer.add_data(event_buffer)
+
             if self.histogrammer.is_finished():
                 self.processing_finished = True
         else:
@@ -112,9 +113,6 @@ class Processor:
                 time_in_ns() // 1_000_000,
                 self.histogrammer.stop
             )
-
-            if self.histogrammer.is_finished():
-                self.processing_finished = True
 
         if self.processing_finished:
             self.histogrammer.set_finished()
