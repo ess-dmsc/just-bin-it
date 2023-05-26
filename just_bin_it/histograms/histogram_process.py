@@ -115,11 +115,6 @@ class Processor:
 
             if self.histogrammer.is_finished():
                 self.processing_finished = True
-        else:
-            self.processing_finished |= self.is_stop_time_exceeded(
-                time_in_ns() // 1_000_000,
-                self.histogrammer.stop
-            )
 
         if self.processing_finished:
             self.histogrammer.set_finished()
