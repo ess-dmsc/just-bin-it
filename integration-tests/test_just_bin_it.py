@@ -93,9 +93,7 @@ class TestJustBinIt:
         admin_client = AdminClient(conf)
         uid = time_in_ns() // 1000
         self.hist_topic_name = f"hist_{uid}"
-        # self.hist_topic_name = "hist_123"
         self.data_topic_name = f"data_{uid}"
-        # self.data_topic_name = "data_123"
         hist_topic = NewTopic(self.hist_topic_name, 1, 1)
         data_topic = NewTopic(self.data_topic_name, 2, 1)
         admin_client.create_topics([hist_topic, data_topic])
