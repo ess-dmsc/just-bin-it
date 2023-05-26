@@ -22,7 +22,6 @@ def safe_convert(msg, converter):
         logging.debug("SourceException: %s", error)  # pragma: no mutate
         return None
 
-
 def convert_messages(messages, converter):
     return [res for res in (safe_convert(msg, converter) for msg in messages) if res is not None]
 
