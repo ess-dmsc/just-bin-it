@@ -15,7 +15,7 @@ from just_bin_it.histograms.histogram2d_roi import ROI_TYPE
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
-def safe_convert(msg, converter):
+def _safe_convert(msg, converter):
     try:
         return msg.timestamp(), msg.offset(), converter(msg.value())
     except Exception as error:
@@ -26,7 +26,7 @@ def safe_convert(msg, converter):
 def convert_messages(messages, converter):
     return [
         res
-        for res in (safe_convert(msg, converter) for msg in messages)
+        for res in (_safe_convert(msg, converter) for msg in messages)
         if res is not None
     ]
 
