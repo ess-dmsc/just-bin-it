@@ -65,9 +65,14 @@ def create_histogrammer(configuration, start, stop, hist_schema):
     return Histogrammer(hist_sink, histograms, start, stop)
 
 
+class Time:
+    def time_in_ns(self):
+        return time_in_ns()
+
+
 class Processor:
     def __init__(
-        self, histogrammer, event_source, msg_queue, stats_queue, publish_interval
+        self, histogrammer, event_source, msg_queue, stats_queue, publish_interval, time_source = Time()
     ):
         """
         Constructor.
@@ -87,9 +92,10 @@ class Processor:
         self.stats_queue = stats_queue
         self.publish_interval = publish_interval
         self.processing_finished = False
+        self.time = time_source
 
         # Publish initial empty histograms and stats.
-        self.publish_data(time_in_ns())
+        self.publish_data(self.time.time_in_ns())
 
     def run_processing(self):
         """
@@ -110,7 +116,7 @@ class Processor:
                     self.processing_finished = True
             else:
                 self.processing_finished |= self.is_stop_time_exceeded(
-                    time_in_ns() // 1_000_000,
+                    self.time.time_in_ns() // 1_000_000,
                     self.histogrammer.stop
                 )
 
@@ -118,7 +124,7 @@ class Processor:
             self.histogrammer.set_finished()
 
         # Only publish at specified rate or if the process is stopping.
-        curr_time = time_in_ns()
+        curr_time = self.time.time_in_ns()
         if curr_time // 1_000_000 > self.time_to_publish or self.processing_finished:
             self.publish_data(curr_time)
             self.time_to_publish = curr_time // 1_000_000 + self.publish_interval

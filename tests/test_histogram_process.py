@@ -79,6 +79,14 @@ class StubEventSource:
         )
 
 
+class StubTime:
+    def __init__(self):
+        self.curr_time_ns = 0
+
+    def time_in_ns(self):
+        return self.curr_time_ns
+
+
 class TestHistogramProcess:
     @staticmethod
     def generate_histogrammer(producer, start_time, stop_time, hist_configs):
@@ -97,7 +105,9 @@ class TestHistogramProcess:
         )
 
         event_source = StubEventSource()
-        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+        processor = Processor(
+            histogrammer, event_source, Queue(), Queue(), 1000, StubTime()
+        )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
         irrelevant_det_ids = [123] * len(tofs)
@@ -109,10 +119,10 @@ class TestHistogramProcess:
             )
             processor.run_processing()
 
-        _, (final_hist, _, final_msg) = producer.messages[~0]
+        _, (last_hist, _, last_msg) = producer.messages[~0]
 
-        assert np.array_equal(final_hist.data, [6, 6, 6, 6, 6])
-        assert json.loads(final_msg)["state"] == "FINISHED"
+        assert np.array_equal(last_hist.data, [6, 6, 6, 6, 6])
+        assert json.loads(last_msg)["state"] == "FINISHED"
 
     def test_number_events_histogrammed_correspond_to_start_and_stop_times(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -126,7 +136,9 @@ class TestHistogramProcess:
         )
 
         event_source = StubEventSource()
-        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+        processor = Processor(
+            histogrammer, event_source, Queue(), Queue(), 1000, StubTime()
+        )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
         irrelevant_det_ids = [123] * len(tofs)
@@ -138,15 +150,15 @@ class TestHistogramProcess:
             )
             processor.run_processing()
 
-        _, (final_hist, _, final_msg) = producer.messages[~0]
+        _, (last_hist, _, last_msg) = producer.messages[~0]
 
-        assert np.array_equal(final_hist.data, [9, 9, 9, 9, 9])
-        assert json.loads(final_msg)["state"] == "FINISHED"
+        assert np.array_equal(last_hist.data, [9, 9, 9, 9, 9])
+        assert json.loads(last_msg)["state"] == "FINISHED"
 
     def test_counting_for_duration_with_no_data_exits_after_stop_time(self):
         config = copy.deepcopy(CONFIG_1D)
         config["start"] = 0
-        config["stop"] = 8_000
+        config["stop"] = 8 * 1000
         start_time, stop_time, hist_configs, _, _ = parse_config(config)
 
         producer = SpyProducer()
@@ -155,16 +167,25 @@ class TestHistogramProcess:
         )
 
         event_source = StubEventSource()
-        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+        time_source = StubTime()
+        processor = Processor(
+            histogrammer, event_source, Queue(), Queue(), 1000, time_source
+        )
 
-        # No data at all
         processor.run_processing()
-        # TODO: wall clock time is past stop_time because time.time() - do we stub a clock?
 
-        _, (final_hist, _, final_msg) = producer.messages[~0]
+        _, (last_hist, _, last_msg) = producer.messages[~0]
 
-        assert np.array_equal(final_hist.data, [0, 0, 0, 0, 0])
-        assert json.loads(final_msg)["state"] == "FINISHED"
+        assert json.loads(last_msg)["state"] == "INITIALISED"
+
+        # Advance time past stop time + leeway
+        time_source.curr_time_ns = 15 * 1_000_000_000
+        processor.run_processing()
+
+        _, (last_hist, _, last_msg) = producer.messages[~0]
+
+        assert np.array_equal(last_hist.data, [0, 0, 0, 0, 0])
+        assert json.loads(last_msg)["state"] == "FINISHED"
 
     def test_counting_for_an_interval_with_only_one_event_message_gets_data(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -178,7 +199,10 @@ class TestHistogramProcess:
         )
 
         event_source = StubEventSource()
-        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+        time_source = StubTime()
+        processor = Processor(
+            histogrammer, event_source, Queue(), Queue(), 1000, time_source
+        )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
         irrelevant_det_ids = [123] * len(tofs)
@@ -192,10 +216,55 @@ class TestHistogramProcess:
 
         processor.run_processing()
 
-        _, (final_hist, _, final_msg) = producer.messages[~0]
+        _, (last_hist, _, last_msg) = producer.messages[~0]
 
-        assert np.array_equal(final_hist.data, [1, 1, 1, 1, 1])
-        assert json.loads(final_msg)["state"] == "FINISHED"
+        assert json.loads(last_msg)["state"] == "INITIALISED"
+
+        # Advance time past stop time + leeway
+        time_source.curr_time_ns = 15 * 1_000_000_000
+        processor.run_processing()
+
+        _, (last_hist, _, last_msg) = producer.messages[~0]
+
+        assert np.array_equal(last_hist.data, [1, 1, 1, 1, 1])
+        assert json.loads(last_msg)["state"] == "FINISHED"
+
+    def test_if_wallclock_has_exceeded_stop_time_but_data_has_not_then_continues(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 0
+        config["stop"] = 8_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+
+        producer = SpyProducer()
+        histogrammer = self.generate_histogrammer(
+            producer, start_time, stop_time, hist_configs
+        )
+
+        event_source = StubEventSource()
+        time_source = StubTime()
+        processor = Processor(
+            histogrammer, event_source, Queue(), Queue(), 1000, time_source
+        )
+
+        # Advance time past stop time + leeway
+        time_source.curr_time_ns = 15 * 1_000_000_000
+
+        tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
+        irrelevant_det_ids = [123] * len(tofs)
+
+        for time_offset in [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000]:
+            # Inject some fake data
+            event_source.append_data(
+                "::source::", start_time + time_offset, tofs, irrelevant_det_ids
+            )
+            processor.run_processing()
+
+        processor.run_processing()
+
+        _, (last_hist, _, last_msg) = producer.messages[~0]
+
+        assert np.array_equal(last_hist.data, [9, 9, 9, 9, 9])
+        assert json.loads(last_msg)["state"] == "FINISHED"
 
     def test_counting_during_an_empty_duration_after_stop_time_data_is_ignored(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -209,7 +278,9 @@ class TestHistogramProcess:
         )
 
         event_source = StubEventSource()
-        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+        processor = Processor(
+            histogrammer, event_source, Queue(), Queue(), 1000, StubTime()
+        )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
         irrelevant_det_ids = [123] * len(tofs)
@@ -221,10 +292,10 @@ class TestHistogramProcess:
             )
             processor.run_processing()
 
-        _, (final_hist, _, final_msg) = producer.messages[~0]
+        _, (last_hist, _, last_msg) = producer.messages[~0]
 
-        assert np.array_equal(final_hist.data, [0, 0, 0, 0, 0])
-        assert json.loads(final_msg)["state"] == "FINISHED"
+        assert np.array_equal(last_hist.data, [0, 0, 0, 0, 0])
+        assert json.loads(last_msg)["state"] == "FINISHED"
 
     def test_open_ended_counting_for_a_while_then_stop_command_triggers_finished(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -238,7 +309,9 @@ class TestHistogramProcess:
 
         event_source = StubEventSource()
         msg_queue = Queue()
-        processor = Processor(histogrammer, event_source, msg_queue, Queue(), 1000)
+        processor = Processor(
+            histogrammer, event_source, msg_queue, Queue(), 1000, StubTime()
+        )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
         irrelevant_det_ids = [123] * len(tofs)
@@ -260,10 +333,10 @@ class TestHistogramProcess:
             )
             processor.run_processing()
 
-        _, (final_hist, _, final_msg) = producer.messages[~0]
+        _, (last_hist, _, last_msg) = producer.messages[~0]
 
-        assert np.array_equal(final_hist.data, [5, 5, 5, 5, 5])
-        assert json.loads(final_msg)["state"] == "FINISHED"
+        assert np.array_equal(last_hist.data, [5, 5, 5, 5, 5])
+        assert json.loads(last_msg)["state"] == "FINISHED"
 
 
 @pytest.mark.slow
