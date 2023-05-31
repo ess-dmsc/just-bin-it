@@ -13,7 +13,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import (
     SCHEMAS_TO_DESERIALISERS,
     get_schema,
-    serialise_ev42,
     serialise_ev44,
 )
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
@@ -69,11 +68,6 @@ def generate_data(msg_id, time_stamp, num_events):
     return serialise_ev44("integration test", msg_id, time_stamp, tofs, dets)
 
 
-def generate_data_ev42(msg_id, time_stamp, num_events):
-    tofs, dets = generate_fake_data(TOF_RANGE, DET_RANGE, num_events)
-    return serialise_ev42("integration test", msg_id, time_stamp, tofs, dets)
-
-
 class TestJustBinIt:
     @pytest.fixture(autouse=True)
     def prepare(self):
@@ -117,15 +111,12 @@ class TestJustBinIt:
             self.producer.send(topic, message)
         self.producer.flush()
 
-    def generate_and_send_data(self, msg_id, schema="ev44"):
+    def generate_and_send_data(self, msg_id):
         time_stamp = time_in_ns()
         # Generate a random number of events so we can be sure the correct data matches
         # up at the end.
         num_events = random.randint(500, 1500)
-        if schema == "ev42":
-            data = generate_data_ev42(msg_id, time_stamp, num_events)
-        else:
-            data = generate_data(msg_id, time_stamp, num_events)
+        data = generate_data(msg_id, time_stamp, num_events)
 
         # Need timestamp in ms
         self.time_stamps.append(time_stamp // 1_000_000)
@@ -162,12 +153,6 @@ class TestJustBinIt:
 
         msg = data[topic_part][-1]
         return msg.value
-
-    def ensure_topic_is_not_empty_on_startup(self):
-        #  Put some data in it, so jbi doesn't complain about an empty topic
-        for i in range(10):
-            self.generate_and_send_data(i)
-        time.sleep(1)
 
     def test_basic_operation(
         self, just_bin_it
@@ -207,7 +192,7 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "FINISHED"
 
-    def test_supplying_msg_id_get_acknowledgement_response(self, just_bin_it):
+    def test_supplying_msg_id_gets_acknowledgement_response(self, just_bin_it):
         # Configure just-bin-it
         config = self.create_basic_config()
         config["msg_id"] = f"{time_in_ns() // 1000}"
@@ -223,7 +208,7 @@ class TestJustBinIt:
         assert json.loads(msg)["msg_id"] == config["msg_id"]
         assert json.loads(msg)["response"] == "ACK"
 
-    def test_supplying_msg_id_get_error_response(self, just_bin_it):
+    def test_supplying_msg_id_gets_error_response(self, just_bin_it):
         # Configure just-bin-it
         config = self.create_basic_config()
         config["cmd"] = "not a valid command"
