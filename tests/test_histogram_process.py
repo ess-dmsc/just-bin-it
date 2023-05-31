@@ -1,12 +1,37 @@
+import copy
+import json
 import time
 from multiprocessing import Queue
 
+import numpy as np
 import pytest
 
+from just_bin_it.endpoints.histogram_sink import HistogramSink
+from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
+from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
 from just_bin_it.histograms.histogram_process import Processor
+from just_bin_it.histograms.histogrammer import Histogrammer
+from tests.doubles.producers import SpyProducer
+
+CONFIG_1D = {
+    "cmd": "config",
+    "histograms": [
+        {
+            "type": TOF_1D_TYPE,
+            "data_brokers": ["broker"],
+            "data_topics": ["some_topic"],
+            "tof_range": [0, 50],  # Five bins of width 10
+            "num_bins": 5,
+            "topic": "some_topic",
+            "id": "id",
+        }
+    ],
+}
+
+STOP_CMD = {"cmd": "stop"}
 
 
-class MockHistogrammer:
+class SpyHistogrammer:
     def __init__(self):
         self.cleared = False
         self.histogramming_stopped = False
@@ -34,23 +59,219 @@ class MockHistogrammer:
         self.data_received.append(event_buffer)
 
 
-class MockEventSource:
+class StubEventSource:
     def __init__(self):
         self.data = []
 
     def get_new_data(self):
-        return self.data
+        return [self.data.pop(0)] if self.data else None
 
     def seek_to_start_time(self):
         pass
 
+    def append_data(self, source_name, pulse_time, time_of_flight, detector_id):
+        self.data.append(
+            (
+                pulse_time,  # Kafka timestamp
+                123,  # Kafka offset (irrelevant for these tests)
+                (source_name, pulse_time, time_of_flight, detector_id),
+            )
+        )
+
+
+class TestHistogramProcess:
+    @staticmethod
+    def generate_histogrammer(producer, start_time, stop_time, hist_configs):
+        histograms = HistogramFactory.generate(hist_configs)
+        hist_sink = HistogramSink(producer, lambda x, y, z: (x, y, z))
+        return Histogrammer(hist_sink, histograms, start_time, stop_time)
+
+    def test_counting_for_an_interval_gets_all_data_during_interval(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["interval"] = 5
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+
+        producer = SpyProducer()
+        histogrammer = self.generate_histogrammer(
+            producer, start_time, stop_time, hist_configs
+        )
+
+        event_source = StubEventSource()
+        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+
+        tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
+        irrelevant_det_ids = [123] * len(tofs)
+
+        for time_offset in [0, 1000, 2000, 3000, 4000, 5000, 5001]:
+            # Inject some fake data
+            event_source.append_data(
+                "::source::", start_time + time_offset, tofs, irrelevant_det_ids
+            )
+            processor.run_processing()
+
+        _, (final_hist, _, final_msg) = producer.messages[~0]
+
+        assert np.array_equal(final_hist.data, [6, 6, 6, 6, 6])
+        assert json.loads(final_msg)["state"] == "FINISHED"
+
+    def test_number_events_histogrammed_correspond_to_start_and_stop_times(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 0
+        config["stop"] = 8_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+
+        producer = SpyProducer()
+        histogrammer = self.generate_histogrammer(
+            producer, start_time, stop_time, hist_configs
+        )
+
+        event_source = StubEventSource()
+        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+
+        tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
+        irrelevant_det_ids = [123] * len(tofs)
+
+        for time_offset in [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 8001]:
+            # Inject some fake data
+            event_source.append_data(
+                "::source::", start_time + time_offset, tofs, irrelevant_det_ids
+            )
+            processor.run_processing()
+
+        _, (final_hist, _, final_msg) = producer.messages[~0]
+
+        assert np.array_equal(final_hist.data, [9, 9, 9, 9, 9])
+        assert json.loads(final_msg)["state"] == "FINISHED"
+
+    def test_counting_for_duration_with_no_data_exits_after_stop_time(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 0
+        config["stop"] = 8_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+
+        producer = SpyProducer()
+        histogrammer = self.generate_histogrammer(
+            producer, start_time, stop_time, hist_configs
+        )
+
+        event_source = StubEventSource()
+        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+
+        # No data at all
+        processor.run_processing()
+        # TODO: wall clock time is past stop_time because time.time() - do we stub a clock?
+
+        _, (final_hist, _, final_msg) = producer.messages[~0]
+
+        assert np.array_equal(final_hist.data, [0, 0, 0, 0, 0])
+        assert json.loads(final_msg)["state"] == "FINISHED"
+
+    def test_counting_for_an_interval_with_only_one_event_message_gets_data(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 0
+        config["stop"] = 8_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+
+        producer = SpyProducer()
+        histogrammer = self.generate_histogrammer(
+            producer, start_time, stop_time, hist_configs
+        )
+
+        event_source = StubEventSource()
+        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+
+        tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
+        irrelevant_det_ids = [123] * len(tofs)
+
+        for time_offset in [4000]:
+            # Inject some fake data
+            event_source.append_data(
+                "::source::", start_time + time_offset, tofs, irrelevant_det_ids
+            )
+            processor.run_processing()
+
+        processor.run_processing()
+
+        _, (final_hist, _, final_msg) = producer.messages[~0]
+
+        assert np.array_equal(final_hist.data, [1, 1, 1, 1, 1])
+        assert json.loads(final_msg)["state"] == "FINISHED"
+
+    def test_counting_during_an_empty_duration_after_stop_time_data_is_ignored(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 0
+        config["stop"] = 8_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+
+        producer = SpyProducer()
+        histogrammer = self.generate_histogrammer(
+            producer, start_time, stop_time, hist_configs
+        )
+
+        event_source = StubEventSource()
+        processor = Processor(histogrammer, event_source, Queue(), Queue(), 1000)
+
+        tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
+        irrelevant_det_ids = [123] * len(tofs)
+
+        for time_offset in [8001, 8002]:
+            # Inject some fake data
+            event_source.append_data(
+                "::source::", start_time + time_offset, tofs, irrelevant_det_ids
+            )
+            processor.run_processing()
+
+        _, (final_hist, _, final_msg) = producer.messages[~0]
+
+        assert np.array_equal(final_hist.data, [0, 0, 0, 0, 0])
+        assert json.loads(final_msg)["state"] == "FINISHED"
+
+    def test_open_ended_counting_for_a_while_then_stop_command_triggers_finished(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 0
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+
+        producer = SpyProducer()
+        histogrammer = self.generate_histogrammer(
+            producer, start_time, stop_time, hist_configs
+        )
+
+        event_source = StubEventSource()
+        msg_queue = Queue()
+        processor = Processor(histogrammer, event_source, msg_queue, Queue(), 1000)
+
+        tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
+        irrelevant_det_ids = [123] * len(tofs)
+
+        for time_offset in [0, 1000, 2000, 3000, 4000]:
+            # Inject some fake data
+            event_source.append_data(
+                "::source::", start_time + time_offset, tofs, irrelevant_det_ids
+            )
+            processor.run_processing()
+
+        msg_queue.put("stop")
+        time.sleep(0.5)
+
+        for time_offset in [5000, 6000, 7000, 8000]:
+            # Inject some fake data
+            event_source.append_data(
+                "::source::", start_time + time_offset, tofs, irrelevant_det_ids
+            )
+            processor.run_processing()
+
+        _, (final_hist, _, final_msg) = producer.messages[~0]
+
+        assert np.array_equal(final_hist.data, [5, 5, 5, 5, 5])
+        assert json.loads(final_msg)["state"] == "FINISHED"
+
 
 @pytest.mark.slow
-class TestHistogramProcessLowLevel:
+class TestHistogramProcessCommands:
     @pytest.fixture(autouse=True)
     def prepare(self):
-        self.histogrammer = MockHistogrammer()
-        self.event_source = MockEventSource()
+        self.histogrammer = SpyHistogrammer()
+        self.event_source = StubEventSource()
         self.msg_queue = Queue()
         self.stats_queue = Queue()
         self.processor = Processor(
@@ -64,15 +285,6 @@ class TestHistogramProcessLowLevel:
     def _queue_command_message(self, message):
         self.msg_queue.put(message)
         time.sleep(0.1)
-
-    def _get_number_of_stats_messages(self):
-        time.sleep(0.1)
-        # qsize is not implemented on Mac OSX, so we need to count the messages manually.
-        count = 0
-        while not self.stats_queue.empty():
-            count += 1
-            self.stats_queue.get(block=True)
-        return count
 
     def test_unrecognised_command_does_not_trigger_stop(self):
         self._queue_command_message("unknown command")
@@ -95,6 +307,36 @@ class TestHistogramProcessLowLevel:
 
         assert self.processor.processing_finished
         assert self.histogrammer.histogramming_stopped
+
+
+@pytest.mark.slow
+class TestHistogramProcessPublishing:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        self.histogrammer = SpyHistogrammer()
+        self.event_source = StubEventSource()
+        self.msg_queue = Queue()
+        self.stats_queue = Queue()
+        self.processor = Processor(
+            self.histogrammer,
+            self.event_source,
+            self.msg_queue,
+            self.stats_queue,
+            publish_interval=500,
+        )
+
+    def _queue_command_message(self, message):
+        self.msg_queue.put(message)
+        time.sleep(0.1)
+
+    def _get_number_of_stats_messages(self):
+        time.sleep(0.1)
+        # qsize is not implemented on Mac OSX, so we need to count the messages manually.
+        count = 0
+        while not self.stats_queue.empty():
+            count += 1
+            self.stats_queue.get(block=True)
+        return count
 
     def test_histograms_published_on_initialisation(self):
         assert self.histogrammer.times_publish_called == 1

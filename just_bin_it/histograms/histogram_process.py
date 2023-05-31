@@ -98,20 +98,21 @@ class Processor:
         if not self.msg_queue.empty():
             self.processing_finished |= self.process_command_message()
 
-        event_buffer = self.event_source.get_new_data()
+        if not self.processing_finished:
+            event_buffer = self.event_source.get_new_data()
 
-        if event_buffer:
-            # Even if the stop time has been exceeded there still may be data
-            # in the buffer to add.
-            self.histogrammer.add_data(event_buffer)
+            if event_buffer:
+                # Even if the stop time has been exceeded there still may be data
+                # in the buffer to add.
+                self.histogrammer.add_data(event_buffer)
 
-            if self.histogrammer.is_finished():
-                self.processing_finished = True
-        else:
-            self.processing_finished |= self.is_stop_time_exceeded(
-                time_in_ns() // 1_000_000,
-                self.histogrammer.stop
-            )
+                if self.histogrammer.is_finished():
+                    self.processing_finished = True
+            else:
+                self.processing_finished |= self.is_stop_time_exceeded(
+                    time_in_ns() // 1_000_000,
+                    self.histogrammer.stop
+                )
 
         if self.processing_finished:
             self.histogrammer.set_finished()
