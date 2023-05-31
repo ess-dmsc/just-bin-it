@@ -72,7 +72,7 @@ class Time:
 
 class Processor:
     def __init__(
-        self, histogrammer, event_source, msg_queue, stats_queue, publish_interval, time_source = Time()
+        self, histogrammer, event_source, msg_queue, stats_queue, publish_interval, time_source=Time()
     ):
         """
         Constructor.
