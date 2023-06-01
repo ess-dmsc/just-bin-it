@@ -1,7 +1,7 @@
 {
     "cmd": "config",
     "msg_id": "some_unique_id",
-    "input_schema": "ev42",
+    "input_schema": "ev44",
     "output_schema": "hs01",
     "histograms": [
         {
