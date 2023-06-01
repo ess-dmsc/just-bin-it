@@ -7,7 +7,7 @@ import time
 import uuid
 
 import pytest
-from confluent_kafka import Consumer, Producer, TopicPartition
+from confluent_kafka import OFFSET_END, Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
@@ -61,7 +61,10 @@ def create_consumer(topic):
     partition_numbers = [p.id for p in metadata.topics[topic].partitions.values()]
 
     for pn in partition_numbers:
-        topic_partitions.append(TopicPartition(topic, pn))
+        partition = TopicPartition(topic, pn)
+        # Make sure consumer is at end of the partition(s)
+        partition.offset = OFFSET_END
+        topic_partitions.append(partition)
 
     consumer.assign(topic_partitions)
     return consumer, topic_partitions
