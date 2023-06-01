@@ -39,7 +39,7 @@ class StubConsumer(Consumer):
     def _assign_topics(self, topics):
         pass
 
-    def _get_new_messages(self):
+    def get_new_messages(self):
         # From Kafka we get a dictionary of topics which contains a list of
         # consumer records which we want 'value' from.
         # Recreate the structure here to match that.
@@ -52,11 +52,11 @@ class StubConsumer(Consumer):
                 v["offset"] += 1
         return data
 
-    def _seek_by_offsets(self, offsets):
+    def seek_by_offsets(self, offsets):
         for tp, offset in zip(self.topic_partitions.values(), offsets):
             tp["offset"] = offset
 
-    def _get_offset_range(self):
+    def get_offset_range(self):
         offset_ranges = []
         for tp in self.topic_partitions.values():
             if tp["messages"]:
@@ -66,7 +66,7 @@ class StubConsumer(Consumer):
 
         return offset_ranges
 
-    def _offset_for_time(self, requested_time):
+    def offset_for_time(self, requested_time):
         result = []
         for tp in self.topic_partitions.values():
             count = 0
@@ -82,7 +82,7 @@ class StubConsumer(Consumer):
                 result.append(None)
         return result
 
-    def _get_positions(self):
+    def get_positions(self):
         positions = []
         for tp in self.topic_partitions.values():
             positions.append(tp["offset"])

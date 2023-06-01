@@ -60,7 +60,12 @@ class Consumer:
 
         self.consumer.assign(self.topic_partitions)
 
-    def _get_new_messages(self):
+    def get_new_messages(self):
+        """
+        Get any new messages.
+
+        :return: The dict containing the messages.
+        """
         data = []
         while True:
             messages = self.consumer.consume(timeout=0.005)
@@ -77,14 +82,6 @@ class Consumer:
                 )
         return data
 
-    def get_new_messages(self):
-        """
-        Get any new messages.
-
-        :return: The dict containing the messages.
-        """
-        return self._get_new_messages()
-
     def offset_for_time(self, start_time: int):
         """
         Find the offset to the position corresponding to the supplied time.
@@ -92,9 +89,6 @@ class Consumer:
         :param start_time: Time to seek in microseconds.
         :return: The offset number.
         """
-        return self._offset_for_time(start_time)
-
-    def _offset_for_time(self, start_time):
         partitions = [
             TopicPartition(tp.topic, tp.partition, start_time)
             for tp in self.topic_partitions
@@ -112,9 +106,6 @@ class Consumer:
 
         :param offsets: The requested offsets.
         """
-        self._seek_by_offsets(offsets)
-
-    def _seek_by_offsets(self, offsets):
         for tp, offset in zip(self.topic_partitions, offsets):
             tp.offset = offset
 
@@ -127,9 +118,6 @@ class Consumer:
 
         :return: Tuple of lowest and highest offsets.
         """
-        return self._get_offset_range()
-
-    def _get_offset_range(self):
         offset_ranges = []
         for tp in self.topic_partitions:
             try:
@@ -149,9 +137,6 @@ class Consumer:
 
         :return: List of positions.
         """
-        return self._get_positions()
-
-    def _get_positions(self):
         positions = []
         for tp in self.topic_partitions:
             logging.error(self.consumer.position([tp]))
