@@ -1,8 +1,13 @@
-import argparse
 import os
 import sys
 
+import configargparse as argparse
 import numpy as np
+
+from just_bin_it.utilities.sasl_utils import (
+    add_sasl_commandline_options,
+    generate_kafka_security_config,
+)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_consumer import Consumer
@@ -35,15 +40,16 @@ def convert_for_plotting(histogram_data):
     return [hist]
 
 
-def main(brokers, topic, log_scale_for_2d):
+def main(brokers, topic, log_scale_for_2d, kafka_config):
     """
 
     :param brokers: The brokers to listen for data on.
     :param topic: The topic to listen for data on.
     :param log_scale_for_2d: Whether to plot 2D images on a log scale
+    :param kafka_config: The security settings for Kafka.
     """
     # Create the listener
-    hist_consumer = Consumer(brokers, [topic])
+    hist_consumer = Consumer(brokers, [topic], kafka_config)
     hist_source = HistogramSource(hist_consumer)
 
     buffs = []
@@ -79,5 +85,16 @@ if __name__ == "__main__":
         "-l", "--log-scale", type=bool, help="the histogram data topic", default=False
     )
 
+    add_sasl_commandline_options(parser)
+
     args = parser.parse_args()
-    main(args.brokers, args.topic, args.log_scale)
+
+    kafka_config = generate_kafka_security_config(
+        args.security_protocol,
+        args.sasl_mechanism,
+        args.sasl_username,
+        args.sasl_password,
+        args.ssl_cafile,
+    )
+
+    main(args.brokers, args.topic, args.log_scale, kafka_config)

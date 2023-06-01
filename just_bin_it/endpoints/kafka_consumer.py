@@ -1,6 +1,5 @@
 import logging
 import uuid
-from typing import List
 
 from confluent_kafka import Consumer as KafkaConsumer
 from confluent_kafka import KafkaException as KafkaError
@@ -19,24 +18,24 @@ class Consumer:
     Note: Can only handle one topic.
     """
 
-    def __init__(self, brokers: List[str], topics: List[str]):
+    def __init__(self, brokers, topics, security_config):
         """
         Constructor.
 
         :param brokers: The names of the brokers to connect to.
         :param topics: The names of the data topics.
+        :param security_config: The security confi for Kafka
         """
         self.topic_partitions = []
         try:
-            self.consumer = self._create_consumer(brokers)
+            self.consumer = self._create_consumer(brokers, security_config)
             self._assign_topics(topics)
         except KafkaError as error:
             raise KafkaException(error)
 
-    def _create_consumer(self, brokers):
-        return KafkaConsumer(
-            {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
-        )
+    def _create_consumer(self, brokers, security_config):
+        options = {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
+        return KafkaConsumer({**options, **security_config})
 
     def _assign_topics(self, topics):
         # Only use the first topic

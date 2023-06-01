@@ -12,19 +12,19 @@ class Producer:
     mock the Kafka side without making the tests trivial or pointless.
     """
 
-    def __init__(self, brokers):
+    def __init__(self, brokers, security_config):
         """
         Constructor.
 
         :param brokers: The brokers to connect to.
+        :param security_config: The security configuration for Kafka.
         """
         try:
-            self.producer = KafkaProducer(
-                {
-                    "bootstrap.servers": ",".join(brokers),
-                    "message.max.bytes": 100_000_000,
-                }
-            )
+            options = {
+                "bootstrap.servers": ",".join(brokers),
+                "message.max.bytes": 100_000_000,
+            }
+            self.producer = KafkaProducer({**options, **security_config})
         except KafkaError as error:
             raise KafkaException(error)
 
