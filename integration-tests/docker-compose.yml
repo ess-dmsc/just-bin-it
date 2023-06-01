@@ -3,7 +3,6 @@ version: '3.7'
 services:
   kafka:
     image: wurstmeister/kafka:2.12-2.1.0
-#    image: confluentinc/cp-kafka:latest
     depends_on:
       - zookeeper
     hostname: kafka
@@ -13,20 +12,13 @@ services:
     environment:
       KAFKA_ADVERTISED_HOST_NAME: localhost
       KAFKA_ADVERTISED_PORT: 9092
-#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_MESSAGE_MAX_BYTES: 10000000
       KAFKA_BROKER_ID: 0
       KAFKA_CREATE_TOPICS: "hist_commands:1:1,event_data:2:1,hist_topic:1:1,hist_responses:1:1"
-#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-#      CONFLUENT_SUPPORT_METRICS_ENABLE: 'false'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
   zookeeper:
     image: zookeeper:3.4
-#    image: confluentinc/cp-zookeeper:latest
-#    environment:
-#      ZOOKEEPER_CLIENT_PORT: 2181
-#      ZOOKEEPER_TICK_TIME: 2000
     platform: linux/amd64
