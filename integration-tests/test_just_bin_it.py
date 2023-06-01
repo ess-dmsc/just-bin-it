@@ -63,13 +63,6 @@ def create_consumer(topic):
     for pn in partition_numbers:
         topic_partitions.append(TopicPartition(topic, pn))
 
-    # make sure offsets are at the end
-    for tp in topic_partitions:
-        high_watermark = consumer.get_watermark_offsets(tp, timeout=10.0, cached=False)[
-            1
-        ]
-        tp.offset = high_watermark
-
     consumer.assign(topic_partitions)
     return consumer, topic_partitions
 
