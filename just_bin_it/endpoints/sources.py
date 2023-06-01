@@ -14,6 +14,9 @@ from just_bin_it.histograms.histogram2d_map import MAP_TYPE
 from just_bin_it.histograms.histogram2d_roi import ROI_TYPE
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
+IRRELEVANT_OFFSET = 0
+IRRELEVANT_TYPE = 0
+
 
 def _safe_convert(msg, converter):
     try:
@@ -168,7 +171,13 @@ class SimulatedEventSource:
     def _generate_data(self):
         tofs, dets = generate_fake_data(self.tof_range, self.det_range, self.num_events)
         data = ("simulator", math.floor(time.time() * 10**9), tofs, dets, None)
-        return [(int(time.time() * self.num_events), 0, data)]
+        return [
+            (
+                (IRRELEVANT_TYPE, int(time.time() * self.num_events)),
+                IRRELEVANT_OFFSET,
+                data,
+            )
+        ]
 
     def _generate_dethist_data(self):
         dets = []
@@ -180,7 +189,13 @@ class SimulatedEventSource:
             for det in new_dets:
                 dets.append(h * self.width + det)
         data = ("simulator", math.floor(time.time() * 10**9), [], dets, None)
-        return [(int(time.time() * self.num_events), 0, data)]
+        return [
+            (
+                (IRRELEVANT_TYPE, int(time.time() * self.num_events)),
+                IRRELEVANT_OFFSET,
+                data,
+            )
+        ]
 
     def seek_to_start_time(self):
         """

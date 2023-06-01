@@ -184,8 +184,8 @@ def run_processing(
     stop,
     hist_schema,
     event_schema,
-    publish_interval,
     kafka_security_config,
+    publish_interval,
     simulation=False,
 ):
     """

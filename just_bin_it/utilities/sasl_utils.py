@@ -67,7 +67,7 @@ def generate_kafka_security_config(
         )
 
     logging.info(f"Using Kafka security protocol {protocol}")
-    config["security_protocol"] = protocol
+    config["security.protocol"] = protocol
 
     if "SASL_" in protocol:
         if mechanism not in supported_sasl_mechanisms:
@@ -76,16 +76,16 @@ def generate_kafka_security_config(
             )
 
         logging.info(f"Using SASL mechanism {mechanism}")
-        config["sasl_mechanism"] = mechanism
+        config["sasl.mechanism"] = mechanism
 
         if not username or not password:
             raise Exception(f"Username and password are required with {protocol}")
 
-        config["sasl_plain_username"] = username
-        config["sasl_plain_password"] = password
+        config["sasl.username"] = username
+        config["sasl.password"] = password
 
     if "_SSL" in protocol:
         logging.info(f"Using CA certificate file {cafile}")
-        config["ssl_cafile"] = cafile
+        config["ssl.ca.location"] = cafile
 
     return config

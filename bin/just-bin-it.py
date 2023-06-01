@@ -112,7 +112,9 @@ class Main:
         self.producer = Producer(self.config_brokers, self.kafka_security_config)
 
         self.command_actioner = CommandActioner(
-            ResponsePublisher(self.producer, self.response_topic), self.simulation
+            ResponsePublisher(self.producer, self.response_topic),
+            self.kafka_security_config,
+            self.simulation,
         )
 
         if self.heartbeat_topic:
