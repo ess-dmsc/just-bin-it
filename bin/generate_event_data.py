@@ -1,13 +1,18 @@
-import argparse
 import os
 import sys
 import time
+
+import configargparse as argparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.serialisation import serialise_ev42
 from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
+from just_bin_it.utilities.sasl_utils import (
+    add_sasl_commandline_options,
+    generate_kafka_security_config,
+)
 
 TOF_RANGE = (0, 100_000_000)
 DET_RANGE = (1, 10000)
@@ -38,8 +43,8 @@ def generate_dethist_data(source, message_id, num_points):
     return time_stamp, data
 
 
-def main(brokers, topic, num_msgs, num_points, det_hist=False):
-    producer = Producer(brokers)
+def main(brokers, topic, num_msgs, num_points, kafka_security_config, det_hist=False):
+    producer = Producer(brokers, kafka_security_config)
     count = 0
     message_id = 1
     start_time = None
@@ -103,6 +108,30 @@ if __name__ == "__main__":
         "-dh", "--det-hist", action="store_true", help="output the data as a det hist"
     )
 
+    parser.add_argument(
+        "-c",
+        "--config-file",
+        is_config_file=True,
+        help="configuration file",
+    )
+
+    add_sasl_commandline_options(parser)
+
     args = parser.parse_args()
 
-    main(args.brokers, args.topic, args.num_messages, args.num_events, args.det_hist)
+    kafka_security_config = generate_kafka_security_config(
+        args.security_protocol,
+        args.sasl_mechanism,
+        args.sasl_username,
+        args.sasl_password,
+        args.ssl_cafile,
+    )
+
+    main(
+        args.brokers,
+        args.topic,
+        args.num_messages,
+        args.num_events,
+        kafka_security_config,
+        args.det_hist,
+    )

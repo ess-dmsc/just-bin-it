@@ -10,10 +10,7 @@ from just_bin_it.endpoints.serialisation import (
     SCHEMAS_TO_DESERIALISERS,
     SCHEMAS_TO_SERIALISERS,
 )
-from just_bin_it.endpoints.sources import (
-    EventSource,
-    SimulatedEventSource,
-)
+from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
 from just_bin_it.histograms.histogram_factory import HistogramFactory
 from just_bin_it.histograms.histogrammer import Histogrammer
 from just_bin_it.utilities import time_in_ns
@@ -31,17 +28,24 @@ def create_simulated_event_source(configuration, start, stop):
     return SimulatedEventSource(configuration, start, stop)
 
 
-def create_event_source(configuration, start, stop, deserialise_func):
+def create_event_source(
+    configuration, start, stop, deserialise_func, kafka_security_config
+):
     """
     Create an event source.
 
     :param configuration: The configuration.
     :param start: The start time.
     :param stop: The stop time.
-    :param deserilise_func: The FlatBuffers deserialisation function.
+    :param deserialise_func: The FlatBuffers deserialisation function.
+    :param kafka_security_config: The security config for kafka.
     :return: The created event source.
     """
-    consumer = Consumer(configuration["data_brokers"], configuration["data_topics"])
+    consumer = Consumer(
+        configuration["data_brokers"],
+        configuration["data_topics"],
+        kafka_security_config,
+    )
     time.sleep(5)
     event_source = EventSource(consumer, start, stop, deserialise_func)
 
@@ -50,7 +54,7 @@ def create_event_source(configuration, start, stop, deserialise_func):
     return event_source
 
 
-def create_histogrammer(configuration, start, stop, hist_schema):
+def create_histogrammer(configuration, start, stop, hist_schema, kafka_security_config):
     """
     Create a histogrammer.
 
@@ -58,9 +62,10 @@ def create_histogrammer(configuration, start, stop, hist_schema):
     :param start: The start time.
     :param stop: The stop time.
     :param hist_schema: The output schema.
+    :param kafka_security_config: The security config for kafka.
     :return: The created histogrammer.
     """
-    producer = Producer(configuration["data_brokers"])
+    producer = Producer(configuration["data_brokers"], kafka_security_config)
     hist_sink = HistogramSink(producer, SCHEMAS_TO_SERIALISERS[hist_schema])
     histograms = HistogramFactory.generate([configuration])
     return Histogrammer(hist_sink, histograms, start, stop)
@@ -73,7 +78,13 @@ class Time:
 
 class Processor:
     def __init__(
-        self, histogrammer, event_source, msg_queue, stats_queue, publish_interval, time_source=Time()
+        self,
+        histogrammer,
+        event_source,
+        msg_queue,
+        stats_queue,
+        publish_interval,
+        time_source=Time(),
     ):
         """
         Constructor.
@@ -117,8 +128,7 @@ class Processor:
                     self.processing_finished = True
             else:
                 self.processing_finished |= self.is_stop_time_exceeded(
-                    self.time.time_in_ns() // 1_000_000,
-                    self.histogrammer.stop
+                    self.time.time_in_ns() // 1_000_000, self.histogrammer.stop
                 )
 
         if self.processing_finished:
@@ -174,6 +184,7 @@ def run_processing(
     stop,
     hist_schema,
     event_schema,
+    kafka_security_config,
     publish_interval,
     simulation=False,
 ):
@@ -195,19 +206,22 @@ def run_processing(
     :param hist_schema: The schema to use for writing histograms.
     :param event_schema: The schema of the event messages.
     :param publish_interval: How often to publish histograms and stats in milliseconds.
+    :param kafka_security_config: The security config for kafka.
     :param simulation: Whether to run in simulation.
     """
     histogrammer = None
     try:
         # Setting up
-        histogrammer = create_histogrammer(configuration, start, stop, hist_schema)
+        histogrammer = create_histogrammer(
+            configuration, start, stop, hist_schema, kafka_security_config
+        )
 
         if simulation:
             event_source = create_simulated_event_source(configuration, start, stop)
         else:
             deserialise_func = SCHEMAS_TO_DESERIALISERS[event_schema]
             event_source = create_event_source(
-                configuration, start, stop, deserialise_func
+                configuration, start, stop, deserialise_func, kafka_security_config
             )
 
         processor = Processor(
@@ -236,6 +250,7 @@ class HistogramProcess:
         stop_time,
         hist_schema,
         event_schema,
+        kafka_security_config,
         publish_interval=500,
         simulation=False,
     ):
@@ -261,6 +276,7 @@ class HistogramProcess:
                 stop_time,
                 hist_schema,
                 event_schema,
+                kafka_security_config,
                 publish_interval,
                 simulation,
             ),

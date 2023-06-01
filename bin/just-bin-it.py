@@ -1,9 +1,10 @@
-import argparse
 import json
 import logging
 import os
 import sys
 import time
+
+import configargparse as argparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.command_actioner import CommandActioner, ResponsePublisher
@@ -17,6 +18,10 @@ from just_bin_it.endpoints.statistics_publisher import (
     StatisticsPublisher,
 )
 from just_bin_it.utilities import time_in_ns
+from just_bin_it.utilities.sasl_utils import (
+    add_sasl_commandline_options,
+    generate_kafka_security_config,
+)
 
 
 def load_json_config_file(file):
@@ -41,8 +46,8 @@ class Main:
         config_brokers,
         config_topic,
         simulation,
+        kafka_security_config,
         heartbeat_topic=None,
-        initial_config=None,
         stats_publisher=None,
         response_topic=None,
     ):
@@ -53,16 +58,15 @@ class Main:
         :param config_topic: The topic to listen for commands on.
         :param simulation: Run in simulation mode.
         :param heartbeat_topic: The topic where to publish heartbeat messages.
-        :param initial_config: A histogram configuration to start with.
         :param stats_publisher: Publisher for the histograms statistics.
         """
         self.config_topic = config_topic
         self.simulation = simulation
         self.heartbeat_topic = heartbeat_topic
-        self.initial_config = initial_config
         self.config_brokers = config_brokers
         self.stats_publisher = stats_publisher
         self.response_topic = response_topic
+        self.kafka_security_config = kafka_security_config
         self.config_listener = None
         self.heartbeat_publisher = None
         self.hist_processes = []
@@ -82,13 +86,8 @@ class Main:
 
         while True:
             # Handle configuration messages
-            if self.initial_config or self.config_listener.check_for_messages():
-                if self.initial_config:
-                    # If initial configuration supplied, use it only once.
-                    msg = self.initial_config
-                    self.initial_config = None
-                else:
-                    msg = self.config_listener.consume_message()
+            if self.config_listener.check_for_messages():
+                msg = self.config_listener.consume_message()
 
                 logging.warning("New command received")
                 logging.warning("%s", msg)
@@ -110,10 +109,12 @@ class Main:
         """
         Create the publishers.
         """
-        self.producer = Producer(self.config_brokers)
+        self.producer = Producer(self.config_brokers, self.kafka_security_config)
 
         self.command_actioner = CommandActioner(
-            ResponsePublisher(self.producer, self.response_topic), self.simulation
+            ResponsePublisher(self.producer, self.response_topic),
+            self.kafka_security_config,
+            self.simulation,
         )
 
         if self.heartbeat_topic:
@@ -128,14 +129,18 @@ class Main:
         Note: Blocks until the Kafka connection is made.
         """
         logging.info("Creating configuration consumer")
-        while not are_kafka_settings_valid(self.config_brokers, [self.config_topic]):
+        while not are_kafka_settings_valid(
+            self.config_brokers, [self.config_topic], self.kafka_security_config
+        ):
             logging.error(
                 "Could not connect to Kafka brokers or topic for configuration "
                 "- will retry shortly"
             )
             time.sleep(5)
         self.config_listener = ConfigListener(
-            Consumer(self.config_brokers, [self.config_topic])
+            Consumer(
+                self.config_brokers, [self.config_topic], self.kafka_security_config
+            )
         )
 
 
@@ -168,13 +173,6 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-c",
-        "--config-file",
-        type=str,
-        help="configure an initial histogram from a file",
-    )
-
-    parser.add_argument(
         "-g",
         "--graphite-config-file",
         type=str,
@@ -196,11 +194,9 @@ if __name__ == "__main__":
         help="sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.",
     )
 
-    args = parser.parse_args()
+    add_sasl_commandline_options(parser)
 
-    init_hist_json = None
-    if args.config_file:
-        init_hist_json = load_json_config_file(args.config_file)
+    args = parser.parse_args()
 
     statistics_publisher = None
     if args.graphite_config_file:
@@ -221,12 +217,20 @@ if __name__ == "__main__":
     else:
         logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 
+    kafka_security_config = generate_kafka_security_config(
+        args.security_protocol,
+        args.sasl_mechanism,
+        args.sasl_username,
+        args.sasl_password,
+        args.ssl_cafile,
+    )
+
     main = Main(
         args.brokers,
         args.config_topic,
         args.simulation_mode,
+        kafka_security_config,
         args.hb_topic,
-        init_hist_json,
         statistics_publisher,
         args.response_topic,
     )

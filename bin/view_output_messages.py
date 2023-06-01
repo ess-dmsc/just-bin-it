@@ -1,20 +1,23 @@
-import argparse
 import os
 import sys
 import uuid
 
+import configargparse as argparse
 from confluent_kafka import Consumer, TopicPartition
 
 from just_bin_it.exceptions import KafkaException
+from just_bin_it.utilities.sasl_utils import (
+    add_sasl_commandline_options,
+    generate_kafka_security_config,
+)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_schema
 
 
-def main(brokers, topic):
-    consumer = Consumer(
-        {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
-    )
+def main(brokers, topic, kafka_security_config):
+    options = {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
+    consumer = Consumer({**options, **kafka_security_config})
     print(f"Topics = {consumer.list_topics().topics.keys()}")
 
     tp = TopicPartition(topic, 0)
@@ -72,6 +75,16 @@ if __name__ == "__main__":
         required=True,
     )
 
+    add_sasl_commandline_options(parser)
+
     args = parser.parse_args()
 
-    main(args.brokers, args.topic)
+    kafka_security_config = generate_kafka_security_config(
+        args.security_protocol,
+        args.sasl_mechanism,
+        args.sasl_username,
+        args.sasl_password,
+        args.ssl_cafile,
+    )
+
+    main(args.brokers, args.topic, kafka_security_config)
