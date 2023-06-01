@@ -72,7 +72,7 @@ class StubEventSource:
     def append_data(self, source_name, pulse_time, time_of_flight, detector_id):
         self.data.append(
             (
-                pulse_time,  # Kafka timestamp
+                (123, pulse_time),  # Kafka timestamp tuple of (type, timestamp)
                 123,  # Kafka offset (irrelevant for these tests)
                 (source_name, pulse_time, time_of_flight, detector_id),
             )
