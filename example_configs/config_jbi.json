@@ -10,7 +10,7 @@
             "data_topics": ["fake_events"],
             "tof_range": [0, 100000000],
             "num_bins": 50,
-            "topic": "hist-topic",
+            "topic": "hist_topic",
             "id": "some_unique_id"
         },
         {

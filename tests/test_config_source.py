@@ -1,7 +1,7 @@
 from just_bin_it.endpoints.sources import ConfigSource
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
-from tests.doubles.consumer import StubConsumer
+from tests.doubles.consumer import StubConsumer, StubConsumerRecord
 
 CONFIG_BASIC_1 = """
 {
@@ -77,7 +77,8 @@ INVALID_JSON = '{ "malformed": 123]'
 class TestConfigSource:
     def test_received_configuration_converted_correctly(self):
         consumer = StubConsumer(["broker1"], ["topic1"])
-        consumer.add_messages([(0, 0, CONFIG_BASIC_1)])
+        record = StubConsumerRecord(0, 0, CONFIG_BASIC_1)
+        consumer.add_messages([record])
         src = ConfigSource(consumer)
 
         _, _, config = src.get_new_data()[-1]
@@ -105,7 +106,8 @@ class TestConfigSource:
 
     def test_received_restart_message_converted_correctly(self):
         consumer = StubConsumer(["broker1"], ["topic1"])
-        consumer.add_messages([(0, 0, RESET_CMD)])
+        record = StubConsumerRecord(0, 0, RESET_CMD)
+        consumer.add_messages([record])
         src = ConfigSource(consumer)
 
         _, _, message = src.get_new_data()[-1]
@@ -121,9 +123,12 @@ class TestConfigSource:
 
     def test_if_multiple_new_messages_gets_the_most_recent_one(self):
         consumer = StubConsumer(["broker1"], ["topic1"])
-        consumer.add_messages(
-            [(0, 0, CONFIG_BASIC_1), (1, 1, CONFIG_BASIC_1), (2, 2, CONFIG_BASIC_2)]
-        )
+        records = [
+            StubConsumerRecord(0, 0, CONFIG_BASIC_1),
+            StubConsumerRecord(1, 1, CONFIG_BASIC_1),
+            StubConsumerRecord(2, 2, CONFIG_BASIC_2),
+        ]
+        consumer.add_messages(records)
         src = ConfigSource(consumer)
 
         _, _, config = src.get_new_data()[-1]
@@ -132,16 +137,20 @@ class TestConfigSource:
 
     def test_malformed_message_is_ignored(self):
         consumer = StubConsumer(["broker1"], ["topic1"])
-        consumer.add_messages([(0, 0, INVALID_JSON)])
+        record = StubConsumerRecord(0, 0, INVALID_JSON)
+        consumer.add_messages([record])
         src = ConfigSource(consumer)
 
         assert len(src.get_new_data()) == 0
 
     def test_if_multiple_new_messages_gets_the_most_recent_valid_one(self):
         consumer = StubConsumer(["broker1"], ["topic1"])
-        consumer.add_messages(
-            [(0, 0, CONFIG_BASIC_1), (1, 1, CONFIG_BASIC_2), (2, 2, INVALID_JSON)]
-        )
+        records = [
+            StubConsumerRecord(0, 0, CONFIG_BASIC_1),
+            StubConsumerRecord(1, 1, CONFIG_BASIC_2),
+            StubConsumerRecord(2, 2, INVALID_JSON),
+        ]
+        consumer.add_messages(records)
         src = ConfigSource(consumer)
 
         _, _, config = src.get_new_data()[-1]
@@ -150,7 +159,8 @@ class TestConfigSource:
 
     def test_start_and_stop_time_converted_correctly(self):
         consumer = StubConsumer(["broker1"], ["topic1"])
-        consumer.add_messages([(0, 0, CONFIG_START_AND_STOP)])
+        record = StubConsumerRecord(0, 0, CONFIG_START_AND_STOP)
+        consumer.add_messages([record])
         src = ConfigSource(consumer)
 
         _, _, config = src.get_new_data()[-1]
@@ -160,7 +170,8 @@ class TestConfigSource:
 
     def test_interval_converted_correctly(self):
         consumer = StubConsumer(["broker1"], ["topic1"])
-        consumer.add_messages([(0, 0, CONFIG_INTERVAL)])
+        record = StubConsumerRecord(0, 0, CONFIG_INTERVAL)
+        consumer.add_messages([record])
         src = ConfigSource(consumer)
 
         _, _, config = src.get_new_data()[-1]

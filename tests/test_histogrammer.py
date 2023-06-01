@@ -2,6 +2,7 @@ import copy
 import json
 
 import pytest
+from confluent_kafka import TIMESTAMP_CREATE_TIME
 
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.endpoints.serialisation import deserialise_hs00, serialise_hs00
@@ -100,15 +101,15 @@ STOP_CONFIG = {
 # Data in each "pulse" increases by factor of 2, that way we can know which
 # messages were consumed by looking at the histogram sum.
 EVENT_DATA = [
-    (998 * 10**3, 0, ("simulator", 998 * 10**9, [1], [1], None)),
-    (999 * 10**3, 1, ("simulator", 999 * 10**9, [1, 2], [1, 2], None)),
+    ((TIMESTAMP_CREATE_TIME, 998 * 10**3), 0, ("simulator", 998 * 10**9, [1], [1], None)),
+    ((TIMESTAMP_CREATE_TIME, 999 * 10**3), 1, ("simulator", 999 * 10**9, [1, 2], [1, 2], None)),
     (
-        1000 * 10**3,
+        (TIMESTAMP_CREATE_TIME, 1000 * 10**3),
         2,
         ("simulator", 1000 * 10**9, [1, 2, 3, 4], [1, 2, 3, 4], None),
     ),
     (
-        1001 * 10**3,
+        (TIMESTAMP_CREATE_TIME, 1001 * 10**3),
         3,
         (
             "simulator",
@@ -119,7 +120,7 @@ EVENT_DATA = [
         ),
     ),
     (
-        1002 * 10**3,
+        (TIMESTAMP_CREATE_TIME, 1002 * 10**3),
         4,
         (
             "simulator",
@@ -133,12 +134,12 @@ EVENT_DATA = [
 
 UNORDERED_EVENT_DATA = [
     (
-        1000 * 10**3,
+        (TIMESTAMP_CREATE_TIME, 1000 * 10**3),
         0,
         ("simulator", 1000 * 10**9, [1, 2, 3, 4], [1, 2, 3, 4], None),
     ),
     (
-        1001 * 10**3,
+        (TIMESTAMP_CREATE_TIME, 1001 * 10**3),
         1,
         (
             "simulator",
@@ -149,7 +150,7 @@ UNORDERED_EVENT_DATA = [
         ),
     ),
     (
-        1002 * 10**3,
+        (TIMESTAMP_CREATE_TIME, 1002 * 10**3),
         2,
         (
             "simulator",
@@ -159,8 +160,8 @@ UNORDERED_EVENT_DATA = [
             None,
         ),
     ),
-    (998 * 10**3, 3, ("simulator", 998 * 10**9, [1], [1], None)),
-    (999 * 10**3, 4, ("simulator", 999 * 10**9, [1, 2], [1, 2], None)),
+    ((TIMESTAMP_CREATE_TIME, 998 * 10**3), 3, ("simulator", 998 * 10**9, [1], [1], None)),
+    ((TIMESTAMP_CREATE_TIME, 999 * 10**3), 4, ("simulator", 999 * 10**9, [1, 2], [1, 2], None)),
 ]
 
 

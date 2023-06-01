@@ -1,5 +1,5 @@
-from kafka import KafkaProducer
-from kafka.errors import KafkaError
+from confluent_kafka import KafkaException as KafkaError
+from confluent_kafka import Producer as KafkaProducer
 
 from just_bin_it.exceptions import KafkaException
 
@@ -20,7 +20,10 @@ class Producer:
         """
         try:
             self.producer = KafkaProducer(
-                bootstrap_servers=brokers, max_request_size=100_000_000
+                {
+                    "bootstrap.servers": ",".join(brokers),
+                    "message.max.bytes": 100_000_000,
+                }
             )
         except KafkaError as error:
             raise KafkaException(error)
@@ -33,7 +36,7 @@ class Producer:
         :param message: The message to publish.
         """
         try:
-            self.producer.send(topic, message)
+            self.producer.produce(topic, message)
             self.producer.flush()
         except KafkaError as error:
             raise KafkaException(error)

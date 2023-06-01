@@ -4,7 +4,7 @@ import pytest
 
 import tests
 from just_bin_it.endpoints.sources import HistogramSource
-from tests.doubles.consumer import StubConsumer
+from tests.doubles.consumer import StubConsumer, StubConsumerRecord
 
 INVALID_FB = b"this is an invalid fb message"
 
@@ -26,7 +26,8 @@ class TestHistogramSource:
 
     def test_if_five_new_messages_on_one_topic_then_data_has_five_items(self):
         mock_consumer = StubConsumer(["broker1"], ["topic1"])
-        mock_consumer.add_messages([(0, 0, self.valid_fb)] * 5)
+        mock_record = StubConsumerRecord(0, 0, self.valid_fb)
+        mock_consumer.add_messages([mock_record] * 5)
         hs = HistogramSource(mock_consumer)
 
         data = hs.get_new_data()

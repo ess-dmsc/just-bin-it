@@ -1,46 +1,52 @@
 import argparse
 import os
 import sys
+import uuid
 
-from kafka import KafkaConsumer, TopicPartition
+from confluent_kafka import Consumer, TopicPartition
+
+from just_bin_it.exceptions import KafkaException
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_schema
 
 
 def main(brokers, topic):
-    consumer = KafkaConsumer(bootstrap_servers=brokers)
-    print(f"Topics = {consumer.topics()}")
+    consumer = Consumer(
+        {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
+    )
+    print(f"Topics = {consumer.list_topics().topics.keys()}")
 
     tp = TopicPartition(topic, 0)
-    consumer.assign([tp])
 
     # Move to one from the end
-    consumer.seek_to_end(tp)
-    end = consumer.position(tp)
-    consumer.seek(tp, end - 1)
+    _, high_wm = consumer.get_watermark_offsets(tp)
+    last_highest = max(0, high_wm - 1)
+    tp.offset = last_highest
+
+    consumer.assign([tp])
 
     while True:
-        data = []
-
-        while not data:
-            data = consumer.poll(5)
-
-        for message in data[tp]:
+        msg = consumer.poll(0.005)
+        if msg is None:
+            continue
+        if msg.error():
+            raise KafkaException(msg.error())
+        else:
             print(
                 "%s %s:%d:%d: key=%s value=%s"
                 % (
-                    message.timestamp,
-                    message.topic,
-                    message.partition,
-                    message.offset,
-                    message.key,
-                    message.value[0:20],
+                    msg.timestamp(),
+                    msg.topic(),
+                    msg.partition(),
+                    msg.offset(),
+                    msg.key(),
+                    msg.value()[0:20],
                 )
             )
-            schema = get_schema(message.value)
+            schema = get_schema(msg.value())
             if schema in SCHEMAS_TO_DESERIALISERS:
-                ans = SCHEMAS_TO_DESERIALISERS[schema](message.value)
+                ans = SCHEMAS_TO_DESERIALISERS[schema](msg.value())
                 print(f"\nHistogram data:\n{ans}")
                 print(f"Total events: {ans['data'].sum()}")
 

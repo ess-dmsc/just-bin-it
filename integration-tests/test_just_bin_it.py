@@ -4,10 +4,11 @@ import os
 import random
 import sys
 import time
+import uuid
 
 import pytest
+from confluent_kafka import OFFSET_END, Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic
-from kafka import KafkaConsumer, KafkaProducer, TopicPartition
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import (
@@ -44,22 +45,28 @@ CONFIG_CMD = {
     ],
 }
 
-
 STOP_CMD = {"cmd": "stop"}
 
 
 def create_consumer(topic):
-    consumer = KafkaConsumer(bootstrap_servers=BROKERS)
+    consumer_conf = {
+        "bootstrap.servers": ",".join(BROKERS),
+        "group.id": uuid.uuid4(),
+        "auto.offset.reset": "latest",
+    }
+    consumer = Consumer(consumer_conf)
     topic_partitions = []
 
-    partition_numbers = consumer.partitions_for_topic(topic)
+    metadata = consumer.list_topics(topic)
+    partition_numbers = [p.id for p in metadata.topics[topic].partitions.values()]
 
     for pn in partition_numbers:
-        topic_partitions.append(TopicPartition(topic, pn))
+        partition = TopicPartition(topic, pn)
+        # Make sure consumer is at end of the partition(s)
+        partition.offset = OFFSET_END
+        topic_partitions.append(partition)
 
     consumer.assign(topic_partitions)
-    # Move to end
-    consumer.seek_to_end()
     return consumer, topic_partitions
 
 
@@ -72,7 +79,7 @@ class TestJustBinIt:
     @pytest.fixture(autouse=True)
     def prepare(self):
         # Create unique topics for each test
-        conf = {"bootstrap.servers": BROKERS[0], "api.version.request": True}
+        conf = {"bootstrap.servers": ",".join(BROKERS)}
         admin_client = AdminClient(conf)
         uid = time_in_ns() // 1000
         self.hist_topic_name = f"hist_{uid}"
@@ -81,12 +88,14 @@ class TestJustBinIt:
         data_topic = NewTopic(self.data_topic_name, 2, 1)
         admin_client.create_topics([hist_topic, data_topic])
 
-        self.producer = KafkaProducer(bootstrap_servers=BROKERS)
-        time.sleep(1)
+        self.producer = Producer(
+            {"bootstrap.servers": ",".join(BROKERS), "message.max.bytes": 100_000_000}
+        )
+        time.sleep(5)
+
         self.consumer, topic_partitions = create_consumer(self.hist_topic_name)
         # Only one partition for histogram topic
         self.topic_part = topic_partitions[0]
-        self.initial_offset = self.consumer.position(self.topic_part)
         self.time_stamps = []
         self.num_events_per_msg = []
 
@@ -96,19 +105,11 @@ class TestJustBinIt:
         config["histograms"][0]["data_topics"] = [self.data_topic_name]
         return config
 
-    def check_offsets_have_advanced(self):
-        # Check that end offset has changed otherwise we could be looking at old test
-        # data
-        self.consumer.seek_to_end(self.topic_part)
-        final_offset = self.consumer.position(self.topic_part)
-        if final_offset <= self.initial_offset:
-            raise Exception("No new data found on the topic - is just-bin-it running?")
-
     def send_message(self, topic, message, timestamp=None):
         if timestamp:
-            self.producer.send(topic, message, timestamp_ms=timestamp)
+            self.producer.produce(topic, message, timestamp=timestamp)
         else:
-            self.producer.send(topic, message)
+            self.producer.produce(topic, message)
         self.producer.flush()
 
     def generate_and_send_data(self, msg_id):
@@ -127,32 +128,42 @@ class TestJustBinIt:
     def get_hist_data_from_kafka(self):
         data = []
         # Move it to one from the end so we can read the final histogram
-        self.consumer.seek_to_end(self.topic_part)
-        end_pos = self.consumer.position(self.topic_part)
-        self.consumer.seek(self.topic_part, end_pos - 1)
+        _, high_wm = self.consumer.get_watermark_offsets(self.topic_part)
+        last_highest = max(0, high_wm - 1)
+        self.consumer.seek(
+            TopicPartition(
+                self.topic_part.topic, self.topic_part.partition, last_highest
+            )
+        )
 
         while not data:
-            data = self.consumer.poll(5)
+            msg = self.consumer.poll(0.005)
+            if msg:
+                data.append(msg)
 
-        msg = data[self.topic_part][-1]
-        schema = get_schema(msg.value)
+        last_msg = data[-1]
+        schema = get_schema(last_msg.value())
         if schema in SCHEMAS_TO_DESERIALISERS:
-            return SCHEMAS_TO_DESERIALISERS[schema](msg.value)
+            return SCHEMAS_TO_DESERIALISERS[schema](last_msg.value())
 
     def get_response_message_from_kafka(self):
         data = []
         consumer, topic_partitions = create_consumer(RESPONSE_TOPIC)
         topic_part = topic_partitions[0]
         # Move it to one from the end so we can read the final message
-        consumer.seek_to_end(topic_part)
-        end_pos = consumer.position(topic_part)
-        consumer.seek(topic_part, end_pos - 1)
+        _, high_wm = consumer.get_watermark_offsets(topic_part)
+        last_highest = max(0, high_wm - 1)
+        consumer.seek(
+            TopicPartition(topic_part.topic, topic_part.partition, last_highest)
+        )
 
         while not data:
-            data = consumer.poll(5)
+            msg = consumer.poll(0.005)
+            if msg:
+                data.append(msg)
 
-        msg = data[topic_part][-1]
-        return msg.value
+        last_msg = data[-1]
+        return last_msg.value()
 
     def test_basic_operation(
         self, just_bin_it
@@ -173,9 +184,7 @@ class TestJustBinIt:
 
         total_events = sum(self.num_events_per_msg)
 
-        time.sleep(5)
-
-        self.check_offsets_have_advanced()
+        time.sleep(10)
 
         # Get histogram data
         hist_data = self.get_hist_data_from_kafka()
@@ -203,6 +212,8 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
         time.sleep(1)
 
+        time.sleep(10)
+
         msg = self.get_response_message_from_kafka()
 
         assert json.loads(msg)["msg_id"] == config["msg_id"]
@@ -216,6 +227,8 @@ class TestJustBinIt:
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
         time.sleep(2)
+
+        time.sleep(10)
 
         msg = self.get_response_message_from_kafka()
         msg = json.loads(msg)

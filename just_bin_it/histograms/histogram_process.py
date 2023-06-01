@@ -42,6 +42,7 @@ def create_event_source(configuration, start, stop, deserialise_func):
     :return: The created event source.
     """
     consumer = Consumer(configuration["data_brokers"], configuration["data_topics"])
+    time.sleep(5)
     event_source = EventSource(consumer, start, stop, deserialise_func)
 
     if start:

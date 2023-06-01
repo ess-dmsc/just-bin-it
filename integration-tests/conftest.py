@@ -32,6 +32,8 @@ common_options = {
 
 WAIT_FOR_DEBUGGER_ATTACH = "--wait-to-attach-debugger"
 
+BROKERS = ["localhost:9092"]
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -45,8 +47,8 @@ def pytest_addoption(parser):
 
 def wait_until_kafka_ready(docker_cmd, docker_options):
     print("Waiting for Kafka broker to be ready for integration tests...")
-    conf = {"bootstrap.servers": "localhost:9092", "api.version.request": True}
-    producer = Producer(**conf)
+    conf = {"bootstrap.servers": ",".join(BROKERS)}
+    producer = Producer(conf)
     kafka_ready = False
 
     def delivery_callback(err, msg):
@@ -73,7 +75,7 @@ def wait_until_kafka_ready(docker_cmd, docker_options):
 
     n_polls = 0
     while n_polls < 10 and not topics_ready:
-        topics = client.list_topics().topics.keys()
+        topics = set(client.list_topics().topics.keys())
         topics_needed = ["hist_commands"]
         present = [t in topics for t in topics_needed]
         if all(present):

@@ -3,8 +3,8 @@ import sys
 import time
 
 import pytest
+from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient, NewTopic
-from kafka import KafkaProducer
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_consumer import Consumer
@@ -27,7 +27,7 @@ class TestKafkaConsumer:
     @pytest.fixture(autouse=True)
     def prepare(self):
         # Create unique topics for each test
-        conf = {"bootstrap.servers": BROKERS[0], "api.version.request": True}
+        conf = {"bootstrap.servers": BROKERS[0]}
         admin_client = AdminClient(conf)
         uid = time_in_ns() // 1000
         self.one_partition_topic_name = f"one_{uid}"
@@ -36,7 +36,7 @@ class TestKafkaConsumer:
         three_partition_topic = NewTopic(self.three_partition_topic_name, 3, 1)
         admin_client.create_topics([one_partition_topic, three_partition_topic])
 
-        self.producer = KafkaProducer(bootstrap_servers=BROKERS)
+        self.producer = Producer(conf)
 
         self.num_messages = 50
         # Ugly: give everything a chance to get going
@@ -46,7 +46,7 @@ class TestKafkaConsumer:
         # Put messages in
         for i in range(number_messages):
             msg = f"msg-{i}"
-            self.producer.send(topic_name, msg.encode())
+            self.producer.produce(topic_name, msg.encode())
         self.producer.flush()
 
     def test_all_data_retrieved_when_one_partition(self):
@@ -59,16 +59,13 @@ class TestKafkaConsumer:
         while not data:
             data = consumer.get_new_messages()
 
-        assert isinstance(data, dict)
-        # One partition
-        assert len(data) == 1
-        partition_data = data[list(data.keys())[0]]
+        assert isinstance(data, list)
         # Total messages
-        assert len(partition_data) == self.num_messages
+        assert len(data) == self.num_messages
         # Check the types
-        assert isinstance(partition_data[0].offset, int)
-        assert isinstance(partition_data[0].timestamp, int)
-        assert isinstance(partition_data[0].value, bytes)
+        assert isinstance(data[0].offset(), int)
+        assert isinstance(data[0].timestamp()[1], int)
+        assert isinstance(data[0].value(), bytes)
 
     def test_all_data_retrieved_when_three_partitions(self):
         self.put_messages_in(self.three_partition_topic_name, self.num_messages)
@@ -80,16 +77,13 @@ class TestKafkaConsumer:
         while not data:
             data = consumer.get_new_messages()
 
-        assert isinstance(data, dict)
-        # Three partitions
-        assert len(data) == 3
+        assert isinstance(data, list)
         # Total messages across all partitions
-        assert sum([len(val) for val in data.values()]) == self.num_messages
+        assert len(data) == self.num_messages
         # Check the types
-        partition_data = data[list(data.keys())[0]]
-        assert isinstance(partition_data[0].offset, int)
-        assert isinstance(partition_data[0].timestamp, int)
-        assert isinstance(partition_data[0].value, bytes)
+        assert isinstance(data[0].offset(), int)
+        assert isinstance(data[0].timestamp()[1], int)
+        assert isinstance(data[0].value(), bytes)
 
     def test_get_offsets_for_time_after_last_message(self):
         self.put_messages_in(self.three_partition_topic_name, self.num_messages)
@@ -98,8 +92,8 @@ class TestKafkaConsumer:
 
         offsets = consumer.offset_for_time(current_time)
 
-        # For times after the last message, the offsets should be None
-        assert offsets == [None, None, None]
+        # For times after the last message, the offsets should be -1
+        assert offsets == [-1, -1, -1]
 
     def test_get_offsets_for_time_before_first_message(self):
         current_time = time_in_ns() // 1_000_000
@@ -132,14 +126,18 @@ class TestKafkaConsumer:
 
         consumer.seek_by_offsets(new_offsets)
 
-        assert consumer.get_positions() == new_offsets
+        time.sleep(5)
+
+        num_messages_since_offset = len(consumer.get_new_messages())
+
+        assert num_messages_since_offset == self.num_messages - sum(new_offsets)
 
 
 class TestKafkaTools:
     @pytest.fixture(autouse=True)
     def prepare(self):
         # Create unique topics for each test
-        conf = {"bootstrap.servers": BROKERS[0], "api.version.request": True}
+        conf = {"bootstrap.servers": BROKERS[0]}
         admin_client = AdminClient(conf)
         uid = time_in_ns() // 1000
         self.one_partition_topic_name = f"one_{uid}"
@@ -148,7 +146,9 @@ class TestKafkaTools:
         three_partition_topic = NewTopic(self.three_partition_topic_name, 3, 1)
         admin_client.create_topics([one_partition_topic, three_partition_topic])
 
-        self.producer = KafkaProducer(bootstrap_servers=BROKERS)
+        self.producer = Producer(conf)
+
+        time.sleep(5)
 
     def test_checking_for_non_existent_broker_is_not_valid(self):
         assert not are_kafka_settings_valid(

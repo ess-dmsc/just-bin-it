@@ -1,41 +1,36 @@
 import logging
+import uuid
 
-from kafka import KafkaConsumer
-from kafka.errors import KafkaError
+from confluent_kafka import Consumer
+from confluent_kafka import KafkaException as KafkaError
 
 
 def are_kafka_settings_valid(brokers, topics):
     """
-    Check to see if the broker(s) and topics exist.
+    Check to see if it is possible to connect to the broker(s) and the topics exist.
 
-    :param brokers: The broker names.
-    :return: True if they exist.
+    :param brokers: List of broker names.
+    :param topics: List of topics.
+    :return: True if settings valid.
     """
-    consumer = _are_brokers_present(brokers)
-    if consumer is None:
+    # The Consumer constructor does not throw even if the brokers don't exist!
+    consumer = Consumer(
+        {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
+    )
+
+    try:
+        metadata = consumer.list_topics(timeout=10)
+    except KafkaError as error:
+        logging.error(
+            "Could not get metadata from Kafka (is the broker address " "correct?): %s",
+            error,
+        )
         return False
 
-    return _are_topics_present(consumer, topics)
+    missing_topics = [tp for tp in topics if tp not in set(metadata.topics.keys())]
 
-
-def _are_brokers_present(brokers):
-    try:
-        return KafkaConsumer(bootstrap_servers=brokers)
-    except KafkaError as error:
-        logging.error("Could not connect to Kafka brokers: %s", error)
-        return None
-
-
-def _are_topics_present(consumer, topics):
-    result = True
-    try:
-        existing_topics = consumer.topics()
-        for tp in topics:
-            if tp not in existing_topics:
-                logging.error("Could not find topic: %s", tp)
-                result = False
-    except KafkaError as error:
-        logging.error("Could not get topics from Kafka: %s", error)
+    if missing_topics:
+        logging.error("Could not find topic(s): %s", ", ".join(missing_topics))
         return False
 
-    return result
+    return True

@@ -15,16 +15,20 @@ from just_bin_it.histograms.histogram2d_roi import ROI_TYPE
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
 
 
-def convert_messages(messages, converter):
-    data = []
+def _safe_convert(msg, converter):
+    try:
+        return msg.timestamp(), msg.offset(), converter(msg.value())
+    except Exception as error:
+        logging.debug("SourceException: %s", error)  # pragma: no mutate
+        return None
 
-    for _, records in messages.items():
-        for record in records:
-            try:
-                data.append((record.timestamp, record.offset, converter(record.value)))
-            except Exception as error:
-                logging.debug("SourceException: %s", error)  # pragma: no mutate
-    return data
+
+def convert_messages(messages, converter):
+    return [
+        res
+        for res in (_safe_convert(msg, converter) for msg in messages)
+        if res is not None
+    ]
 
 
 class ConfigSource:
@@ -80,7 +84,7 @@ class EventSource:
         offsets = self.consumer.offset_for_time(self.start_time)
 
         for i, (lowest, highest) in enumerate(offset_ranges):
-            if offsets[i] is None:
+            if offsets[i] == -1:
                 logging.warning(
                     "Could not find corresponding offset for start time, so set "
                     "position to latest message"
