@@ -1,13 +1,15 @@
-import argparse
 import os
 import sys
 import time
+
+import configargparse as argparse
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.serialisation import serialise_ev42
 from just_bin_it.utilities import time_in_ns
 from just_bin_it.utilities.fake_data_generation import generate_fake_data
+from just_bin_it.utilities.sasl_utils import add_sasl_commandline_options
 
 TOF_RANGE = (0, 100_000_000)
 DET_RANGE = (1, 10000)
@@ -102,6 +104,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "-dh", "--det-hist", action="store_true", help="output the data as a det hist"
     )
+
+    parser.add_argument(
+        "-c",
+        "--config-file",
+        is_config_file=True,
+        help="configuration file",
+    )
+
+    add_sasl_commandline_options(parser)
 
     args = parser.parse_args()
 

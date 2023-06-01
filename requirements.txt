@@ -1,3 +1,4 @@
+ConfigArgParse==1.5.3
 confluent-kafka==2.0.2
 ess-streaming-data-types==0.21.1
 fast-histogram==0.11
