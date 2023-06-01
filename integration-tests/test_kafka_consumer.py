@@ -49,8 +49,12 @@ class TestKafkaConsumer:
             self.producer.produce(topic_name, msg.encode())
         self.producer.flush()
 
+    def create_consumer(self, topic):
+        consumer = Consumer(BROKERS, [topic], {})
+        return consumer
+
     def test_all_data_retrieved_when_one_partition(self):
-        consumer = Consumer(BROKERS, [self.one_partition_topic_name])
+        consumer = self.create_consumer(self.one_partition_topic_name)
         self.put_messages_in(self.one_partition_topic_name, self.num_messages)
         # Move to beginning
         consumer.seek_by_offsets([0])
@@ -69,7 +73,7 @@ class TestKafkaConsumer:
 
     def test_all_data_retrieved_when_three_partitions(self):
         self.put_messages_in(self.three_partition_topic_name, self.num_messages)
-        consumer = Consumer(BROKERS, [self.three_partition_topic_name])
+        consumer = self.create_consumer(self.three_partition_topic_name)
         # Move to beginning
         consumer.seek_by_offsets([0, 0, 0])
 
@@ -88,7 +92,7 @@ class TestKafkaConsumer:
     def test_get_offsets_for_time_after_last_message(self):
         self.put_messages_in(self.three_partition_topic_name, self.num_messages)
         current_time = time_in_ns() // 1_000_000
-        consumer = Consumer(BROKERS, [self.three_partition_topic_name])
+        consumer = self.create_consumer(self.three_partition_topic_name)
 
         offsets = consumer.offset_for_time(current_time)
 
@@ -98,7 +102,7 @@ class TestKafkaConsumer:
     def test_get_offsets_for_time_before_first_message(self):
         current_time = time_in_ns() // 1_000_000
         self.put_messages_in(self.three_partition_topic_name, self.num_messages)
-        consumer = Consumer(BROKERS, [self.three_partition_topic_name])
+        consumer = self.create_consumer(self.three_partition_topic_name)
 
         offsets = consumer.offset_for_time(current_time)
 
@@ -107,7 +111,7 @@ class TestKafkaConsumer:
 
     def test_get_offset_ranges(self):
         self.put_messages_in(self.three_partition_topic_name, self.num_messages)
-        consumer = Consumer(BROKERS, [self.three_partition_topic_name])
+        consumer = self.create_consumer(self.three_partition_topic_name)
 
         offsets = consumer.get_offset_range()
 
@@ -118,7 +122,7 @@ class TestKafkaConsumer:
 
     def test_seek_and_get_position(self):
         self.put_messages_in(self.three_partition_topic_name, self.num_messages)
-        consumer = Consumer(BROKERS, [self.three_partition_topic_name])
+        consumer = self.create_consumer(self.three_partition_topic_name)
 
         offsets = consumer.get_offset_range()
         # Pick somewhere in the middle
