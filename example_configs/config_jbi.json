@@ -12,6 +12,26 @@
             "num_bins": 50,
             "topic": "hist_topic",
             "id": "some_unique_id"
+        },
+        {
+            "type": "hist2d",
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["fake_events"],
+            "tof_range": [0, 100000000],
+            "det_range": [0, 100],
+            "num_bins": 50,
+            "topic": "hist-topic",
+            "id": "some_unique_id"
+        },
+        {
+            "type": "dethist",
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["fake_events"],
+            "det_range": [1, 6145],
+            "width": 32,
+            "height": 192,
+            "topic": "hist-topic",
+            "id": "some_unique_id"
         }
     ]
 }
