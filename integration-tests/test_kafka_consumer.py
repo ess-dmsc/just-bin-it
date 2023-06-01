@@ -152,16 +152,18 @@ class TestKafkaTools:
 
     def test_checking_for_non_existent_broker_is_not_valid(self):
         assert not are_kafka_settings_valid(
-            ["invalid_broker"], [self.one_partition_topic_name]
+            ["invalid_broker"], [self.one_partition_topic_name], {}
         )
 
     def test_checking_for_non_existent_topic_is_not_valid(self):
-        assert not are_kafka_settings_valid(BROKERS, ["not_a_real_topic"])
+        assert not are_kafka_settings_valid(BROKERS, ["not_a_real_topic"], {})
 
     def test_checking_for_valid_broker_and_topic_is_valid(self):
-        assert are_kafka_settings_valid(BROKERS, [self.one_partition_topic_name])
+        assert are_kafka_settings_valid(BROKERS, [self.one_partition_topic_name], {})
 
     def test_checking_for_valid_broker_and_multiple_topics_is_valid(self):
         assert are_kafka_settings_valid(
-            BROKERS, [self.one_partition_topic_name, self.three_partition_topic_name]
+            BROKERS,
+            [self.one_partition_topic_name, self.three_partition_topic_name],
+            {},
         )

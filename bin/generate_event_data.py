@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    kafka_config = generate_kafka_security_config(
+    kafka_security_config = generate_kafka_security_config(
         args.security_protocol,
         args.sasl_mechanism,
         args.sasl_username,
@@ -132,6 +132,6 @@ if __name__ == "__main__":
         args.topic,
         args.num_messages,
         args.num_events,
-        kafka_config,
+        kafka_security_config,
         args.det_hist,
     )

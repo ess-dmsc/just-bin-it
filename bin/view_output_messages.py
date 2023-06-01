@@ -15,9 +15,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_schema
 
 
-def main(brokers, topic, kafka_config):
+def main(brokers, topic, kafka_security_config):
     options = {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
-    consumer = Consumer({**options, **kafka_config})
+    consumer = Consumer({**options, **kafka_security_config})
     print(f"Topics = {consumer.list_topics().topics.keys()}")
 
     tp = TopicPartition(topic, 0)
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    kafka_config = generate_kafka_security_config(
+    kafka_security_config = generate_kafka_security_config(
         args.security_protocol,
         args.sasl_mechanism,
         args.sasl_username,
@@ -87,4 +87,4 @@ if __name__ == "__main__":
         args.ssl_cafile,
     )
 
-    main(args.brokers, args.topic, kafka_config)
+    main(args.brokers, args.topic, kafka_security_config)

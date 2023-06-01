@@ -40,16 +40,16 @@ def convert_for_plotting(histogram_data):
     return [hist]
 
 
-def main(brokers, topic, log_scale_for_2d, kafka_config):
+def main(brokers, topic, log_scale_for_2d, kafka_security_config):
     """
 
     :param brokers: The brokers to listen for data on.
     :param topic: The topic to listen for data on.
     :param log_scale_for_2d: Whether to plot 2D images on a log scale
-    :param kafka_config: The security settings for Kafka.
+    :param kafka_security_config: The security settings for Kafka.
     """
     # Create the listener
-    hist_consumer = Consumer(brokers, [topic], kafka_config)
+    hist_consumer = Consumer(brokers, [topic], kafka_security_config)
     hist_source = HistogramSource(hist_consumer)
 
     buffs = []
@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    kafka_config = generate_kafka_security_config(
+    kafka_security_config = generate_kafka_security_config(
         args.security_protocol,
         args.sasl_mechanism,
         args.sasl_username,
@@ -97,4 +97,4 @@ if __name__ == "__main__":
         args.ssl_cafile,
     )
 
-    main(args.brokers, args.topic, args.log_scale, kafka_config)
+    main(args.brokers, args.topic, args.log_scale, kafka_security_config)
