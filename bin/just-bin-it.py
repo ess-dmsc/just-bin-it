@@ -193,6 +193,13 @@ if __name__ == "__main__":
         default=3,
         help="sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.",
     )
+    
+    parser.add_argument(
+        "-c",
+        "--config-file",
+        is_config_file=True,
+        help="configuration file",
+    )
 
     add_sasl_commandline_options(parser)
 
