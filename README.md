@@ -29,6 +29,9 @@ optional arguments:
                         runs the program in simulation mode
   -l LOG_LEVEL, --log-level LOG_LEVEL
                         sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.
+  -c CONFIG_FILE, --config-file CONFIG_FILE
+                        configuration file
+
 
 required arguments:
   -b BROKERS [BROKERS ...], --brokers BROKERS [BROKERS ...]
