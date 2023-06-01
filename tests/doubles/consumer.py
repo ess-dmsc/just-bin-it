@@ -21,7 +21,7 @@ class StubConsumerRecord:
 
 class StubConsumer(Consumer):
     def __init__(self, brokers, topics, num_partitions=1):
-        super().__init__(brokers, topics)
+        super().__init__(brokers, topics, {})
         self.topic_names = topics
         self.topic_partitions = {}
         for i in range(num_partitions):
@@ -33,7 +33,7 @@ class StubConsumer(Consumer):
     def topics(self):
         return self.topic_names
 
-    def _create_consumer(self, brokers):
+    def _create_consumer(self, brokers, security_config):
         return {"brokers": brokers}
 
     def _assign_topics(self, topics):
