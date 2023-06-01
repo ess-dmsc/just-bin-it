@@ -8,9 +8,24 @@ from just_bin_it.histograms.histogram_process import HistogramProcess
 
 
 class ProcessFactory:
-    def create(self, config, start, stop, hist_schema, event_schema, simulation=False):
+    def create(
+        self,
+        config,
+        start,
+        stop,
+        hist_schema,
+        event_schema,
+        kafka_security_config,
+        simulation=False,
+    ):
         return HistogramProcess(
-            config, start, stop, hist_schema, event_schema, simulation=simulation
+            config,
+            start,
+            stop,
+            hist_schema,
+            event_schema,
+            kafka_security_config,
+            simulation=simulation,
         )
 
 
@@ -41,10 +56,12 @@ class CommandActioner:
     def __init__(
         self,
         response_publisher,
+        kafka_security_config,
         simulation=False,
         process_factory=ProcessFactory(),
     ):
         self.response_publisher = response_publisher
+        self.kafka_security_config = kafka_security_config
         self.simulation = simulation
         self.process_factory = process_factory
 
@@ -84,12 +101,20 @@ class CommandActioner:
                 for config in hist_configs:
                     # Check brokers and data topics exist (skip in simulation)
                     if not self.simulation and not are_kafka_settings_valid(
-                        config["data_brokers"], config["data_topics"]
+                        config["data_brokers"],
+                        config["data_topics"],
+                        self.kafka_security_config,
                     ):
                         raise KafkaException("Invalid Kafka settings")
 
                     process = self.process_factory.create(
-                        config, start, stop, hist_schema, event_schema, self.simulation
+                        config,
+                        start,
+                        stop,
+                        hist_schema,
+                        event_schema,
+                        self.kafka_security_config,
+                        self.simulation,
                     )
                     process.start()
                     hist_processes.append(process)

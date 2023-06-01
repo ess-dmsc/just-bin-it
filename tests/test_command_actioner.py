@@ -49,7 +49,7 @@ class TestCommandActioner:
 
         # Put into simulation to avoid kafka checks
         self.actioner = CommandActioner(
-            self.response_publisher, True, self.process_factory
+            self.response_publisher, {}, True, self.process_factory
         )
 
     def test_on_invalid_command_without_id_then_error_response_not_sent(self):
@@ -85,7 +85,7 @@ class TestCommandActioner:
         self.actioner.handle_command_message(CONFIG_CMD, [])
 
         self.process_factory.create.assert_called_once_with(
-            mock.ANY, 1564727596867, 1564727668779, "hs00", "ev42", True
+            mock.ANY, 1564727596867, 1564727668779, "hs00", "ev42", {}, True
         )
         self.process_1.start.assert_called_once()
 
