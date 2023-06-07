@@ -46,7 +46,6 @@ def create_event_source(
         configuration["data_topics"],
         kafka_security_config,
     )
-    time.sleep(5)
     event_source = EventSource(consumer, start, stop, deserialise_func)
 
     if start:
