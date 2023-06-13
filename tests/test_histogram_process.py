@@ -94,19 +94,26 @@ class TestHistogramProcess:
         hist_sink = HistogramSink(producer, lambda x, y, z: (x, y, z))
         return Histogrammer(hist_sink, histograms, start_time, stop_time)
 
+    def generate_processor(self, hist_configs, start_time, stop_time):
+        producer = SpyProducer()
+        histogrammer = self.generate_histogrammer(
+            producer, start_time, stop_time, hist_configs
+        )
+        event_source = StubEventSource()
+        time_source = StubTime()
+        msg_queue = Queue()
+        processor = Processor(
+            histogrammer, event_source, msg_queue, Queue(), 1000, time_source
+        )
+        return event_source, processor, producer, time_source, msg_queue
+
     def test_counting_for_an_interval_gets_all_data_during_interval(self):
         config = copy.deepcopy(CONFIG_1D)
         config["interval"] = 5
         start_time, stop_time, hist_configs, _, _ = parse_config(config)
 
-        producer = SpyProducer()
-        histogrammer = self.generate_histogrammer(
-            producer, start_time, stop_time, hist_configs
-        )
-
-        event_source = StubEventSource()
-        processor = Processor(
-            histogrammer, event_source, Queue(), Queue(), 1000, StubTime()
+        event_source, processor, producer, _, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
         )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
@@ -130,14 +137,8 @@ class TestHistogramProcess:
         config["stop"] = 8_000
         start_time, stop_time, hist_configs, _, _ = parse_config(config)
 
-        producer = SpyProducer()
-        histogrammer = self.generate_histogrammer(
-            producer, start_time, stop_time, hist_configs
-        )
-
-        event_source = StubEventSource()
-        processor = Processor(
-            histogrammer, event_source, Queue(), Queue(), 1000, StubTime()
+        event_source, processor, producer, _, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
         )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
@@ -161,15 +162,8 @@ class TestHistogramProcess:
         config["stop"] = 8 * 1000
         start_time, stop_time, hist_configs, _, _ = parse_config(config)
 
-        producer = SpyProducer()
-        histogrammer = self.generate_histogrammer(
-            producer, start_time, stop_time, hist_configs
-        )
-
-        event_source = StubEventSource()
-        time_source = StubTime()
-        processor = Processor(
-            histogrammer, event_source, Queue(), Queue(), 1000, time_source
+        event_source, processor, producer, time_source, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
         )
 
         processor.run_processing()
@@ -193,15 +187,8 @@ class TestHistogramProcess:
         config["stop"] = 8_000
         start_time, stop_time, hist_configs, _, _ = parse_config(config)
 
-        producer = SpyProducer()
-        histogrammer = self.generate_histogrammer(
-            producer, start_time, stop_time, hist_configs
-        )
-
-        event_source = StubEventSource()
-        time_source = StubTime()
-        processor = Processor(
-            histogrammer, event_source, Queue(), Queue(), 1000, time_source
+        event_source, processor, producer, time_source, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
         )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
@@ -235,15 +222,8 @@ class TestHistogramProcess:
         config["stop"] = 8_000
         start_time, stop_time, hist_configs, _, _ = parse_config(config)
 
-        producer = SpyProducer()
-        histogrammer = self.generate_histogrammer(
-            producer, start_time, stop_time, hist_configs
-        )
-
-        event_source = StubEventSource()
-        time_source = StubTime()
-        processor = Processor(
-            histogrammer, event_source, Queue(), Queue(), 1000, time_source
+        event_source, processor, producer, time_source, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
         )
 
         # Advance time past stop time + leeway
@@ -272,14 +252,8 @@ class TestHistogramProcess:
         config["stop"] = 8_000
         start_time, stop_time, hist_configs, _, _ = parse_config(config)
 
-        producer = SpyProducer()
-        histogrammer = self.generate_histogrammer(
-            producer, start_time, stop_time, hist_configs
-        )
-
-        event_source = StubEventSource()
-        processor = Processor(
-            histogrammer, event_source, Queue(), Queue(), 1000, StubTime()
+        event_source, processor, producer, _, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
         )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
@@ -302,15 +276,8 @@ class TestHistogramProcess:
         config["start"] = 0
         start_time, stop_time, hist_configs, _, _ = parse_config(config)
 
-        producer = SpyProducer()
-        histogrammer = self.generate_histogrammer(
-            producer, start_time, stop_time, hist_configs
-        )
-
-        event_source = StubEventSource()
-        msg_queue = Queue()
-        processor = Processor(
-            histogrammer, event_source, msg_queue, Queue(), 1000, StubTime()
+        event_source, processor, producer, _, msg_queue = self.generate_processor(
+            hist_configs, start_time, stop_time
         )
 
         tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
