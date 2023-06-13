@@ -367,10 +367,10 @@ class TestHistogrammer:
         config["stop"] = 1005 * 10**3
 
         histogrammer = create_histogrammer(self.hist_sink, config)
-        info = histogrammer._generate_info(histogrammer.histograms[0])
+        results = list(histogrammer.histogram_info())
 
-        assert info["start"] == 1003 * 10**3
-        assert info["stop"] == 1005 * 10**3
+        assert results[0][1]["start"] == 1003 * 10**3
+        assert results[0][1]["stop"] == 1005 * 10**3
 
     def test_if_start_time_and_stop_time_not_defined_then_they_are_not_in_the_info(
         self,
@@ -379,10 +379,10 @@ class TestHistogrammer:
         del config["start"]
 
         histogrammer = create_histogrammer(self.hist_sink, config)
-        info = histogrammer._generate_info(histogrammer.histograms[0])
+        results = list(histogrammer.histogram_info())
 
-        assert "start" not in info
-        assert "stop" not in info
+        assert "start" not in results[0][1]
+        assert "stop" not in results[0][1]
 
     def test_if_interval_defined_then_start_and_stop_are_in_the_info(self):
         config = copy.deepcopy(START_CONFIG)
@@ -390,7 +390,7 @@ class TestHistogrammer:
         config["interval"] = 5
 
         histogrammer = create_histogrammer(self.hist_sink, config)
-        info = histogrammer._generate_info(histogrammer.histograms[0])
+        results = list(histogrammer.histogram_info())
 
-        assert "start" in info
-        assert "stop" in info
+        assert "start" in results[0][1]
+        assert "stop" in results[0][1]
