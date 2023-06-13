@@ -1,4 +1,3 @@
-import json
 import logging
 
 HISTOGRAM_STATES = {
@@ -10,7 +9,7 @@ HISTOGRAM_STATES = {
 
 
 class Histogrammer:
-    def __init__(self, histogram_sink, histograms, start=None, stop=None):
+    def __init__(self, histograms, start=None, stop=None):
         """
         Constructor.
 
@@ -22,7 +21,6 @@ class Histogrammer:
         :param stop: When to histogram until.
         """
         self.histograms = histograms
-        self.hist_sink = histogram_sink
         self.start = start
         self.stop = stop
         self._stop_time_exceeded = False
@@ -51,20 +49,6 @@ class Histogrammer:
                 self._started = True
                 src = msg[0] if not simulation else hist.source
                 hist.add_data(msg[1], msg[2], msg[3], src)
-
-    def publish_histograms(self, timestamp=0):
-        """
-        Publish histogram data to the histogram sink.
-
-        :param timestamp: The timestamp to put in the message (ns since epoch).
-        """
-        if self._stop_publishing:
-            return
-
-        for h in self.histograms:
-            info = self._generate_info(h)
-            logging.info(info)
-            self.hist_sink.send_histogram(h.topic, h, timestamp, json.dumps(info))
 
     def _generate_info(self, histogram):
         info = {"id": histogram.identifier}
@@ -121,9 +105,8 @@ class Histogrammer:
     def is_finished(self):
         return self._stop_time_exceeded
 
-    def send_failure_message(self, timestamp, message):
+    def histogram_info(self):
         for h in self.histograms:
             info = self._generate_info(h)
-            info["state"] = HISTOGRAM_STATES["ERROR"]
-            info["error_message"] = message
-            self.hist_sink.send_histogram(h.topic, h, timestamp, json.dumps(info))
+            logging.info(info)
+            yield h, info

@@ -1,11 +1,10 @@
 import copy
-import json
 
 import pytest
 from confluent_kafka import TIMESTAMP_CREATE_TIME
 
 from just_bin_it.endpoints.histogram_sink import HistogramSink
-from just_bin_it.endpoints.serialisation import deserialise_hs00, serialise_hs00
+from just_bin_it.endpoints.serialisation import serialise_hs00
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
@@ -192,7 +191,7 @@ def create_histogrammer(hist_sink, configuration):
     start, stop, hist_configs, _, _ = parse_config(configuration)
     histograms = HistogramFactory.generate(hist_configs)
 
-    return Histogrammer(hist_sink, histograms, start, stop)
+    return Histogrammer(histograms, start, stop)
 
 
 class TestHistogrammer:
@@ -243,36 +242,30 @@ class TestHistogrammer:
         assert histogrammer.histograms[0].data.sum() == 28
         assert histogrammer.histograms[1].data.sum() == 28
 
-    def test_before_counting_published_histogram_is_labelled_to_indicate_not_started(
-        self,
-    ):
+    def test_before_counting_starts_histograms_are_labelled_as_initialised(self):
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
 
-        histogrammer.publish_histograms()
+        results = list(histogrammer.histogram_info())
 
-        data = deserialise_hs00(self.spy_producer.messages[0][1])
-        info = json.loads(data["info"])
-        assert info["state"] == HISTOGRAM_STATES["INITIALISED"]
+        assert results[0][1]["state"] == HISTOGRAM_STATES["INITIALISED"]
+        assert results[1][1]["state"] == HISTOGRAM_STATES["INITIALISED"]
 
-    def test_while_counting_published_histogram_is_labelled_to_indicate_counting(self):
+    def test_while_counting_histograms_are_labelled_as_counting(self):
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)
 
-        histogrammer.publish_histograms()
+        results = list(histogrammer.histogram_info())
 
-        data = deserialise_hs00(self.spy_producer.messages[0][1])
-        info = json.loads(data["info"])
-        assert info["state"] == HISTOGRAM_STATES["COUNTING"]
+        assert results[0][1]["state"] == HISTOGRAM_STATES["COUNTING"]
+        assert results[1][1]["state"] == HISTOGRAM_STATES["COUNTING"]
 
-    def test_after_stop_published_histogram_is_labelled_to_indicate_finished(self):
+    def test_after_stop_histogram_is_labelled_as_finished(self):
         histogrammer = create_histogrammer(self.hist_sink, STOP_CONFIG)
         histogrammer.add_data(EVENT_DATA)
 
-        histogrammer.publish_histograms()
+        results = list(histogrammer.histogram_info())
 
-        data = deserialise_hs00(self.spy_producer.messages[0][1])
-        info = json.loads(data["info"])
-        assert info["state"] == HISTOGRAM_STATES["FINISHED"]
+        assert results[0][1]["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_message_time_exceeds_stop_time_then_is_finished(self):
         histogrammer = create_histogrammer(self.hist_sink, STOP_CONFIG)
@@ -287,27 +280,6 @@ class TestHistogrammer:
         histogrammer.add_data(EVENT_DATA)
 
         assert not histogrammer.is_finished()
-
-    def test_after_stop_publishing_final_histograms_published_once_only(self):
-        histogrammer = create_histogrammer(self.hist_sink, STOP_CONFIG)
-        histogrammer.add_data(EVENT_DATA)
-
-        histogrammer.publish_histograms()
-        # After stop these additional requests to publish should be ignored.
-        histogrammer.publish_histograms()
-        histogrammer.publish_histograms()
-
-        assert len(self.spy_producer.messages) == 1
-
-    def test_published_histogram_has_non_default_timestamp_set(self):
-        histogrammer = create_histogrammer(self.hist_sink, STOP_CONFIG)
-        histogrammer.add_data(EVENT_DATA)
-        timestamp = 1234567890
-
-        histogrammer.publish_histograms(timestamp)
-
-        data = deserialise_hs00(self.spy_producer.messages[0][1])
-        assert data["timestamp"] == timestamp
 
     def test_get_stats_returns_correct_stats_1d(self):
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
@@ -362,11 +334,9 @@ class TestHistogrammer:
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)
 
-        histogrammer.publish_histograms()
+        results = list(histogrammer.histogram_info())
 
-        data = deserialise_hs00(self.spy_producer.messages[0][1])
-        info = json.loads(data["info"])
-        assert info["id"] == "abcdef"
+        assert results[0][1]["id"] == "abcdef"
 
     def test_clear_histograms_empties_all_histograms(self):
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)

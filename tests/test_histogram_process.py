@@ -42,9 +42,6 @@ class SpyHistogrammer:
     def clear_histograms(self):
         self.cleared = True
 
-    def publish_histograms(self, timestamp=0):
-        self.times_publish_called += 1
-
     def set_finished(self):
         self.histogramming_stopped = True
 
@@ -57,6 +54,9 @@ class SpyHistogrammer:
 
     def add_data(self, event_buffer):
         self.data_received.append(event_buffer)
+
+    def histogram_info(self):
+        yield from ()
 
 
 class StubEventSource:
@@ -92,18 +92,18 @@ class TestHistogramProcess:
     def generate_histogrammer(producer, start_time, stop_time, hist_configs):
         histograms = HistogramFactory.generate(hist_configs)
         hist_sink = HistogramSink(producer, lambda x, y, z: (x, y, z))
-        return Histogrammer(hist_sink, histograms, start_time, stop_time)
+        return Histogrammer(histograms, start_time, stop_time), hist_sink
 
     def generate_processor(self, hist_configs, start_time, stop_time):
         producer = SpyProducer()
-        histogrammer = self.generate_histogrammer(
+        histogrammer, hist_sink = self.generate_histogrammer(
             producer, start_time, stop_time, hist_configs
         )
         event_source = StubEventSource()
         time_source = StubTime()
         msg_queue = Queue()
         processor = Processor(
-            histogrammer, event_source, msg_queue, Queue(), 1000, time_source
+            histogrammer, event_source, hist_sink, msg_queue, Queue(), 1000, time_source
         )
         return event_source, processor, producer, time_source, msg_queue
 
@@ -317,6 +317,7 @@ class TestHistogramProcessCommands:
         self.processor = Processor(
             self.histogrammer,
             self.event_source,
+            HistogramSink(SpyProducer(), lambda x, y, z: (x, y, z)),
             self.msg_queue,
             self.stats_queue,
             publish_interval=500,
@@ -355,11 +356,13 @@ class TestHistogramProcessPublishing:
     def prepare(self):
         self.histogrammer = SpyHistogrammer()
         self.event_source = StubEventSource()
+        self.producer = SpyProducer()
         self.msg_queue = Queue()
         self.stats_queue = Queue()
         self.processor = Processor(
             self.histogrammer,
             self.event_source,
+            HistogramSink(self.producer, lambda x, y, z: (x, y, z)),
             self.msg_queue,
             self.stats_queue,
             publish_interval=500,
@@ -378,27 +381,17 @@ class TestHistogramProcessPublishing:
             self.stats_queue.get(block=True)
         return count
 
-    def test_histograms_published_on_initialisation(self):
-        assert self.histogrammer.times_publish_called == 1
-
-    def test_stats_published_on_initialisation(self):
+    def test_published_on_initialisation(self):
         assert self._get_number_of_stats_messages() == 1
 
-    def test_stats_published_when_process_stopped(self):
+    def test_published_when_process_stopped(self):
         self._queue_command_message("stop")
         self.processor.run_processing()
 
         # Once on initialisation and once when processing finished
         assert self._get_number_of_stats_messages() == 2
 
-    def test_histograms_published_when_process_stopped(self):
-        self._queue_command_message("stop")
-        self.processor.run_processing()
-
-        # Once on initialisation and once when processing finished
-        assert self.histogrammer.times_publish_called == 2
-
-    def test_stats_published_when_time_to_publish_is_exceeded(self):
+    def test_published_when_time_to_publish_is_exceeded(self):
         # Set the publish interval to 1 ms, so it publishes
         # every time it is processed.
         self.processor.publish_interval = 1
@@ -410,16 +403,3 @@ class TestHistogramProcessPublishing:
 
         # Once on initialisation and once per time run
         assert self._get_number_of_stats_messages() == times_processed + 1
-
-    def test_histograms_published_when_time_to_publish_is_exceeded(self):
-        # Set the publish interval to 1 ms, so it publishes
-        # every time it is processed.
-        self.processor.publish_interval = 1
-        times_processed = 3
-
-        for _ in range(times_processed):
-            self.processor.run_processing()
-            time.sleep(0.01)
-
-        # Once on initialisation and once per time run
-        assert self.histogrammer.times_publish_called == times_processed + 1
