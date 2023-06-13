@@ -115,28 +115,6 @@ class Histogrammer:
 
         return results
 
-    def check_stop_time_exceeded(self, timestamp: int):
-        """
-        Checks whether the stop time has been exceeded, if so
-        then stop histogramming.
-
-        :param timestamp: The timestamp to check against in ms.
-        :return: True, if exceeded.
-        """
-        # Do nothing if there is no stop time
-        if self.stop is None:
-            return False
-
-        # Already stopped
-        if self._stop_time_exceeded:
-            return True
-
-        # Give it some leeway
-        if timestamp > self.stop + self._stop_leeway_ms:
-            self._stop_time_exceeded = True
-
-        return self._stop_time_exceeded
-
     def set_finished(self):
         self._stop_time_exceeded = True
 

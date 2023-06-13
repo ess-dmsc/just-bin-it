@@ -101,8 +101,16 @@ STOP_CONFIG = {
 # Data in each "pulse" increases by factor of 2, that way we can know which
 # messages were consumed by looking at the histogram sum.
 EVENT_DATA = [
-    ((TIMESTAMP_CREATE_TIME, 998 * 10**3), 0, ("simulator", 998 * 10**9, [1], [1], None)),
-    ((TIMESTAMP_CREATE_TIME, 999 * 10**3), 1, ("simulator", 999 * 10**9, [1, 2], [1, 2], None)),
+    (
+        (TIMESTAMP_CREATE_TIME, 998 * 10**3),
+        0,
+        ("simulator", 998 * 10**9, [1], [1], None),
+    ),
+    (
+        (TIMESTAMP_CREATE_TIME, 999 * 10**3),
+        1,
+        ("simulator", 999 * 10**9, [1, 2], [1, 2], None),
+    ),
     (
         (TIMESTAMP_CREATE_TIME, 1000 * 10**3),
         2,
@@ -160,8 +168,16 @@ UNORDERED_EVENT_DATA = [
             None,
         ),
     ),
-    ((TIMESTAMP_CREATE_TIME, 998 * 10**3), 3, ("simulator", 998 * 10**9, [1], [1], None)),
-    ((TIMESTAMP_CREATE_TIME, 999 * 10**3), 4, ("simulator", 999 * 10**9, [1, 2], [1, 2], None)),
+    (
+        (TIMESTAMP_CREATE_TIME, 998 * 10**3),
+        3,
+        ("simulator", 998 * 10**9, [1], [1], None),
+    ),
+    (
+        (TIMESTAMP_CREATE_TIME, 999 * 10**3),
+        4,
+        ("simulator", 999 * 10**9, [1, 2], [1, 2], None),
+    ),
 ]
 
 
@@ -264,7 +280,7 @@ class TestHistogrammer:
 
         assert histogrammer.is_finished()
 
-    def test_message_time_before_stop_time_then_is_finished(self):
+    def test_message_time_before_stop_time_then_is_not_finished(self):
         config = copy.deepcopy(STOP_CONFIG)
         config["stop"] = 1003 * 10**3
         histogrammer = create_histogrammer(self.hist_sink, config)
@@ -374,36 +390,6 @@ class TestHistogrammer:
         assert stats[0]["diff"] == 0
         assert stats[1]["sum"] == 0
         assert stats[1]["diff"] == 0
-
-    def test_if_no_data_after_start_time_and_stop_time_exceeded_histogram_is_finished(
-        self,
-    ):
-        config = copy.deepcopy(START_CONFIG)
-        config["start"] = 1003 * 10**3
-        config["stop"] = 1005 * 10**3
-
-        histogrammer = create_histogrammer(self.hist_sink, config)
-        # Supply a time significantly after the original stop time because of
-        # leeway
-        finished = histogrammer.check_stop_time_exceeded(config["stop"] * 1.1)
-
-        info = histogrammer._generate_info(histogrammer.histograms[0])
-        assert finished
-        assert info["state"] == HISTOGRAM_STATES["FINISHED"]
-
-    def test_if_no_data_after_start_time_and_stop_time_not_exceeded_histogram_is_not_finished(
-        self,
-    ):
-        config = copy.deepcopy(START_CONFIG)
-        config["start"] = 1003 * 10**3
-        config["stop"] = 1005 * 10**3
-
-        histogrammer = create_histogrammer(self.hist_sink, config)
-        finished = histogrammer.check_stop_time_exceeded(config["stop"] * 0.9)
-
-        info = histogrammer._generate_info(histogrammer.histograms[0])
-        assert not finished
-        assert info["state"] != HISTOGRAM_STATES["FINISHED"]
 
     def test_if_start_time_and_stop_time_defined_then_they_are_in_the_info(self):
         config = copy.deepcopy(START_CONFIG)
