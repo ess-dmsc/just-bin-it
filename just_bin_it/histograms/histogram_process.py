@@ -12,7 +12,7 @@ from just_bin_it.endpoints.serialisation import (
 )
 from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
 from just_bin_it.histograms.histogram_factory import HistogramFactory
-from just_bin_it.histograms.histogrammer import Histogrammer
+from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from just_bin_it.utilities import time_in_ns
 
 
@@ -67,7 +67,7 @@ def create_histogrammer(configuration, start, stop, hist_schema, kafka_security_
     producer = Producer(configuration["data_brokers"], kafka_security_config)
     hist_sink = HistogramSink(producer, SCHEMAS_TO_SERIALISERS[hist_schema])
     histograms = HistogramFactory.generate([configuration])
-    return Histogrammer(hist_sink, histograms, start, stop)
+    return Histogrammer(histograms, start, stop), hist_sink
 
 
 class Time:
@@ -80,6 +80,7 @@ class Processor:
         self,
         histogrammer,
         event_source,
+        hist_sink,
         msg_queue,
         stats_queue,
         publish_interval,
@@ -90,6 +91,7 @@ class Processor:
 
         :param histogrammer: The histogrammer for this process.
         :param event_source: The event source for this process.
+        :param hist_sink: The histogram sink for this process.
         :param msg_queue: The queue for receiving messages from outside the process
         :param stats_queue: The queue for publishing stats to the "outside".
         :param publish_interval: How often to publish histograms and stats in milliseconds.
@@ -99,6 +101,7 @@ class Processor:
         self.time_to_publish = 0
         self.histogrammer = histogrammer
         self.event_source = event_source
+        self.hist_sink = hist_sink
         self.msg_queue = msg_queue
         self.stats_queue = stats_queue
         self.publish_interval = publish_interval
@@ -108,10 +111,13 @@ class Processor:
         # Publish initial empty histograms and stats.
         self.publish_data(self.time.time_in_ns())
 
-    def run_processing(self):
+    def process(self):
         """
         Run the processing chain once.
         """
+        if self.processing_finished:
+            return
+
         if not self.msg_queue.empty():
             self.processing_finished |= self.process_command_message()
 
@@ -141,6 +147,9 @@ class Processor:
             self.time_to_publish -= self.time_to_publish % self.publish_interval
 
     def is_stop_time_exceeded(self, current_time_ms, stop_time_ms, stop_leeway_ms=5000):
+        """
+        Compare the "wall-clock" time against the stop time.
+        """
         if stop_time_ms is None:
             return False
 
@@ -169,7 +178,11 @@ class Processor:
 
         :param current_time: The time to associate the publishing with.
         """
-        self.histogrammer.publish_histograms(current_time)
+        for hist, info in self.histogrammer.histogram_info():
+            logging.info(info)
+            self.hist_sink.send_histogram(
+                hist.topic, hist, current_time, json.dumps(info)
+            )
         hist_stats = self.histogrammer.get_histogram_stats()
         logging.info("%s", json.dumps(hist_stats))
         self.stats_queue.put(hist_stats)
@@ -209,9 +222,10 @@ def run_processing(
     :param simulation: Whether to run in simulation.
     """
     histogrammer = None
+    hist_sink = None
     try:
         # Setting up
-        histogrammer = create_histogrammer(
+        histogrammer, hist_sink = create_histogrammer(
             configuration, start, stop, hist_schema, kafka_security_config
         )
 
@@ -224,19 +238,29 @@ def run_processing(
             )
 
         processor = Processor(
-            histogrammer, event_source, msg_queue, stats_queue, publish_interval
+            histogrammer,
+            event_source,
+            hist_sink,
+            msg_queue,
+            stats_queue,
+            publish_interval,
         )
 
         # Start up the processing
         while not processor.processing_finished:
-            processor.run_processing()
-            time.sleep(0.01)
+            processor.process()
+            time.sleep(0.001)
     except Exception as error:
         logging.error("Histogram process failed: %s", error)
-        if histogrammer:
+        if histogrammer and hist_sink:
             try:
                 # Try to send failure message
-                histogrammer.send_failure_message(time_in_ns(), str(error))
+                for hist, info in histogrammer.histogram_info():
+                    info["state"] = HISTOGRAM_STATES["ERROR"]
+                    info["error_message"] = str(error)
+                    hist_sink.send_histogram(
+                        hist.topic, hist, time_in_ns(), json.dumps(info)
+                    )
             except Exception as send_error:
                 logging.error("Could not send failure message: %s", send_error)
 

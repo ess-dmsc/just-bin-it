@@ -63,7 +63,7 @@ class Consumer:
         """
         Get any new messages.
 
-        :return: The dict containing the messages.
+        :return: The list containing the messages.
         """
         data = []
         while True:
