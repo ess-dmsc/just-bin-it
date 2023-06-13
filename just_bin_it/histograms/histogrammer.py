@@ -23,9 +23,7 @@ class Histogrammer:
         self.start = start
         self.stop = stop
         self._stop_time_exceeded = False
-        self._stop_publishing = False
         self._started = False
-        self._stop_leeway_ms = 5000
         self._previous_sum = [0 for _ in self.histograms]
 
     def add_data(self, event_buffer, simulation=False):
@@ -59,7 +57,6 @@ class Histogrammer:
 
         if self._stop_time_exceeded:
             info["state"] = HISTOGRAM_STATES["FINISHED"]
-            self._stop_publishing = True
         elif self._started:
             info["state"] = HISTOGRAM_STATES["COUNTING"]
         else:
