@@ -15,7 +15,6 @@ class Histogrammer:
 
         All times are given in ns since the Unix epoch.
 
-        :param histogram_sink: The producer for the sink.
         :param histograms: The histograms.
         :param start: When to start histogramming from.
         :param stop: When to histogram until.
