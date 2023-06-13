@@ -111,7 +111,7 @@ class Processor:
         # Publish initial empty histograms and stats.
         self.publish_data(self.time.time_in_ns())
 
-    def run_processing(self):
+    def process(self):
         """
         Run the processing chain once.
         """
@@ -245,8 +245,8 @@ def run_processing(
 
         # Start up the processing
         while not processor.processing_finished:
-            processor.run_processing()
-            time.sleep(0.01)
+            processor.process()
+            time.sleep(0.001)
     except Exception as error:
         logging.error("Histogram process failed: %s", error)
         if histogrammer and hist_sink:

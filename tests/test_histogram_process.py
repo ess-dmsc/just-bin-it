@@ -124,7 +124,7 @@ class TestHistogramProcess:
             event_source.append_data(
                 "::source::", start_time + time_offset, tofs, irrelevant_det_ids
             )
-            processor.run_processing()
+            processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
@@ -149,7 +149,7 @@ class TestHistogramProcess:
             event_source.append_data(
                 "::source::", start_time + time_offset, tofs, irrelevant_det_ids
             )
-            processor.run_processing()
+            processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
@@ -166,7 +166,7 @@ class TestHistogramProcess:
             hist_configs, start_time, stop_time
         )
 
-        processor.run_processing()
+        processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
@@ -174,7 +174,7 @@ class TestHistogramProcess:
 
         # Advance time past stop time + leeway
         time_source.curr_time_ns = 15 * 1_000_000_000
-        processor.run_processing()
+        processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
@@ -199,9 +199,9 @@ class TestHistogramProcess:
             event_source.append_data(
                 "::source::", start_time + time_offset, tofs, irrelevant_det_ids
             )
-            processor.run_processing()
+            processor.process()
 
-        processor.run_processing()
+        processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
@@ -209,7 +209,7 @@ class TestHistogramProcess:
 
         # Advance time past stop time + leeway
         time_source.curr_time_ns = 15 * 1_000_000_000
-        processor.run_processing()
+        processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
@@ -237,9 +237,9 @@ class TestHistogramProcess:
             event_source.append_data(
                 "::source::", start_time + time_offset, tofs, irrelevant_det_ids
             )
-            processor.run_processing()
+            processor.process()
 
-        processor.run_processing()
+        processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
@@ -264,7 +264,7 @@ class TestHistogramProcess:
             event_source.append_data(
                 "::source::", start_time + time_offset, tofs, irrelevant_det_ids
             )
-            processor.run_processing()
+            processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
@@ -288,7 +288,7 @@ class TestHistogramProcess:
             event_source.append_data(
                 "::source::", start_time + time_offset, tofs, irrelevant_det_ids
             )
-            processor.run_processing()
+            processor.process()
 
         msg_queue.put("stop")
         time.sleep(0.5)
@@ -298,7 +298,7 @@ class TestHistogramProcess:
             event_source.append_data(
                 "::source::", start_time + time_offset, tofs, irrelevant_det_ids
             )
-            processor.run_processing()
+            processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
@@ -322,7 +322,7 @@ class TestHistogramProcess:
             event_source.append_data(
                 "::source::", start_time + time_offset, tofs, irrelevant_det_ids
             )
-            processor.run_processing()
+            processor.process()
 
         _, (_, _, first_msg) = producer.messages[0]
         _, (_, _, last_msg) = producer.messages[~0]
@@ -355,14 +355,14 @@ class TestHistogramProcessCommands:
 
     def test_unrecognised_command_does_not_trigger_stop(self):
         self._queue_command_message("unknown command")
-        self.processor.run_processing()
+        self.processor.process()
 
         assert not self.processor.processing_finished
         assert not self.histogrammer.histogramming_stopped
 
     def test_on_clear_command_histograms_are_cleared_and_stop_not_requested(self):
         self._queue_command_message("clear")
-        self.processor.run_processing()
+        self.processor.process()
 
         assert not self.processor.processing_finished
         assert not self.histogrammer.histogramming_stopped
@@ -370,7 +370,7 @@ class TestHistogramProcessCommands:
 
     def test_processing_requests_stop_if_stop_sent_immediately(self):
         self._queue_command_message("stop")
-        self.processor.run_processing()
+        self.processor.process()
 
         assert self.processor.processing_finished
         assert self.histogrammer.histogramming_stopped
@@ -412,7 +412,7 @@ class TestHistogramProcessPublishing:
 
     def test_published_when_process_stopped(self):
         self._queue_command_message("stop")
-        self.processor.run_processing()
+        self.processor.process()
 
         # Once on initialisation and once when processing finished
         assert self._get_number_of_stats_messages() == 2
@@ -424,7 +424,7 @@ class TestHistogramProcessPublishing:
         times_processed = 3
 
         for _ in range(times_processed):
-            self.processor.run_processing()
+            self.processor.process()
             time.sleep(0.01)
 
         # Once on initialisation and once per time run
