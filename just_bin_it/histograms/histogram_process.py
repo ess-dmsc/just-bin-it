@@ -147,6 +147,9 @@ class Processor:
             self.time_to_publish -= self.time_to_publish % self.publish_interval
 
     def is_stop_time_exceeded(self, current_time_ms, stop_time_ms, stop_leeway_ms=5000):
+        """
+        Compare the "wall-clock" time against the stop time.
+        """
         if stop_time_ms is None:
             return False
 
