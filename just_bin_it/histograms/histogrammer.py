@@ -105,6 +105,9 @@ class Histogrammer:
         return self._stop_time_exceeded
 
     def histogram_info(self):
+        """
+        Get the histograms and their status info.
+        """
         for h in self.histograms:
             info = self._generate_info(h)
             logging.info(info)
