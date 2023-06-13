@@ -314,13 +314,22 @@ class TestHistogramProcess:
             hist_configs, start_time, stop_time
         )
 
-        tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
-        irrelevant_det_ids = [123] * len(tofs)
+        irrelevant_tofs = [
+            5,
+            15,
+            25,
+            35,
+            45,
+        ]  # Values correspond to the middle of the bins
+        irrelevant_det_ids = [123] * len(irrelevant_tofs)
 
         for time_offset in [5001, 5002, 5003]:
             # Inject some fake data
             event_source.append_data(
-                "::source::", start_time + time_offset, tofs, irrelevant_det_ids
+                "::source::",
+                start_time + time_offset,
+                irrelevant_tofs,
+                irrelevant_det_ids,
             )
             processor.process()
 
