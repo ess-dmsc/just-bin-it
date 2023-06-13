@@ -10,7 +10,7 @@ from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
 from just_bin_it.histograms.histogram_process import Processor
-from just_bin_it.histograms.histogrammer import Histogrammer
+from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from tests.doubles.producers import SpyProducer
 
 CONFIG_1D = {
@@ -129,7 +129,7 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [6, 6, 6, 6, 6])
-        assert json.loads(last_msg)["state"] == "FINISHED"
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_number_events_histogrammed_correspond_to_start_and_stop_times(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -154,7 +154,7 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [9, 9, 9, 9, 9])
-        assert json.loads(last_msg)["state"] == "FINISHED"
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_counting_for_duration_with_no_data_exits_after_stop_time(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -170,7 +170,7 @@ class TestHistogramProcess:
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
-        assert json.loads(last_msg)["state"] == "INITIALISED"
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["INITIALISED"]
 
         # Advance time past stop time + leeway
         time_source.curr_time_ns = 15 * 1_000_000_000
@@ -179,7 +179,7 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [0, 0, 0, 0, 0])
-        assert json.loads(last_msg)["state"] == "FINISHED"
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_counting_for_an_interval_with_only_one_event_message_gets_data(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -205,7 +205,7 @@ class TestHistogramProcess:
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
-        assert json.loads(last_msg)["state"] == "INITIALISED"
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["INITIALISED"]
 
         # Advance time past stop time + leeway
         time_source.curr_time_ns = 15 * 1_000_000_000
@@ -214,7 +214,7 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [1, 1, 1, 1, 1])
-        assert json.loads(last_msg)["state"] == "FINISHED"
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_if_wallclock_has_exceeded_stop_time_but_data_has_not_then_continues(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -244,7 +244,7 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [9, 9, 9, 9, 9])
-        assert json.loads(last_msg)["state"] == "FINISHED"
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_counting_during_an_empty_duration_after_stop_time_data_is_ignored(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -269,7 +269,7 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [0, 0, 0, 0, 0])
-        assert json.loads(last_msg)["state"] == "FINISHED"
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_open_ended_counting_for_a_while_then_stop_command_triggers_finished(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -303,7 +303,33 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [5, 5, 5, 5, 5])
-        assert json.loads(last_msg)["state"] == "FINISHED"
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
+
+    def test_finished_is_only_published_once(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["interval"] = 5
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+
+        event_source, processor, producer, _, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
+        )
+
+        tofs = [5, 15, 25, 35, 45]  # Values correspond to the middle of the bins
+        irrelevant_det_ids = [123] * len(tofs)
+
+        for time_offset in [5001, 5002, 5003]:
+            # Inject some fake data
+            event_source.append_data(
+                "::source::", start_time + time_offset, tofs, irrelevant_det_ids
+            )
+            processor.run_processing()
+
+        _, (_, _, first_msg) = producer.messages[0]
+        _, (_, _, last_msg) = producer.messages[~0]
+
+        assert len(producer.messages) == 2
+        assert json.loads(first_msg)["state"] == HISTOGRAM_STATES["INITIALISED"]
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
 
 @pytest.mark.slow

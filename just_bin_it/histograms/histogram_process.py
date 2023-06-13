@@ -115,6 +115,9 @@ class Processor:
         """
         Run the processing chain once.
         """
+        if self.processing_finished:
+            return
+
         if not self.msg_queue.empty():
             self.processing_finished |= self.process_command_message()
 
