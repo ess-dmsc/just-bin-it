@@ -63,6 +63,8 @@ data.
 For demo/testing purposes this could be Kafka running on localhost with
 generate_event_data.py running (see Generating fake event data below).
 
+For a quickstart guide to installing Kafka locally, see https://kafka.apache.org/quickstart.
+
 Start the histogrammer from the command-line:
 ```
 python bin/just-bin-it.py --brokers localhost:9092 --config-topic hist_commands
