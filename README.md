@@ -95,7 +95,7 @@ CONFIG_JSON = b"""
 """
 
 producer = Producer(bootstrap_servers='localhost:9092')
-producer.send("hist_commands", CONFIG_JSON)
+producer.produce("hist_commands", CONFIG_JSON)
 producer.flush()
 ```
 
