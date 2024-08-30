@@ -24,7 +24,7 @@ class Consumer:
 
         :param brokers: The names of the brokers to connect to.
         :param topics: The names of the data topics.
-        :param security_config: The security confi for Kafka
+        :param security_config: The security config for Kafka
         """
         self.topic_partitions = []
         try:
