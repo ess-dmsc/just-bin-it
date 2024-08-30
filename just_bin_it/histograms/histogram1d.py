@@ -1,6 +1,6 @@
-import logging
-
 import numpy as np
+
+import logging
 
 from just_bin_it.histograms.input_validators import (
     check_bins,
