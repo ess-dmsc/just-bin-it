@@ -360,7 +360,7 @@ Output data:
 ```
 
 ### Install the commit hooks (important)
-There are commit hooks for Black and Flake8.
+There is a commit hook for Ruff.
 
 The commit hooks are handled using [pre-commit](https://pre-commit.com).
 
@@ -408,7 +408,7 @@ See the integration-tests folder for more information on how to run them.
 They should be run before modified code is pushed to the code repository.
 
 ### Formatting
-Formatting is handled by [Black](https://black.readthedocs.io/en/stable/).
+Formatting is handled by [Ruff](https://docs.astral.sh/ruff/).
 
 It should be added as a commit hook (see above).
 
