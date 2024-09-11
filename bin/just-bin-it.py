@@ -193,7 +193,7 @@ if __name__ == "__main__":
         default=3,
         help="sets the logging level: debug=1, info=2, warning=3, error=4, critical=5.",
     )
-    
+
     parser.add_argument(
         "-c",
         "--config-file",
@@ -219,10 +219,14 @@ if __name__ == "__main__":
 
     if 1 <= args.log_level <= 5:
         logging.basicConfig(
-            format="%(asctime)s - %(message)s", level=args.log_level * 10
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            level=args.log_level * 10,
         )
     else:
-        logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
+        logging.basicConfig(
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            level=logging.INFO,
+        )
 
     kafka_security_config = generate_kafka_security_config(
         args.security_protocol,
