@@ -12,6 +12,7 @@ from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_con
 from just_bin_it.histograms.histogram_process import Processor
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from tests.doubles.producers import SpyProducer
+from tests.test_histogrammer import StubTime as HistogrammerStubTime
 
 CONFIG_1D = {
     "cmd": "config",
@@ -92,7 +93,7 @@ class TestHistogramProcess:
     def generate_histogrammer(producer, start_time, stop_time, hist_configs):
         histograms = HistogramFactory.generate(hist_configs)
         hist_sink = HistogramSink(producer, lambda x, y, z: (x, y, z))
-        return Histogrammer(histograms, start_time, stop_time), hist_sink
+        return Histogrammer(histograms, start_time, stop_time, time_source=HistogrammerStubTime()), hist_sink
 
     def generate_processor(self, hist_configs, start_time, stop_time):
         producer = SpyProducer()
@@ -129,6 +130,9 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [6, 6, 6, 6, 6])
+        assert json.loads(last_msg)["sum"] == 30
+        assert json.loads(last_msg)["diff"] == 30
+        assert json.loads(last_msg)["rate"] == 30
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_number_events_histogrammed_correspond_to_start_and_stop_times(self):
@@ -154,6 +158,9 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [9, 9, 9, 9, 9])
+        assert json.loads(last_msg)["sum"] == 45
+        assert json.loads(last_msg)["diff"] == 45
+        assert json.loads(last_msg)["rate"] == 45
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_counting_for_duration_with_no_data_exits_after_stop_time(self):
@@ -179,6 +186,9 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [0, 0, 0, 0, 0])
+        assert json.loads(last_msg)["sum"] == 0
+        assert json.loads(last_msg)["diff"] == 0
+        assert json.loads(last_msg)["rate"] == 0
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_counting_for_an_interval_with_only_one_event_message_gets_data(self):
@@ -214,6 +224,9 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [1, 1, 1, 1, 1])
+        assert json.loads(last_msg)["sum"] == 5
+        assert json.loads(last_msg)["diff"] == 5
+        assert json.loads(last_msg)["rate"] == 5
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_if_wallclock_has_exceeded_stop_time_but_data_has_not_then_continues(self):
@@ -244,6 +257,9 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [9, 9, 9, 9, 9])
+        assert json.loads(last_msg)["sum"] == 45
+        assert json.loads(last_msg)["diff"] == 40  # 45 - 5
+        assert json.loads(last_msg)["rate"] == 40  # 40 / 1
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_counting_during_an_empty_duration_after_stop_time_data_is_ignored(self):
@@ -269,6 +285,9 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [0, 0, 0, 0, 0])
+        assert json.loads(last_msg)["sum"] == 0
+        assert json.loads(last_msg)["diff"] == 0
+        assert json.loads(last_msg)["rate"] == 0
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_open_ended_counting_for_a_while_then_stop_command_triggers_finished(self):
@@ -303,6 +322,9 @@ class TestHistogramProcess:
         _, (last_hist, _, last_msg) = producer.messages[~0]
 
         assert np.array_equal(last_hist.data, [5, 5, 5, 5, 5])
+        assert json.loads(last_msg)["sum"] == 25
+        assert json.loads(last_msg)["diff"] == 25
+        assert json.loads(last_msg)["rate"] == 25
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_finished_is_only_published_once(self):
