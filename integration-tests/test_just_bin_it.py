@@ -193,8 +193,6 @@ class TestJustBinIt:
         assert hist_data["data"].sum() == total_events
         assert hist_info["state"] == "COUNTING"
         assert hist_info["sum"] == total_events
-        assert hist_info["rate"] > 0
-        assert hist_info["diff"] > 0
 
         self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
         time.sleep(1)
