@@ -24,14 +24,19 @@ class StatisticsPublisher:
         self.metric = metric
         self.stats_interval_ms = stats_interval_ms
         self.next_publish_time_ms = 0
+        self._last_stats = {}
 
     def publish_histogram_stats(self, histogram_processes, current_time_ms):
         if current_time_ms < self.next_publish_time_ms:
             return
 
+        import json
+
+        self._last_stats = {}
         for i, process in enumerate(histogram_processes):
             try:
                 stats = process.get_stats()
+                self._last_stats[i] = stats
                 if stats:
                     self._send_stats(stats, i)
             except Exception as error:
@@ -60,3 +65,6 @@ class StatisticsPublisher:
                 stat["diff"],
                 timestamp=time_stamp,
             )
+
+    def get_last_stats(self):
+        return self._last_stats
