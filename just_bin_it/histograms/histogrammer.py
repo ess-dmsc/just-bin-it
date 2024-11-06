@@ -79,15 +79,19 @@ class Histogrammer:
         return info
 
     def _compute_histogram_stats(self, histogram, curr_time):
+        last_pulse_time = int(histogram.last_pulse_time)
+        last_recorded_pulse_time = self._hist_stats[histogram.identifier].get("last_pulse_time", 0)
         total_counts = int(histogram.data.sum())
         diff = total_counts - self._previous_sum[histogram.identifier]
+        if last_pulse_time == last_recorded_pulse_time and diff == 0:
+            diff = self._hist_stats[histogram.identifier].get("diff", 0)
         ts_diff = (curr_time - self._previous_time[histogram.identifier]) / 1e9
         rate = diff / ts_diff if ts_diff > 0 else 0
         self._previous_sum[histogram.identifier] = total_counts
         self._previous_time[histogram.identifier] = curr_time
 
         self._hist_stats[histogram.identifier] = {
-            "last_pulse_time": int(histogram.last_pulse_time),
+            "last_pulse_time": last_pulse_time,
             "sum": total_counts,
             "diff": diff,
             "rate": rate,
@@ -98,6 +102,7 @@ class Histogrammer:
         """
         Clear/zero the histograms but retain the shape etc.
         """
+        self._hist_stats = {hist.identifier: {} for hist in self.histograms}
         curr_time = self.time.time_in_ns()
         for hist in self.histograms:
             hist.clear_data()
