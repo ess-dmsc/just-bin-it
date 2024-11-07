@@ -1,7 +1,5 @@
 import logging
 
-from just_bin_it.utilities import time_in_ns
-
 HISTOGRAM_STATES = {
     "COUNTING": "COUNTING",
     "FINISHED": "FINISHED",
@@ -10,13 +8,8 @@ HISTOGRAM_STATES = {
 }
 
 
-class Time:
-    def time_in_ns(self):
-        return time_in_ns()
-
-
 class Histogrammer:
-    def __init__(self, histograms, start=None, stop=None, time_source=Time()):
+    def __init__(self, histograms, start=None, stop=None):
         """
         Constructor.
 
@@ -32,9 +25,6 @@ class Histogrammer:
         self._stop_time_exceeded = False
         self._started = False
         self._previous_sum = {hist.identifier: 0 for hist in self.histograms}
-        self.time = time_source
-        curr_time = self.time.time_in_ns()
-        self._previous_time = {hist.identifier: curr_time for hist in self.histograms}
         self._hist_stats = {hist.identifier: {} for hist in self.histograms}
 
     def add_data(self, event_buffer, simulation=False):
@@ -58,7 +48,7 @@ class Histogrammer:
                 src = msg[0] if not simulation else hist.source
                 hist.add_data(msg[1], msg[2], msg[3], src)
 
-    def _generate_info(self, histogram, curr_time):
+    def _generate_info(self, histogram):
         info = {"id": histogram.identifier}
         if self.start:
             info["start"] = self.start
@@ -73,22 +63,27 @@ class Histogrammer:
         else:
             info["state"] = HISTOGRAM_STATES["INITIALISED"]
 
-        hist_stats = self._compute_histogram_stats(histogram, curr_time)
+        hist_stats = self._compute_histogram_stats(histogram)
         info.update(hist_stats)
 
         return info
 
-    def _compute_histogram_stats(self, histogram, curr_time):
+    def _compute_histogram_stats(self, histogram):
         last_pulse_time = int(histogram.last_pulse_time)
-        last_recorded_pulse_time = self._hist_stats[histogram.identifier].get("last_pulse_time", 0)
+        print(f"last_pulse_time: {last_pulse_time}")
+        last_recorded_pulse_time = self._hist_stats[histogram.identifier].get(
+            "last_pulse_time", 0
+        )
+        print(f"last_recorded_pulse_time: {last_recorded_pulse_time}")
         total_counts = int(histogram.data.sum())
         diff = total_counts - self._previous_sum[histogram.identifier]
+        ts_diff = (last_pulse_time - last_recorded_pulse_time) / 1e9
+
+        rate = diff / ts_diff if ts_diff > 0 else 0
         if last_pulse_time == last_recorded_pulse_time and diff == 0:
             diff = self._hist_stats[histogram.identifier].get("diff", 0)
-        ts_diff = (curr_time - self._previous_time[histogram.identifier]) / 1e9
-        rate = diff / ts_diff if ts_diff > 0 else 0
+            rate = self._hist_stats[histogram.identifier].get("rate", 0)
         self._previous_sum[histogram.identifier] = total_counts
-        self._previous_time[histogram.identifier] = curr_time
 
         self._hist_stats[histogram.identifier] = {
             "last_pulse_time": last_pulse_time,
@@ -103,11 +98,9 @@ class Histogrammer:
         Clear/zero the histograms but retain the shape etc.
         """
         self._hist_stats = {hist.identifier: {} for hist in self.histograms}
-        curr_time = self.time.time_in_ns()
         for hist in self.histograms:
             hist.clear_data()
             self._previous_sum[hist.identifier] = 0
-            self._previous_time[hist.identifier] = curr_time
 
     def get_histogram_stats(self):
         """
@@ -122,7 +115,9 @@ class Histogrammer:
                 results.append(
                     {
                         # numpy int64 cannot be converted to JSON.
-                        "last_pulse_time": self._hist_stats[hist.identifier]["last_pulse_time"],
+                        "last_pulse_time": self._hist_stats[hist.identifier][
+                            "last_pulse_time"
+                        ],
                         "sum": self._hist_stats[hist.identifier]["sum"],
                         "diff": self._hist_stats[hist.identifier]["diff"],
                         "rate": self._hist_stats[hist.identifier]["rate"],
@@ -130,9 +125,7 @@ class Histogrammer:
                 )
             except KeyError:
                 logging.warning("No stats for histogram %s", hist.identifier)
-                results.append(
-                    {}
-            )
+                results.append({})
 
         return results
 
@@ -146,8 +139,7 @@ class Histogrammer:
         """
         Get the histograms and their status info.
         """
-        curr_time = self.time.time_in_ns()
         for h in self.histograms:
-            info = self._generate_info(h, curr_time)
+            info = self._generate_info(h)
             logging.info(info)
             yield h, info
