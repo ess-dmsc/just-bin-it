@@ -24,7 +24,8 @@ class Histogrammer:
         self.stop = stop
         self._stop_time_exceeded = False
         self._started = False
-        self._previous_sum = [0 for _ in self.histograms]
+        self._previous_sum = {hist.identifier: 0 for hist in self.histograms}
+        self._hist_stats = {hist.identifier: {} for hist in self.histograms}
 
     def add_data(self, event_buffer, simulation=False):
         """
@@ -62,15 +63,45 @@ class Histogrammer:
         else:
             info["state"] = HISTOGRAM_STATES["INITIALISED"]
 
+        hist_stats = self._compute_histogram_stats(histogram)
+        info.update(hist_stats)
+
         return info
+
+    def _compute_histogram_stats(self, histogram):
+        last_pulse_time = int(histogram.last_pulse_time)
+        last_recorded_pulse_time = self._hist_stats[histogram.identifier].get(
+            "last_pulse_time", 0
+        )
+        total_counts = int(histogram.data.sum())
+        diff = total_counts - self._previous_sum[histogram.identifier]
+        if last_pulse_time == last_recorded_pulse_time and diff == 0:
+            # If we are resending "duplicate" data,
+            # we don't want to update the stats.
+            diff = self._hist_stats[histogram.identifier].get("diff", 0)
+            rate = self._hist_stats[histogram.identifier].get("rate", 0)
+        else:
+            ts_diff = (last_pulse_time - last_recorded_pulse_time) / 1e9
+            rate = diff / ts_diff if ts_diff > 0 else 0
+
+        self._previous_sum[histogram.identifier] = total_counts
+
+        self._hist_stats[histogram.identifier] = {
+            "last_pulse_time": last_pulse_time,
+            "sum": total_counts,
+            "diff": diff,
+            "rate": rate,
+        }
+        return self._hist_stats[histogram.identifier]
 
     def clear_histograms(self):
         """
         Clear/zero the histograms but retain the shape etc.
         """
-        for i, hist in enumerate(self.histograms):
+        self._hist_stats = {hist.identifier: {} for hist in self.histograms}
+        for hist in self.histograms:
             hist.clear_data()
-            self._previous_sum[i] = 0
+            self._previous_sum[hist.identifier] = 0
 
     def get_histogram_stats(self):
         """
@@ -81,17 +112,21 @@ class Histogrammer:
         results = []
 
         for i, hist in enumerate(self.histograms):
-            total_counts = int(hist.data.sum())
-            diff = total_counts - self._previous_sum[i]
-            self._previous_sum[i] = total_counts
-            results.append(
-                {
-                    # numpy int64 cannot be converted to JSON.
-                    "last_pulse_time": int(hist.last_pulse_time),
-                    "sum": total_counts,
-                    "diff": diff,
-                }
-            )
+            try:
+                results.append(
+                    {
+                        # numpy int64 cannot be converted to JSON.
+                        "last_pulse_time": self._hist_stats[hist.identifier][
+                            "last_pulse_time"
+                        ],
+                        "sum": self._hist_stats[hist.identifier]["sum"],
+                        "diff": self._hist_stats[hist.identifier]["diff"],
+                        "rate": self._hist_stats[hist.identifier]["rate"],
+                    }
+                )
+            except KeyError:
+                logging.warning("No stats for histogram %s", hist.identifier)
+                results.append({})
 
         return results
 

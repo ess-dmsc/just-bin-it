@@ -161,3 +161,15 @@ class TestStatisticsPublisher:
 
         # Messages sent for both publish
         assert self.sender.send.call_count == 4
+
+    def test_handle_empty_stats(self):
+        mock_process = mock.create_autospec(HistogramProcess)
+        mock_process.get_stats.return_value = [{}]
+
+        histogram_processes = [mock_process]
+
+        self.publisher.publish_histogram_stats(
+            histogram_processes, current_time_ms=1234
+        )
+
+        self.sender.send.assert_not_called()

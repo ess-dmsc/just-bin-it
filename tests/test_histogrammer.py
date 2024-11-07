@@ -1,5 +1,6 @@
 import copy
 
+import numpy as np
 import pytest
 from confluent_kafka import TIMESTAMP_CREATE_TIME
 
@@ -194,6 +195,12 @@ def create_histogrammer(hist_sink, configuration):
     return Histogrammer(histograms, start, stop)
 
 
+def update_stats(histogrammer):
+    generator = histogrammer.histogram_info()
+    for _ in generator:
+        pass
+
+
 class TestHistogrammer:
     @pytest.fixture(autouse=True)
     def prepare(self):
@@ -285,23 +292,33 @@ class TestHistogrammer:
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)
 
+        update_stats(histogrammer)
         stats = histogrammer.get_histogram_stats()
 
         assert stats[0]["last_pulse_time"] == 1002 * 10**9
         assert stats[0]["sum"] == 28
         assert stats[0]["diff"] == 28
+        assert np.allclose(
+            stats[0]["rate"], 28 / stats[0]["last_pulse_time"] * 1e9, atol=1e-7, rtol=0
+        )
         assert stats[1]["last_pulse_time"] == 1002 * 10**9
         assert stats[1]["sum"] == 28
         assert stats[1]["diff"] == 28
+        assert np.allclose(
+            stats[1]["rate"], 28 / stats[1]["last_pulse_time"] * 1e9, atol=1e-7, rtol=0
+        )
 
     def test_get_stats_returns_correct_counts_since_last_request(self):
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)
+        update_stats(histogrammer)
         histogrammer.get_histogram_stats()
         histogrammer.add_data(EVENT_DATA)
+        update_stats(histogrammer)
         histogrammer.get_histogram_stats()
         histogrammer.add_data(EVENT_DATA)
 
+        update_stats(histogrammer)
         stats = histogrammer.get_histogram_stats()
 
         assert stats[0]["diff"] == 28
@@ -311,24 +328,44 @@ class TestHistogrammer:
         histogrammer = create_histogrammer(self.hist_sink, START_2D_CONFIG)
         histogrammer.add_data(EVENT_DATA)
 
+        update_stats(histogrammer)
         stats = histogrammer.get_histogram_stats()
 
         assert stats[0]["last_pulse_time"] == 1002 * 10**9
         assert stats[0]["sum"] == 28
         assert stats[0]["diff"] == 28
+        assert np.allclose(
+            stats[0]["rate"], 28 / stats[0]["last_pulse_time"] * 1e9, atol=1e-7, rtol=0
+        )
         assert stats[1]["last_pulse_time"] == 1002 * 10**9
         assert stats[1]["sum"] == 28
         assert stats[1]["diff"] == 28
+        assert np.allclose(
+            stats[1]["rate"], 28 / stats[1]["last_pulse_time"] * 1e9, atol=1e-7, rtol=0
+        )
         assert stats[2]["sum"] == 28
         assert stats[2]["diff"] == 28
         assert stats[2]["last_pulse_time"] == 1002 * 10**9
+        assert np.allclose(
+            stats[2]["rate"], 28 / stats[2]["last_pulse_time"] * 1e9, atol=1e-7, rtol=0
+        )
 
     def test_get_stats_with_no_histogram_returns_empty(self):
         histogrammer = create_histogrammer(self.hist_sink, NO_HIST_CONFIG)
 
+        # update_stats is not called so no stats are generated
         stats = histogrammer.get_histogram_stats()
 
         assert len(stats) == 0
+
+    def test_stats_are_empty_if_no_histogram_has_been_updated(self):
+        histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
+        histogrammer.add_data(EVENT_DATA)
+
+        stats = histogrammer.get_histogram_stats()
+
+        assert stats[0] == {}
+        assert stats[1] == {}
 
     def test_if_histogram_has_id_then_that_is_added_to_the_info_field(self):
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
@@ -350,16 +387,29 @@ class TestHistogrammer:
     def test_clear_histograms_resets_statistics(self):
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)
+        update_stats(histogrammer)
         histogrammer.get_histogram_stats()
 
         histogrammer.clear_histograms()
 
+        update_stats(histogrammer)
         stats = histogrammer.get_histogram_stats()
 
         assert stats[0]["sum"] == 0
         assert stats[0]["diff"] == 0
         assert stats[1]["sum"] == 0
         assert stats[1]["diff"] == 0
+        assert stats[0]["rate"] == 0
+        assert stats[1]["rate"] == 0
+
+    def test_histogram_rate_is_zero_when_no_data(self):
+        histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
+
+        update_stats(histogrammer)
+        stats = histogrammer.get_histogram_stats()
+
+        assert stats[0]["rate"] == 0
+        assert stats[1]["rate"] == 0
 
     def test_if_start_time_and_stop_time_defined_then_they_are_in_the_info(self):
         config = copy.deepcopy(START_CONFIG)
