@@ -75,12 +75,15 @@ class Histogrammer:
         )
         total_counts = int(histogram.data.sum())
         diff = total_counts - self._previous_sum[histogram.identifier]
-        ts_diff = (last_pulse_time - last_recorded_pulse_time) / 1e9
-
-        rate = diff / ts_diff if ts_diff > 0 else 0
         if last_pulse_time == last_recorded_pulse_time and diff == 0:
+            # If we are resending "duplicate" data,
+            # we don't want to update the stats.
             diff = self._hist_stats[histogram.identifier].get("diff", 0)
             rate = self._hist_stats[histogram.identifier].get("rate", 0)
+        else:
+            ts_diff = (last_pulse_time - last_recorded_pulse_time) / 1e9
+            rate = diff / ts_diff if ts_diff > 0 else 0
+
         self._previous_sum[histogram.identifier] = total_counts
 
         self._hist_stats[histogram.identifier] = {
