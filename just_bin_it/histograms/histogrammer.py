@@ -70,11 +70,9 @@ class Histogrammer:
 
     def _compute_histogram_stats(self, histogram):
         last_pulse_time = int(histogram.last_pulse_time)
-        print(f"last_pulse_time: {last_pulse_time}")
         last_recorded_pulse_time = self._hist_stats[histogram.identifier].get(
             "last_pulse_time", 0
         )
-        print(f"last_recorded_pulse_time: {last_recorded_pulse_time}")
         total_counts = int(histogram.data.sum())
         diff = total_counts - self._previous_sum[histogram.identifier]
         ts_diff = (last_pulse_time - last_recorded_pulse_time) / 1e9
