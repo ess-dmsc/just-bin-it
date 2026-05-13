@@ -48,6 +48,21 @@ CONFIG_CMD = {
 }
 
 STOP_CMD = {"cmd": "stop"}
+POLL_INTERVAL_S = 0.05
+KAFKA_TIMEOUT_S = 15
+
+
+def create_topics(admin_client, topics):
+    futures = admin_client.create_topics(topics)
+    for future in futures.values():
+        future.result(timeout=KAFKA_TIMEOUT_S)
+
+
+def deserialise_message(message):
+    schema = get_schema(message)
+    if schema in SCHEMAS_TO_DESERIALISERS:
+        return SCHEMAS_TO_DESERIALISERS[schema](message)
+    raise AssertionError(f"Unexpected schema {schema}")
 
 
 def create_consumer(topic):
@@ -108,14 +123,14 @@ class TestJustBinIt:
         self.data_topic_name = f"data_{uid}"
         hist_topic = NewTopic(self.hist_topic_name, 1, 1)
         data_topic = NewTopic(self.data_topic_name, 2, 1)
-        admin_client.create_topics([hist_topic, data_topic])
+        create_topics(admin_client, [hist_topic, data_topic])
 
         self.producer = Producer(
             {"bootstrap.servers": ",".join(BROKERS), "message.max.bytes": 100_000_000}
         )
-        time.sleep(5)
 
         self.consumer, topic_partitions = create_consumer(self.hist_topic_name)
+        self.response_consumer, _ = create_consumer(RESPONSE_TOPIC)
         # Only one partition for histogram topic
         self.topic_part = topic_partitions[0]
         self.time_stamps = []
@@ -166,67 +181,72 @@ class TestJustBinIt:
         # Set the message timestamps explicitly so kafka latency effects are minimised.
         self.send_message(self.data_topic_name, data, self.time_stamps[~0])
 
-    def get_hist_data_from_kafka(self):
-        data = []
-        # Move it to one from the end so we can read the final histogram
-        _, high_wm = self.consumer.get_watermark_offsets(self.topic_part)
-        last_highest = max(0, high_wm - 1)
-        self.consumer.seek(
-            TopicPartition(
-                self.topic_part.topic, self.topic_part.partition, last_highest
-            )
+    def wait_for_histogram(self, expected_sum, expected_state, timeout=KAFKA_TIMEOUT_S):
+        deadline = time.monotonic() + timeout
+        last_hist_data = None
+        last_hist_info = None
+
+        while time.monotonic() < deadline:
+            msg = self.consumer.poll(POLL_INTERVAL_S)
+            if msg is None:
+                continue
+            if msg.error():
+                raise AssertionError(msg.error())
+
+            last_hist_data = deserialise_message(msg.value())
+            last_hist_info = json.loads(last_hist_data["info"])
+            if (
+                last_hist_data["data"].sum() == expected_sum
+                and last_hist_info["state"] == expected_state
+            ):
+                return last_hist_data
+
+        raise AssertionError(
+            f"Timed out waiting for histogram sum={expected_sum}, "
+            f"state={expected_state}. Last message was sum="
+            f"{last_hist_data['data'].sum() if last_hist_data else None}, "
+            f"info={last_hist_info}"
         )
 
-        while not data:
-            msg = self.consumer.poll(0.005)
-            if msg:
-                data.append(msg)
+    def wait_for_response(self, msg_id, expected_response, timeout=KAFKA_TIMEOUT_S):
+        deadline = time.monotonic() + timeout
+        last_response = None
 
-        last_msg = data[-1]
-        schema = get_schema(last_msg.value())
-        if schema in SCHEMAS_TO_DESERIALISERS:
-            return SCHEMAS_TO_DESERIALISERS[schema](last_msg.value())
+        while time.monotonic() < deadline:
+            msg = self.response_consumer.poll(POLL_INTERVAL_S)
+            if msg is None:
+                continue
+            if msg.error():
+                raise AssertionError(msg.error())
 
-    def get_response_message_from_kafka(self):
-        data = []
-        consumer, topic_partitions = create_consumer(RESPONSE_TOPIC)
-        topic_part = topic_partitions[0]
-        # Move it to one from the end so we can read the final message
-        _, high_wm = consumer.get_watermark_offsets(topic_part)
-        last_highest = max(0, high_wm - 1)
-        consumer.seek(
-            TopicPartition(topic_part.topic, topic_part.partition, last_highest)
+            last_response = json.loads(msg.value())
+            if (
+                last_response.get("msg_id") == msg_id
+                and last_response.get("response") == expected_response
+            ):
+                return last_response
+
+        raise AssertionError(
+            f"Timed out waiting for {expected_response} response to {msg_id}. "
+            f"Last response was {last_response}"
         )
-
-        while not data:
-            msg = consumer.poll(0.005)
-            if msg:
-                data.append(msg)
-
-        last_msg = data[-1]
-        return last_msg.value()
 
     def test_basic_operation(self, just_bin_it):
         # Configure just-bin-it
         config = self.create_basic_config()
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-
-        # Give it time to start counting
-        time.sleep(1)
+        self.wait_for_histogram(0, "INITIALISED")
 
         # Send fake data
         num_msgs = 10
 
         for i in range(num_msgs):
             self.generate_and_send_data(i + 1)
-            time.sleep(0.5)
 
         total_events = sum(self.num_events_per_msg)
 
-        time.sleep(10)
-
         # Get histogram data
-        hist_data = self.get_hist_data_from_kafka()
+        hist_data = self.wait_for_histogram(total_events, "COUNTING")
         hist_info = json.loads(hist_data["info"])
 
         assert hist_data["data"].sum() == total_events
@@ -234,10 +254,9 @@ class TestJustBinIt:
         assert hist_info["sum"] == total_events
 
         self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
-        time.sleep(1)
 
         # Get histogram data
-        hist_data = self.get_hist_data_from_kafka()
+        hist_data = self.wait_for_histogram(total_events, "FINISHED")
 
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "FINISHED"
@@ -246,23 +265,18 @@ class TestJustBinIt:
         # Configure just-bin-it
         config = self.create_da00_config()
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-
-        # Give it time to start counting
-        time.sleep(1)
+        self.wait_for_histogram(0, "INITIALISED")
 
         # Send fake data
         num_msgs = 10
 
         for _ in range(num_msgs):
             self.generate_and_send_da00_data()
-            time.sleep(0.5)
 
         total_events = sum(self.num_events_per_msg)
 
-        time.sleep(10)
-
         # Get histogram data
-        hist_data = self.get_hist_data_from_kafka()
+        hist_data = self.wait_for_histogram(total_events, "COUNTING")
         hist_info = json.loads(hist_data["info"])
 
         assert hist_data["data"].sum() == total_events
@@ -270,10 +284,9 @@ class TestJustBinIt:
         assert hist_info["sum"] == total_events
 
         self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
-        time.sleep(1)
 
         # Get histogram data
-        hist_data = self.get_hist_data_from_kafka()
+        hist_data = self.wait_for_histogram(total_events, "FINISHED")
 
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "FINISHED"
@@ -284,17 +297,14 @@ class TestJustBinIt:
         config["msg_id"] = f"{time_in_ns() // 1000}"
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
-        # Give it some time before stopping it
-        time.sleep(5)
-        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
-        time.sleep(1)
+        msg = self.wait_for_response(config["msg_id"], "ACK")
 
-        time.sleep(10)
+        assert msg["msg_id"] == config["msg_id"]
+        assert msg["response"] == "ACK"
 
-        msg = self.get_response_message_from_kafka()
-
-        assert json.loads(msg)["msg_id"] == config["msg_id"]
-        assert json.loads(msg)["response"] == "ACK"
+        stop_cmd = {"cmd": "stop", "msg_id": f"{time_in_ns() // 1000}"}
+        self.send_message(CMD_TOPIC, bytes(json.dumps(stop_cmd), "utf-8"))
+        self.wait_for_response(stop_cmd["msg_id"], "ACK")
 
     def test_supplying_msg_id_gets_error_response(self, just_bin_it):
         # Configure just-bin-it
@@ -303,12 +313,7 @@ class TestJustBinIt:
         config["msg_id"] = f"{time_in_ns() // 1000}"
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
-        time.sleep(2)
-
-        time.sleep(10)
-
-        msg = self.get_response_message_from_kafka()
-        msg = json.loads(msg)
+        msg = self.wait_for_response(config["msg_id"], "ERR")
 
         assert msg["msg_id"] == config["msg_id"]
         assert msg["response"] == "ERR"

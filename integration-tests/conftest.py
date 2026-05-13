@@ -1,12 +1,14 @@
+import json
 import os.path
 import signal
 import sys
+import time
+import uuid
 from subprocess import Popen
-from time import sleep
 
 import pytest
 from compose.cli.main import TopLevelCommand, project_from_options
-from confluent_kafka import Producer
+from confluent_kafka import OFFSET_END, Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient
 
 common_options = {
@@ -33,6 +35,9 @@ common_options = {
 WAIT_FOR_DEBUGGER_ATTACH = "--wait-to-attach-debugger"
 
 BROKERS = ["localhost:9092"]
+CMD_TOPIC = "hist_commands"
+RESPONSE_TOPIC = "hist_responses"
+POLL_INTERVAL_S = 0.05
 
 
 def pytest_addoption(parser):
@@ -73,21 +78,65 @@ def wait_until_kafka_ready(docker_cmd, docker_options):
     client = AdminClient(conf)
     topics_ready = False
 
-    n_polls = 0
-    while n_polls < 10 and not topics_ready:
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline and not topics_ready:
         topics = set(client.list_topics().topics.keys())
-        topics_needed = ["hist_commands"]
+        topics_needed = [CMD_TOPIC, RESPONSE_TOPIC]
         present = [t in topics for t in topics_needed]
         if all(present):
             topics_ready = True
             print("Topics are ready!", flush=True)
             break
-        sleep(6)
-        n_polls += 1
+        time.sleep(0.5)
 
     if not topics_ready:
         docker_cmd.down(docker_options)  # Bring down containers cleanly
         raise Exception("Kafka topics were not ready after 60 seconds, aborting tests.")
+
+
+def wait_until_just_bin_it_ready(proc, timeout=15):
+    conf = {
+        "bootstrap.servers": ",".join(BROKERS),
+        "group.id": uuid.uuid4(),
+        "auto.offset.reset": "latest",
+    }
+    consumer = Consumer(conf)
+    producer = Producer({"bootstrap.servers": ",".join(BROKERS)})
+    response_metadata = consumer.list_topics(RESPONSE_TOPIC, timeout=timeout)
+    topic_partitions = [
+        TopicPartition(RESPONSE_TOPIC, partition.id, OFFSET_END)
+        for partition in response_metadata.topics[RESPONSE_TOPIC].partitions.values()
+    ]
+    consumer.assign(topic_partitions)
+    msg_id = f"startup-{uuid.uuid4()}"
+    message = json.dumps({"cmd": "not a valid command", "msg_id": msg_id}).encode()
+    deadline = time.monotonic() + timeout
+    next_send = 0
+
+    try:
+        while time.monotonic() < deadline:
+            if proc.poll() is not None:
+                raise Exception("just-bin-it process exited during startup")
+
+            now = time.monotonic()
+            if now >= next_send:
+                producer.produce(CMD_TOPIC, message)
+                producer.flush(1)
+                next_send = now + 0.5
+
+            msg = consumer.poll(POLL_INTERVAL_S)
+            if msg is None:
+                continue
+            if msg.error():
+                raise Exception(msg.error())
+
+            response = json.loads(msg.value())
+            if response.get("msg_id") == msg_id and response.get("response") == "ERR":
+                return
+    finally:
+        consumer.close()
+
+    raise Exception("just-bin-it was not ready before timeout")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -107,7 +156,7 @@ def start_kafka(request):
         print("Stopping zookeeper and kafka", flush=True)
         options["--timeout"] = 30
         options["--project-name"] = "kafka"
-        options["--file"] = ["docker-compose-kafka.yml"]
+        options["--file"] = ["docker-compose.yml"]
         cmd.down(options)
 
     request.addfinalizer(fin)
@@ -129,8 +178,7 @@ def just_bin_it(request):
         ]
     )
 
-    # Give just-bin-it time to start up
-    sleep(10)
+    wait_until_just_bin_it_ready(proc)
 
     wait_for_debugger = request.config.getoption(WAIT_FOR_DEBUGGER_ATTACH)
 
