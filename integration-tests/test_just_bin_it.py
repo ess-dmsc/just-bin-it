@@ -6,6 +6,7 @@ import sys
 import time
 import uuid
 
+import numpy as np
 import pytest
 from confluent_kafka import OFFSET_END, Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic
@@ -14,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.serialisation import (
     SCHEMAS_TO_DESERIALISERS,
     get_schema,
+    serialise_da00,
     serialise_ev44,
 )
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
@@ -75,6 +77,26 @@ def generate_data(msg_id, time_stamp, num_events):
     return serialise_ev44("integration test", msg_id, time_stamp, tofs, dets)
 
 
+def generate_da00_data(time_stamp, num_events):
+    counts = np.zeros(NUM_BINS, dtype=np.int64)
+    for _ in range(num_events):
+        counts[random.randrange(NUM_BINS)] += 1
+    edges = np.linspace(TOF_RANGE[0], TOF_RANGE[1], NUM_BINS + 1, dtype=np.int64)
+    return serialise_da00(
+        "integration test",
+        time_stamp,
+        [
+            {"name": "signal", "data": counts, "axes": ["frame_time"]},
+            {
+                "name": "frame_time",
+                "data": edges,
+                "axes": ["frame_time"],
+                "unit": "ns",
+            },
+        ],
+    )
+
+
 class TestJustBinIt:
     @pytest.fixture(autouse=True)
     def prepare(self):
@@ -105,6 +127,12 @@ class TestJustBinIt:
         config["histograms"][0]["data_topics"] = [self.data_topic_name]
         return config
 
+    def create_da00_config(self):
+        config = self.create_basic_config()
+        config["input_schema"] = "da00"
+        del config["histograms"][0]["det_range"]
+        return config
+
     def send_message(self, topic, message, timestamp=None):
         if timestamp:
             self.producer.produce(topic, message, timestamp=timestamp)
@@ -118,6 +146,19 @@ class TestJustBinIt:
         # up at the end.
         num_events = random.randint(500, 1500)
         data = generate_data(msg_id, time_stamp, num_events)
+
+        # Need timestamp in ms
+        self.time_stamps.append(time_stamp // 1_000_000)
+        self.num_events_per_msg.append(num_events)
+        # Set the message timestamps explicitly so kafka latency effects are minimised.
+        self.send_message(self.data_topic_name, data, self.time_stamps[~0])
+
+    def generate_and_send_da00_data(self):
+        time_stamp = time_in_ns()
+        # Generate a random number of counts so we can be sure the correct data matches
+        # up at the end.
+        num_events = random.randint(500, 1500)
+        data = generate_da00_data(time_stamp, num_events)
 
         # Need timestamp in ms
         self.time_stamps.append(time_stamp // 1_000_000)
@@ -165,9 +206,7 @@ class TestJustBinIt:
         last_msg = data[-1]
         return last_msg.value()
 
-    def test_basic_operation(
-        self, just_bin_it
-    ):
+    def test_basic_operation(self, just_bin_it):
         # Configure just-bin-it
         config = self.create_basic_config()
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
@@ -180,6 +219,42 @@ class TestJustBinIt:
 
         for i in range(num_msgs):
             self.generate_and_send_data(i + 1)
+            time.sleep(0.5)
+
+        total_events = sum(self.num_events_per_msg)
+
+        time.sleep(10)
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+        hist_info = json.loads(hist_data["info"])
+
+        assert hist_data["data"].sum() == total_events
+        assert hist_info["state"] == "COUNTING"
+        assert hist_info["sum"] == total_events
+
+        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
+        time.sleep(1)
+
+        # Get histogram data
+        hist_data = self.get_hist_data_from_kafka()
+
+        assert hist_data["data"].sum() == total_events
+        assert json.loads(hist_data["info"])["state"] == "FINISHED"
+
+    def test_basic_da00_operation(self, just_bin_it):
+        # Configure just-bin-it
+        config = self.create_da00_config()
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+
+        # Give it time to start counting
+        time.sleep(1)
+
+        # Send fake data
+        num_msgs = 10
+
+        for _ in range(num_msgs):
+            self.generate_and_send_da00_data()
             time.sleep(0.5)
 
         total_events = sum(self.num_events_per_msg)

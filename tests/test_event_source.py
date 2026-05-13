@@ -50,6 +50,12 @@ def serialise_messages(messages):
     return result
 
 
+def raise_on_invalid_message(message):
+    if message == "invalid":
+        raise Exception("Invalid message")
+    return message
+
+
 class TestEventSourceSinglePartition:
     @classmethod
     def setup_class(cls):
@@ -78,6 +84,20 @@ class TestEventSourceSinglePartition:
         assert len(data) == len(self.messages)
         for i, m in enumerate(self.messages):
             assert compare_two_messages(m, data[i])
+
+    def test_invalid_message_is_skipped(self):
+        consumer = StubConsumer(["broker"], ["topic"])
+        valid = StubConsumerRecord((0, 0), 0, "valid")
+        invalid = StubConsumerRecord((0, 1), 1, "invalid")
+        consumer.add_messages([invalid, valid])
+        event_source = EventSource(
+            consumer, 0, deserialise_function=raise_on_invalid_message
+        )
+
+        data = event_source.get_new_data()
+
+        assert len(data) == 1
+        assert data[0][2] == "valid"
 
     def test_given_exact_time_finds_start_message(self):
         _, _, expected_event_data = self.messages[45]

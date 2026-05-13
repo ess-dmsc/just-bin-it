@@ -1,10 +1,16 @@
 import numpy as np
 import pytest
 
+from just_bin_it.histograms.binned_data import BinnedData
 from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 IRRELEVANT_TOPIC = "some-topic"
 IRRELEVANT_TOF_RANGE = (0, 100)
+MAPPED_BINNED_DATA = BinnedData(
+    np.array([0, 1, 2]),
+    np.array([[1, 2, 3, 4], [10, 20, 30, 40]]),
+)
+WRONG_SHAPE_BINNED_DATA = BinnedData(np.array([0, 1]), np.array([[1, 2, 3]]))
 
 
 def generate_pixel_id(x, y, width):
@@ -184,3 +190,20 @@ class TestHistogram2dMapFunctionality:
         assert self.hist.data[4][0] == 2
         assert self.hist.data[0][5] == 3
         assert self.hist.data[4][5] == 4
+
+    def test_binned_data_is_mapped_to_detector_bins(self):
+        hist = DetHistogram(IRRELEVANT_TOPIC, (10, 20), 2, 2)
+
+        hist.add_binned_data(123, MAPPED_BINNED_DATA)
+
+        assert hist.data[0][0] == 11
+        assert hist.data[1][0] == 22
+        assert hist.data[0][1] == 33
+        assert hist.data[1][1] == 44
+
+    def test_incompatible_binned_data_spatial_size_is_skipped(self):
+        hist = DetHistogram(IRRELEVANT_TOPIC, (10, 20), 2, 2)
+
+        hist.add_binned_data(123, WRONG_SHAPE_BINNED_DATA)
+
+        assert hist.data.sum() == 0

@@ -6,6 +6,7 @@ from confluent_kafka import TIMESTAMP_CREATE_TIME
 
 from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.endpoints.serialisation import serialise_hs00
+from just_bin_it.histograms.binned_data import BinnedData
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
@@ -97,6 +98,34 @@ STOP_CONFIG = {
     ],
 }
 
+BINNED_CONFIG = {
+    "cmd": "config",
+    "histograms": [
+        {
+            "data_brokers": ["fakehost:9092"],
+            "data_topics": ["LOQ_events"],
+            "type": TOF_1D_TYPE,
+            "tof_range": [0, 30],
+            "num_bins": 3,
+            "topic": "hist-topic",
+        }
+    ],
+}
+
+FRACTIONAL_BINNED_CONFIG = {
+    "cmd": "config",
+    "histograms": [
+        {
+            "data_brokers": ["fakehost:9092"],
+            "data_topics": ["LOQ_events"],
+            "type": TOF_1D_TYPE,
+            "tof_range": [0, 5],
+            "num_bins": 1,
+            "topic": "hist-topic",
+        }
+    ],
+}
+
 
 # Data in each "pulse" increases by factor of 2, that way we can know which
 # messages were consumed by looking at the histogram sum.
@@ -178,6 +207,32 @@ UNORDERED_EVENT_DATA = [
         4,
         ("simulator", 999 * 10**9, [1, 2], [1, 2], None),
     ),
+]
+
+BINNED_EVENT_DATA = [
+    (
+        (TIMESTAMP_CREATE_TIME, 1000 * 10**3),
+        0,
+        (
+            "simulator",
+            1000 * 10**9,
+            BinnedData(np.array([0, 10, 20, 30]), np.array([[1], [2], [4]])),
+            None,
+        ),
+    )
+]
+
+FRACTIONAL_BINNED_EVENT_DATA = [
+    (
+        (TIMESTAMP_CREATE_TIME, 1000 * 10**3),
+        0,
+        (
+            "simulator",
+            1000 * 10**9,
+            BinnedData(np.array([0, 10, 20]), np.array([[1_000_000_001], [0]])),
+            None,
+        ),
+    )
 ]
 
 
@@ -444,3 +499,20 @@ class TestHistogrammer:
 
         assert "start" in results[0][1]
         assert "stop" in results[0][1]
+
+    def test_binned_data_is_added_to_histogram(self):
+        histogrammer = create_histogrammer(self.hist_sink, BINNED_CONFIG)
+
+        histogrammer.add_data(BINNED_EVENT_DATA)
+
+        assert np.array_equal(histogrammer.histograms[0].data, [1, 2, 4])
+
+    def test_get_stats_returns_integer_binned_counts(self):
+        histogrammer = create_histogrammer(self.hist_sink, FRACTIONAL_BINNED_CONFIG)
+        histogrammer.add_data(FRACTIONAL_BINNED_EVENT_DATA)
+
+        update_stats(histogrammer)
+        stats = histogrammer.get_histogram_stats()
+
+        assert stats[0]["sum"] == 500_000_000
+        assert stats[0]["diff"] == 500_000_000

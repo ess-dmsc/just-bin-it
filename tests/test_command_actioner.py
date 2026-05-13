@@ -89,6 +89,25 @@ class TestCommandActioner:
         )
         self.process_1.start.assert_called_once()
 
+    def test_on_config_command_per_histogram_input_schema_is_used(self):
+        cmd = deepcopy(CONFIG_CMD)
+        cmd["input_schema"] = "ev44"
+        cmd["histograms"].append(deepcopy(cmd["histograms"][0]))
+        cmd["histograms"][0]["input_schema"] = "da00"
+        cmd["histograms"][1]["topic"] = "output_topic_for_1d_2"
+        self.process_factory.create.side_effect = [self.process_1, self.process_2]
+
+        self.actioner.handle_command_message(cmd, [])
+
+        assert self.process_factory.create.call_args_list[0] == mock.call(
+            mock.ANY, 1564727596867, 1564727668779, "hs00", "da00", {}, True
+        )
+        assert self.process_factory.create.call_args_list[1] == mock.call(
+            mock.ANY, 1564727596867, 1564727668779, "hs00", "ev44", {}, True
+        )
+        self.process_1.start.assert_called_once()
+        self.process_2.start.assert_called_once()
+
     def test_on_config_command_existing_processes_stopped(self):
         processes = [self.process_1, self.process_2]
         self.process_factory.create.side_effect = processes
