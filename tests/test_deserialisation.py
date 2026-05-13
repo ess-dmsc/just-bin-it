@@ -204,6 +204,12 @@ class TestDeserialisationDa00:
         with pytest.raises(JustBinItException):
             deserialise_da00(buf)
 
+    def test_rejects_non_array_signal(self):
+        buf = make_da00_buffer("counts", ["frame_time"], [0, 1])
+
+        with pytest.raises(JustBinItException):
+            deserialise_da00(buf)
+
     def test_rejects_missing_frame_time(self):
         buf = make_da00_buffer([1], ["frame_time"], [], include_frame_time=False)
 
@@ -212,6 +218,18 @@ class TestDeserialisationDa00:
 
     def test_rejects_missing_frame_time_axis(self):
         buf = make_da00_buffer([1], ["tof"], [0, 1])
+
+        with pytest.raises(JustBinItException):
+            deserialise_da00(buf)
+
+    def test_rejects_multidimensional_frame_time(self):
+        buf = make_da00_buffer([1, 2], ["frame_time"], [[0, 1], [2, 3]])
+
+        with pytest.raises(JustBinItException):
+            deserialise_da00(buf)
+
+    def test_rejects_incompatible_frame_time_length(self):
+        buf = make_da00_buffer([1, 2], ["frame_time"], [0, 1, 2, 3])
 
         with pytest.raises(JustBinItException):
             deserialise_da00(buf)

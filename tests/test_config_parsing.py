@@ -5,6 +5,7 @@ import pytest
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
+from just_bin_it.histograms.histogram2d_roi import ROI_TYPE
 from just_bin_it.histograms.histogram_factory import parse_config
 
 CONFIG_FULL = {
@@ -87,6 +88,22 @@ CONFIG_NO_DET_RANGE = {
             "num_bins": 50,
             "topic": "hist-topic1",
             "id": "abcdef",
+        }
+    ],
+}
+
+CONFIG_ROI = {
+    "cmd": "config",
+    "histograms": [
+        {
+            "type": ROI_TYPE,
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["junk_data_4"],
+            "width": 10,
+            "left_edges": [1, 20],
+            "topic": "hist_topic4",
+            "id": "some_id4",
+            "source": "source4",
         }
     ],
 }
@@ -283,6 +300,13 @@ class TestConfigParser:
 
     def test_da00_hist2d_config_throws(self):
         config = copy.deepcopy(CONFIG_FULL)
+        config["input_schema"] = "da00"
+
+        with pytest.raises(Exception):
+            parse_config(config)
+
+    def test_da00_roi_config_throws(self):
+        config = copy.deepcopy(CONFIG_ROI)
         config["input_schema"] = "da00"
 
         with pytest.raises(Exception):
