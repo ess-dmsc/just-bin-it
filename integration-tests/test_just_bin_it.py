@@ -12,6 +12,8 @@ from confluent_kafka import OFFSET_END, Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from integration_settings import BROKERS
+
 from just_bin_it.endpoints.serialisation import (
     SCHEMAS_TO_DESERIALISERS,
     get_schema,
@@ -25,7 +27,6 @@ from just_bin_it.utilities.fake_data_generation import generate_fake_data
 TOF_RANGE = (0, 100_000_000)
 DET_RANGE = (1, 512)
 NUM_BINS = 50
-BROKERS = ["localhost:9092"]
 CMD_TOPIC = "hist_commands"
 RESPONSE_TOPIC = "hist_responses"
 EV44_SOURCE = "ev44_source"

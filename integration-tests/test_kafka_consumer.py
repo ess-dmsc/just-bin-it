@@ -7,11 +7,12 @@ from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient, NewTopic
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from integration_settings import BROKERS
+
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.utilities import time_in_ns
 
-BROKERS = ["localhost:9092"]
 POLL_INTERVAL_S = 0.05
 KAFKA_TIMEOUT_S = 15
 

@@ -54,17 +54,22 @@ integration-tests:
   stage: integration
   image: docker:28
   resource_group: just-bin-it-integration-tests
+  variables:
+    JBI_COMPOSE_PROJECT: just-bin-it-$CI_JOB_ID
+    JBI_KAFKA_ADVERTISED_HOST_NAME: kafka
+    JBI_KAFKA_BROKERS: kafka:9092
+    JBI_KAFKA_MANAGED_EXTERNALLY: "1"
+    JBI_TEST_WORKDIR: /tmp/just-bin-it
   script:
     - docker info
-    - docker compose -f integration-tests/docker-compose.yml -p kafka down --volumes --remove-orphans || true
+    - docker compose -f integration-tests/docker-compose.yml -p "$JBI_COMPOSE_PROJECT" down --volumes --remove-orphans || true
+    - docker compose -f integration-tests/docker-compose.yml -p "$JBI_COMPOSE_PROJECT" up -d zookeeper kafka test-runner
+    - docker compose -f integration-tests/docker-compose.yml -p "$JBI_COMPOSE_PROJECT" exec -T test-runner mkdir -p "$JBI_TEST_WORKDIR"
+    - tar -C "$CI_PROJECT_DIR" -cf - . | docker compose -f integration-tests/docker-compose.yml -p "$JBI_COMPOSE_PROJECT" exec -T test-runner tar -C "$JBI_TEST_WORKDIR" -xf -
     - >
-      docker run --rm
-      --network host
-      -v /var/run/docker.sock:/var/run/docker.sock
-      -v "$CI_PROJECT_DIR":"$CI_PROJECT_DIR"
-      -w "$CI_PROJECT_DIR"
-      registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
+      docker compose -f integration-tests/docker-compose.yml -p "$JBI_COMPOSE_PROJECT" exec -T test-runner
       bash -lc '
+      cd "$JBI_TEST_WORKDIR" &&
       scl enable rh-python38 -- python -m venv test_env &&
       source test_env/bin/activate &&
       python -m pip install --upgrade pip &&
@@ -74,8 +79,10 @@ integration-tests:
       cd integration-tests &&
       python -m pytest -s --junitxml=./IntegrationTestsOutput.xml .
       '
+    - docker compose -f integration-tests/docker-compose.yml -p "$JBI_COMPOSE_PROJECT" cp test-runner:"$JBI_TEST_WORKDIR"/integration-tests/IntegrationTestsOutput.xml integration-tests/IntegrationTestsOutput.xml || true
   after_script:
-    - docker compose -f integration-tests/docker-compose.yml -p kafka down --volumes --remove-orphans || true
+    - docker compose -f integration-tests/docker-compose.yml -p "$JBI_COMPOSE_PROJECT" cp test-runner:"$JBI_TEST_WORKDIR"/integration-tests/IntegrationTestsOutput.xml integration-tests/IntegrationTestsOutput.xml || true
+    - docker compose -f integration-tests/docker-compose.yml -p "$JBI_COMPOSE_PROJECT" down --volumes --remove-orphans || true
     - rm -rf test_env
     - rm -rf integration-tests/output-files/* || true
   rules:
