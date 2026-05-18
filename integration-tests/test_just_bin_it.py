@@ -28,6 +28,8 @@ NUM_BINS = 50
 BROKERS = ["localhost:9092"]
 CMD_TOPIC = "hist_commands"
 RESPONSE_TOPIC = "hist_responses"
+EV44_SOURCE = "ev44_source"
+DA00_SOURCE = "da00_source"
 
 CONFIG_CMD = {
     "cmd": "config",
@@ -87,18 +89,18 @@ def create_consumer(topic):
     return consumer, topic_partitions
 
 
-def generate_data(msg_id, time_stamp, num_events):
+def generate_data(msg_id, time_stamp, num_events, source="integration test"):
     tofs, dets = generate_fake_data(TOF_RANGE, DET_RANGE, num_events)
-    return serialise_ev44("integration test", msg_id, time_stamp, tofs, dets)
+    return serialise_ev44(source, msg_id, time_stamp, tofs, dets)
 
 
-def generate_da00_data(time_stamp, num_events):
+def generate_da00_data(time_stamp, num_events, source="integration test"):
     counts = np.zeros(NUM_BINS, dtype=np.int64)
     for _ in range(num_events):
         counts[random.randrange(NUM_BINS)] += 1
     edges = np.linspace(TOF_RANGE[0], TOF_RANGE[1], NUM_BINS + 1, dtype=np.int64)
     return serialise_da00(
-        "integration test",
+        source,
         time_stamp,
         [
             {"name": "signal", "data": counts, "axes": ["frame_time"]},
@@ -148,6 +150,18 @@ class TestJustBinIt:
         del config["histograms"][0]["det_range"]
         return config
 
+    def create_mixed_config(self):
+        config = self.create_basic_config()
+        da00_histogram = copy.deepcopy(config["histograms"][0])
+        da00_histogram["input_schema"] = "da00"
+        da00_histogram["source"] = DA00_SOURCE
+        da00_histogram["id"] = "da00_id"
+        del da00_histogram["det_range"]
+        config["histograms"][0]["source"] = EV44_SOURCE
+        config["histograms"][0]["id"] = "ev44_id"
+        config["histograms"].append(da00_histogram)
+        return config
+
     def send_message(self, topic, message, timestamp=None):
         if timestamp:
             self.producer.produce(topic, message, timestamp=timestamp)
@@ -155,31 +169,33 @@ class TestJustBinIt:
             self.producer.produce(topic, message)
         self.producer.flush()
 
-    def generate_and_send_data(self, msg_id):
+    def generate_and_send_data(self, msg_id, source="integration test"):
         time_stamp = time_in_ns()
         # Generate a random number of events so we can be sure the correct data matches
         # up at the end.
         num_events = random.randint(500, 1500)
-        data = generate_data(msg_id, time_stamp, num_events)
+        data = generate_data(msg_id, time_stamp, num_events, source)
 
         # Need timestamp in ms
         self.time_stamps.append(time_stamp // 1_000_000)
         self.num_events_per_msg.append(num_events)
         # Set the message timestamps explicitly so kafka latency effects are minimised.
         self.send_message(self.data_topic_name, data, self.time_stamps[~0])
+        return num_events
 
-    def generate_and_send_da00_data(self):
+    def generate_and_send_da00_data(self, source="integration test"):
         time_stamp = time_in_ns()
         # Generate a random number of counts so we can be sure the correct data matches
         # up at the end.
         num_events = random.randint(500, 1500)
-        data = generate_da00_data(time_stamp, num_events)
+        data = generate_da00_data(time_stamp, num_events, source)
 
         # Need timestamp in ms
         self.time_stamps.append(time_stamp // 1_000_000)
         self.num_events_per_msg.append(num_events)
         # Set the message timestamps explicitly so kafka latency effects are minimised.
         self.send_message(self.data_topic_name, data, self.time_stamps[~0])
+        return num_events
 
     def wait_for_histogram(self, expected_sum, expected_state, timeout=KAFKA_TIMEOUT_S):
         deadline = time.monotonic() + timeout
@@ -206,6 +222,43 @@ class TestJustBinIt:
             f"state={expected_state}. Last message was sum="
             f"{last_hist_data['data'].sum() if last_hist_data else None}, "
             f"info={last_hist_info}"
+        )
+
+    def wait_for_histograms_by_id(
+        self, expected_sums, expected_state, timeout=KAFKA_TIMEOUT_S
+    ):
+        deadline = time.monotonic() + timeout
+        remaining = dict(expected_sums)
+        results = {}
+        last_infos = {}
+
+        while time.monotonic() < deadline:
+            msg = self.consumer.poll(POLL_INTERVAL_S)
+            if msg is None:
+                continue
+            if msg.error():
+                raise AssertionError(msg.error())
+
+            hist_data = deserialise_message(msg.value())
+            hist_info = json.loads(hist_data["info"])
+            hist_id = hist_info["id"]
+            last_infos[hist_id] = hist_info
+
+            if hist_id not in remaining:
+                continue
+            if (
+                hist_data["data"].sum() == remaining[hist_id]
+                and hist_info["state"] == expected_state
+            ):
+                results[hist_id] = hist_data
+                del remaining[hist_id]
+
+            if not remaining:
+                return results
+
+        raise AssertionError(
+            f"Timed out waiting for {expected_state} histograms. "
+            f"Remaining={remaining}, last infos={last_infos}"
         )
 
     def wait_for_response(self, msg_id, expected_response, timeout=KAFKA_TIMEOUT_S):
@@ -290,6 +343,37 @@ class TestJustBinIt:
 
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "FINISHED"
+
+    def test_mixed_ev44_and_da00_operation(self, just_bin_it):
+        config = self.create_mixed_config()
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+        self.wait_for_histograms_by_id({"ev44_id": 0, "da00_id": 0}, "INITIALISED")
+
+        num_msgs = 10
+        ev44_events = 0
+        da00_events = 0
+
+        for i in range(num_msgs):
+            ev44_events += self.generate_and_send_data(i + 1, EV44_SOURCE)
+            da00_events += self.generate_and_send_da00_data(DA00_SOURCE)
+
+        hist_data = self.wait_for_histograms_by_id(
+            {"ev44_id": ev44_events, "da00_id": da00_events}, "COUNTING"
+        )
+
+        assert hist_data["ev44_id"]["data"].sum() == ev44_events
+        assert json.loads(hist_data["ev44_id"]["info"])["sum"] == ev44_events
+        assert hist_data["da00_id"]["data"].sum() == da00_events
+        assert json.loads(hist_data["da00_id"]["info"])["sum"] == da00_events
+
+        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
+
+        hist_data = self.wait_for_histograms_by_id(
+            {"ev44_id": ev44_events, "da00_id": da00_events}, "FINISHED"
+        )
+
+        assert hist_data["ev44_id"]["data"].sum() == ev44_events
+        assert hist_data["da00_id"]["data"].sum() == da00_events
 
     def test_supplying_msg_id_gets_acknowledgement_response(self, just_bin_it):
         # Configure just-bin-it
