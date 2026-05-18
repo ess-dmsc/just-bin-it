@@ -52,22 +52,30 @@ unit-tests:
 
 integration-tests:
   stage: integration
+  image: docker:28
   resource_group: just-bin-it-integration-tests
-  before_script:
-    - scl enable rh-python38 -- python -m venv test_env
-    - source test_env/bin/activate
-    - python -m pip install --upgrade pip
-    - python -m pip install -r requirements-dev.txt
-    - python -m pip install -r integration-tests/requirements.txt
-    - python -m pip install 'requests<2.30.0'
-    - docker-compose -f integration-tests/docker-compose.yml -p kafka down --volumes --remove-orphans || true
   script:
-    - source test_env/bin/activate
-    - cd integration-tests
-    - python -m pytest -s --junitxml=./IntegrationTestsOutput.xml .
+    - docker info
+    - docker compose -f integration-tests/docker-compose.yml -p kafka down --volumes --remove-orphans || true
+    - >
+      docker run --rm
+      --network host
+      -v /var/run/docker.sock:/var/run/docker.sock
+      -v "$CI_PROJECT_DIR":"$CI_PROJECT_DIR"
+      -w "$CI_PROJECT_DIR"
+      registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
+      bash -lc '
+      scl enable rh-python38 -- python -m venv test_env &&
+      source test_env/bin/activate &&
+      python -m pip install --upgrade pip &&
+      python -m pip install -r requirements-dev.txt &&
+      python -m pip install -r integration-tests/requirements.txt &&
+      python -m pip install "requests<2.30.0" &&
+      cd integration-tests &&
+      python -m pytest -s --junitxml=./IntegrationTestsOutput.xml .
+      '
   after_script:
-    - source test_env/bin/activate || true
-    - docker-compose -f integration-tests/docker-compose.yml -p kafka down --volumes --remove-orphans || true
+    - docker compose -f integration-tests/docker-compose.yml -p kafka down --volumes --remove-orphans || true
     - rm -rf test_env
     - rm -rf integration-tests/output-files/* || true
   rules:
