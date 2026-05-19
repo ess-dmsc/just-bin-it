@@ -115,6 +115,8 @@ A JSON histogramming configuration has the following parameters:
 * "start" (seconds since epoch in ms): only histogram data after this UTC time (optional).
 * "stop" (seconds since epoch in ms): only histogram data up to this UTC time (optional).
 * "interval" (seconds): only histogram for this interval (optional).
+* "input_schema" (string): the input schema, one of ev42, ev44 or da00 (optional, default ev42).
+* "output_schema" (string): the output schema, one of hs00 or hs01 (optional, default hs00).
 * "histograms" (array of dicts): the histograms to create, see the docs for more information.
 
 An example:
@@ -162,6 +164,10 @@ An example:
 }
 ```
 
+The `input_schema` can also be set on an individual histogram. If it is set on a
+histogram then it overrides the top-level `input_schema` for that histogram.
+This allows different histograms to use different input schemas.
+
 #### Counting for a specified time
 By default just-bin-it will start counting from when it receives the configuration
 command and continue indefinitely.
@@ -176,6 +182,16 @@ If both `start` and `stop` are in the past then historic data will be used
 
 If `interval`"` is defined in combination with `start` and/or `stop` then the
 message will be treated as invalid and ignored.
+
+#### Input schemas
+The `ev42` and `ev44` input schemas contain neutron events.
+
+The `da00` input schema contains pre-binned data. just-bin-it expects a `signal`
+variable and a `frame_time` variable. The `signal` variable must have a
+`frame_time` axis. The `frame_time` variable defines the bin edges and may use
+ns, us, usec, ms or s as the unit.
+
+`da00` input is supported for hist1d and dethist histograms.
 
 #### Histogram types
 
@@ -347,6 +363,7 @@ python bin/view_output_messages.py --brokers localhost:9092 --topic output_topic
 Input data: 
  * [ev42](https://github.com/ess-dmsc/streaming-data-types).
  * [ev44](https://github.com/ess-dmsc/streaming-data-types).
+ * [da00](https://github.com/ess-dmsc/streaming-data-types).
 
 Output data: 
  * [hs00](https://github.com/ess-dmsc/streaming-data-types).

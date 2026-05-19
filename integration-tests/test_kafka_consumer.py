@@ -7,11 +7,32 @@ from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient, NewTopic
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from integration_settings import BROKERS
+
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.utilities import time_in_ns
 
-BROKERS = ["localhost:9092"]
+POLL_INTERVAL_S = 0.05
+KAFKA_TIMEOUT_S = 15
+
+
+def create_topics(admin_client, topics):
+    futures = admin_client.create_topics(topics)
+    for future in futures.values():
+        future.result(timeout=KAFKA_TIMEOUT_S)
+
+
+def wait_for_messages(consumer, timeout=KAFKA_TIMEOUT_S):
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        messages = consumer.get_new_messages()
+        if messages:
+            return messages
+        time.sleep(POLL_INTERVAL_S)
+
+    raise AssertionError("Timed out waiting for Kafka messages")
 
 
 class TestKafkaConsumer:
@@ -34,13 +55,11 @@ class TestKafkaConsumer:
         self.three_partition_topic_name = f"three_{uid}"
         one_partition_topic = NewTopic(self.one_partition_topic_name, 1, 1)
         three_partition_topic = NewTopic(self.three_partition_topic_name, 3, 1)
-        admin_client.create_topics([one_partition_topic, three_partition_topic])
+        create_topics(admin_client, [one_partition_topic, three_partition_topic])
 
         self.producer = Producer(conf)
 
         self.num_messages = 50
-        # Ugly: give everything a chance to get going
-        time.sleep(5)
 
     def put_messages_in(self, topic_name, number_messages):
         # Put messages in
@@ -59,9 +78,7 @@ class TestKafkaConsumer:
         # Move to beginning
         consumer.seek_by_offsets([0])
 
-        data = {}
-        while not data:
-            data = consumer.get_new_messages()
+        data = wait_for_messages(consumer)
 
         assert isinstance(data, list)
         # Total messages
@@ -77,9 +94,7 @@ class TestKafkaConsumer:
         # Move to beginning
         consumer.seek_by_offsets([0, 0, 0])
 
-        data = {}
-        while not data:
-            data = consumer.get_new_messages()
+        data = wait_for_messages(consumer)
 
         assert isinstance(data, list)
         # Total messages across all partitions
@@ -130,9 +145,7 @@ class TestKafkaConsumer:
 
         consumer.seek_by_offsets(new_offsets)
 
-        time.sleep(5)
-
-        num_messages_since_offset = len(consumer.get_new_messages())
+        num_messages_since_offset = len(wait_for_messages(consumer))
 
         assert num_messages_since_offset == self.num_messages - sum(new_offsets)
 
@@ -148,11 +161,9 @@ class TestKafkaTools:
         self.three_partition_topic_name = f"three_{uid}"
         one_partition_topic = NewTopic(self.one_partition_topic_name, 1, 1)
         three_partition_topic = NewTopic(self.three_partition_topic_name, 3, 1)
-        admin_client.create_topics([one_partition_topic, three_partition_topic])
+        create_topics(admin_client, [one_partition_topic, three_partition_topic])
 
         self.producer = Producer(conf)
-
-        time.sleep(5)
 
     def test_checking_for_non_existent_broker_is_not_valid(self):
         assert not are_kafka_settings_valid(

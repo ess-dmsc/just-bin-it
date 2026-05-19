@@ -1,9 +1,30 @@
 import numpy as np
 import pytest
 
+from just_bin_it.histograms.binned_data import BinnedData
 from just_bin_it.histograms.histogram1d import Histogram1d
 
 IRRELEVANT_TOPIC = "some-topic"
+MATCHING_BINNED_DATA = BinnedData(
+    np.array([0, 10, 20, 30]),
+    np.array([[1, 2], [3, 4], [5, 6]]),
+)
+FRACTIONAL_BINNED_DATA = BinnedData(
+    np.array([0, 10, 20, 30]),
+    np.array([[10], [20], [30]]),
+)
+RANGED_BINNED_DATA = BinnedData(
+    np.array([0, 10, 20, 30, 40]),
+    np.array([[10], [20], [30], [40]]),
+)
+FILTERED_BINNED_DATA = BinnedData(
+    np.array([0, 10, 20]),
+    np.array([[1], [2]]),
+)
+SPATIAL_BINNED_DATA = BinnedData(
+    np.array([0, 10, 20]),
+    np.array([[1, 2, 3, 4], [5, 6, 7, 8]]),
+)
 
 
 class TestHistogram1dFunctionality:
@@ -104,3 +125,41 @@ class TestHistogram1dFunctionality:
 
         assert hist.data.sum() == 2
         assert np.array_equal(hist.data, [0, 1, 1, 0, 0])
+
+    def test_matching_binned_data_bins_adds_counts_directly(self):
+        hist = Histogram1d(IRRELEVANT_TOPIC, 3, (0, 30))
+
+        hist.add_binned_data(123, MATCHING_BINNED_DATA)
+
+        assert np.array_equal(hist.data, [3, 7, 11])
+        assert np.issubdtype(hist.data.dtype, np.integer)
+
+    def test_fractional_binned_data_rebinning_preserves_total_counts(self):
+        hist = Histogram1d(IRRELEVANT_TOPIC, 2, (0, 30))
+
+        hist.add_binned_data(123, FRACTIONAL_BINNED_DATA)
+
+        assert np.array_equal(hist.data, [20, 40])
+        assert hist.data.sum() == FRACTIONAL_BINNED_DATA.counts.sum()
+        assert np.issubdtype(hist.data.dtype, np.floating)
+
+    def test_binned_data_tof_range_is_respected(self):
+        hist = Histogram1d(IRRELEVANT_TOPIC, 2, (10, 30))
+
+        hist.add_binned_data(123, RANGED_BINNED_DATA)
+
+        assert np.array_equal(hist.data, [20, 30])
+
+    def test_binned_data_source_filtering_is_respected(self):
+        hist = Histogram1d(IRRELEVANT_TOPIC, 2, (0, 20), source="source")
+
+        hist.add_binned_data(123, FILTERED_BINNED_DATA, source="other")
+
+        assert np.array_equal(hist.data, [0, 0])
+
+    def test_binned_data_detector_range_filters_flattened_spatial_axes(self):
+        hist = Histogram1d(IRRELEVANT_TOPIC, 2, (0, 20), det_range=(1, 2))
+
+        hist.add_binned_data(123, SPATIAL_BINNED_DATA)
+
+        assert np.array_equal(hist.data, [5, 13])

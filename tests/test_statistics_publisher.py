@@ -1,4 +1,5 @@
 import copy
+import logging
 
 import mock
 import pytest
@@ -173,3 +174,50 @@ class TestStatisticsPublisher:
         )
 
         self.sender.send.assert_not_called()
+
+    def test_sender_error_does_not_stop_remaining_stats(self, caplog):
+        last_pulse_time = 12345
+        mock_process = mock.create_autospec(HistogramProcess)
+        mock_process.get_stats.return_value = [
+            generate_stats_message(last_pulse_time * 10**9, 1999, 678)
+        ]
+        self.sender.send.side_effect = [RuntimeError("graphite down"), None]
+
+        with caplog.at_level(logging.WARNING):
+            self.publisher.publish_histogram_stats([mock_process], current_time_ms=1234)
+
+        calls = [
+            mock.call(f"{self.metric}0-0-sum", 1999, timestamp=last_pulse_time),
+            mock.call(f"{self.metric}0-0-diff", 678, timestamp=last_pulse_time),
+        ]
+        self.sender.send.assert_has_calls(calls)
+        assert "Could not publish Graphite statistic" in caplog.text
+
+
+class TestGraphiteSender:
+    def test_send_error_is_suppressed_and_backed_off(self, caplog):
+        current_time = [10]
+        sender = GraphiteSender(
+            "graphite.example",
+            2003,
+            "test-prefix",
+            retry_interval_s=60,
+            clock=lambda: current_time[0],
+        )
+        sender.sender = mock.Mock()
+        sender.sender.send.side_effect = OSError("graphite down")
+
+        with caplog.at_level(logging.WARNING):
+            sender.send("test-metric", 1, 2)
+
+        sender.sender.send.assert_called_once_with("test-metric", 1, 2)
+        assert "skipping Graphite metrics for 60 seconds" in caplog.text
+
+        sender.send("test-metric-2", 2, 3)
+        assert sender.sender.send.call_count == 1
+
+        current_time[0] = 71
+        sender.sender.send.side_effect = None
+        sender.send("test-metric-3", 3, 4)
+
+        assert sender.sender.send.call_count == 2

@@ -24,8 +24,9 @@ from just_bin_it.histograms.histogram2d_roi import (
 
 DEFAULT_OUTPUT_SCHEMA = "hs00"
 DEFAULT_INPUT_SCHEMA = "ev42"
-VALID_INPUT_SCHEMA = ["ev42", "ev44"]
+VALID_INPUT_SCHEMA = ["ev42", "ev44", "da00"]
 VALID_OUTPUT_SCHEMA = ["hs00", "hs01"]
+DA00_HISTOGRAM_TYPES = [TOF_1D_TYPE, MAP_TYPE]
 
 
 def parse_config(configuration, current_time_ms=None):
@@ -71,7 +72,15 @@ def parse_config(configuration, current_time_ms=None):
     hist_configs = []
 
     if "histograms" in configuration:
-        for hist in configuration["histograms"]:
+        for configured_hist in configuration["histograms"]:
+            hist = configured_hist.copy()
+            hist_input_schema = hist.get("input_schema", input_schema)
+            if hist_input_schema not in VALID_INPUT_SCHEMA:
+                raise Exception(
+                    f"Unknown input schema {hist_input_schema}, "
+                    f"must be one of {VALID_INPUT_SCHEMA}"
+                )
+
             if hist["type"] == TOF_1D_TYPE:
                 if not validate_hist_1d(hist):
                     raise Exception("Could not parse 1d histogram config")
@@ -86,6 +95,9 @@ def parse_config(configuration, current_time_ms=None):
                     raise Exception("Could not parse 2d ROI config")
             else:
                 raise Exception("Unexpected histogram type")
+            if hist_input_schema == "da00" and hist["type"] not in DA00_HISTOGRAM_TYPES:
+                raise Exception(f"da00 input is not supported for {hist['type']}")
+            hist["input_schema"] = hist_input_schema
             hist_configs.append(hist)
 
     return start, stop, hist_configs, output_schema, input_schema

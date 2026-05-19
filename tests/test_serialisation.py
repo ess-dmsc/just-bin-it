@@ -2,8 +2,10 @@ import numpy as np
 import pytest
 
 from just_bin_it.endpoints.serialisation import (
+    deserialise_da00,
     deserialise_ev42,
     deserialise_hs00,
+    serialise_da00,
     serialise_ev42,
     serialise_hs00,
 )
@@ -115,3 +117,32 @@ class TestSerialisationEv42:
         assert info[1] == pulse_time
         assert np.array_equal(info[2], tofs)
         assert np.array_equal(info[3], dets)
+
+
+class TestSerialisationDa00:
+    def test_serialises_da00_message_correctly(self):
+        """
+        Sanity check: checks the combination of libraries work as expected.
+        """
+        source = "just-bin-it"
+        timestamp = 1234567890000000000
+        buf = serialise_da00(
+            source,
+            timestamp,
+            [
+                {"name": "signal", "data": [1, 2], "axes": ["frame_time"]},
+                {
+                    "name": "frame_time",
+                    "data": [0, 10, 20],
+                    "axes": ["frame_time"],
+                    "unit": "ns",
+                },
+            ],
+        )
+
+        actual_source, actual_timestamp, binned_data, _ = deserialise_da00(buf)
+
+        assert actual_source == source
+        assert actual_timestamp == timestamp
+        assert np.array_equal(binned_data.tof_edges, [0, 10, 20])
+        assert np.array_equal(binned_data.counts, [[1], [2]])

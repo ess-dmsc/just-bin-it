@@ -6,14 +6,18 @@ import sys
 import time
 import uuid
 
+import numpy as np
 import pytest
 from confluent_kafka import OFFSET_END, Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from integration_settings import BROKERS
+
 from just_bin_it.endpoints.serialisation import (
     SCHEMAS_TO_DESERIALISERS,
     get_schema,
+    serialise_da00,
     serialise_ev44,
 )
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
@@ -23,9 +27,10 @@ from just_bin_it.utilities.fake_data_generation import generate_fake_data
 TOF_RANGE = (0, 100_000_000)
 DET_RANGE = (1, 512)
 NUM_BINS = 50
-BROKERS = ["localhost:9092"]
 CMD_TOPIC = "hist_commands"
 RESPONSE_TOPIC = "hist_responses"
+EV44_SOURCE = "ev44_source"
+DA00_SOURCE = "da00_source"
 
 CONFIG_CMD = {
     "cmd": "config",
@@ -46,6 +51,21 @@ CONFIG_CMD = {
 }
 
 STOP_CMD = {"cmd": "stop"}
+POLL_INTERVAL_S = 0.05
+KAFKA_TIMEOUT_S = 15
+
+
+def create_topics(admin_client, topics):
+    futures = admin_client.create_topics(topics)
+    for future in futures.values():
+        future.result(timeout=KAFKA_TIMEOUT_S)
+
+
+def deserialise_message(message):
+    schema = get_schema(message)
+    if schema in SCHEMAS_TO_DESERIALISERS:
+        return SCHEMAS_TO_DESERIALISERS[schema](message)
+    raise AssertionError(f"Unexpected schema {schema}")
 
 
 def create_consumer(topic):
@@ -70,9 +90,29 @@ def create_consumer(topic):
     return consumer, topic_partitions
 
 
-def generate_data(msg_id, time_stamp, num_events):
+def generate_data(msg_id, time_stamp, num_events, source="integration test"):
     tofs, dets = generate_fake_data(TOF_RANGE, DET_RANGE, num_events)
-    return serialise_ev44("integration test", msg_id, time_stamp, tofs, dets)
+    return serialise_ev44(source, msg_id, time_stamp, tofs, dets)
+
+
+def generate_da00_data(time_stamp, num_events, source="integration test"):
+    counts = np.zeros(NUM_BINS, dtype=np.int64)
+    for _ in range(num_events):
+        counts[random.randrange(NUM_BINS)] += 1
+    edges = np.linspace(TOF_RANGE[0], TOF_RANGE[1], NUM_BINS + 1, dtype=np.int64)
+    return serialise_da00(
+        source,
+        time_stamp,
+        [
+            {"name": "signal", "data": counts, "axes": ["frame_time"]},
+            {
+                "name": "frame_time",
+                "data": edges,
+                "axes": ["frame_time"],
+                "unit": "ns",
+            },
+        ],
+    )
 
 
 class TestJustBinIt:
@@ -86,14 +126,14 @@ class TestJustBinIt:
         self.data_topic_name = f"data_{uid}"
         hist_topic = NewTopic(self.hist_topic_name, 1, 1)
         data_topic = NewTopic(self.data_topic_name, 2, 1)
-        admin_client.create_topics([hist_topic, data_topic])
+        create_topics(admin_client, [hist_topic, data_topic])
 
         self.producer = Producer(
             {"bootstrap.servers": ",".join(BROKERS), "message.max.bytes": 100_000_000}
         )
-        time.sleep(5)
 
         self.consumer, topic_partitions = create_consumer(self.hist_topic_name)
+        self.response_consumer, _ = create_consumer(RESPONSE_TOPIC)
         # Only one partition for histogram topic
         self.topic_part = topic_partitions[0]
         self.time_stamps = []
@@ -105,6 +145,24 @@ class TestJustBinIt:
         config["histograms"][0]["data_topics"] = [self.data_topic_name]
         return config
 
+    def create_da00_config(self):
+        config = self.create_basic_config()
+        config["input_schema"] = "da00"
+        del config["histograms"][0]["det_range"]
+        return config
+
+    def create_mixed_config(self):
+        config = self.create_basic_config()
+        da00_histogram = copy.deepcopy(config["histograms"][0])
+        da00_histogram["input_schema"] = "da00"
+        da00_histogram["source"] = DA00_SOURCE
+        da00_histogram["id"] = "da00_id"
+        del da00_histogram["det_range"]
+        config["histograms"][0]["source"] = EV44_SOURCE
+        config["histograms"][0]["id"] = "ev44_id"
+        config["histograms"].append(da00_histogram)
+        return config
+
     def send_message(self, topic, message, timestamp=None):
         if timestamp:
             self.producer.produce(topic, message, timestamp=timestamp)
@@ -112,82 +170,137 @@ class TestJustBinIt:
             self.producer.produce(topic, message)
         self.producer.flush()
 
-    def generate_and_send_data(self, msg_id):
+    def generate_and_send_data(self, msg_id, source="integration test"):
         time_stamp = time_in_ns()
         # Generate a random number of events so we can be sure the correct data matches
         # up at the end.
         num_events = random.randint(500, 1500)
-        data = generate_data(msg_id, time_stamp, num_events)
+        data = generate_data(msg_id, time_stamp, num_events, source)
 
         # Need timestamp in ms
         self.time_stamps.append(time_stamp // 1_000_000)
         self.num_events_per_msg.append(num_events)
         # Set the message timestamps explicitly so kafka latency effects are minimised.
         self.send_message(self.data_topic_name, data, self.time_stamps[~0])
+        return num_events
 
-    def get_hist_data_from_kafka(self):
-        data = []
-        # Move it to one from the end so we can read the final histogram
-        _, high_wm = self.consumer.get_watermark_offsets(self.topic_part)
-        last_highest = max(0, high_wm - 1)
-        self.consumer.seek(
-            TopicPartition(
-                self.topic_part.topic, self.topic_part.partition, last_highest
-            )
+    def generate_and_send_da00_data(self, source="integration test"):
+        time_stamp = time_in_ns()
+        # Generate a random number of counts so we can be sure the correct data matches
+        # up at the end.
+        num_events = random.randint(500, 1500)
+        data = generate_da00_data(time_stamp, num_events, source)
+
+        # Need timestamp in ms
+        self.time_stamps.append(time_stamp // 1_000_000)
+        self.num_events_per_msg.append(num_events)
+        # Set the message timestamps explicitly so kafka latency effects are minimised.
+        self.send_message(self.data_topic_name, data, self.time_stamps[~0])
+        return num_events
+
+    def wait_for_histogram(self, expected_sum, expected_state, timeout=KAFKA_TIMEOUT_S):
+        deadline = time.monotonic() + timeout
+        last_hist_data = None
+        last_hist_info = None
+
+        while time.monotonic() < deadline:
+            msg = self.consumer.poll(POLL_INTERVAL_S)
+            if msg is None:
+                continue
+            if msg.error():
+                raise AssertionError(msg.error())
+
+            last_hist_data = deserialise_message(msg.value())
+            last_hist_info = json.loads(last_hist_data["info"])
+            if (
+                last_hist_data["data"].sum() == expected_sum
+                and last_hist_info["state"] == expected_state
+            ):
+                return last_hist_data
+
+        raise AssertionError(
+            f"Timed out waiting for histogram sum={expected_sum}, "
+            f"state={expected_state}. Last message was sum="
+            f"{last_hist_data['data'].sum() if last_hist_data else None}, "
+            f"info={last_hist_info}"
         )
 
-        while not data:
-            msg = self.consumer.poll(0.005)
-            if msg:
-                data.append(msg)
-
-        last_msg = data[-1]
-        schema = get_schema(last_msg.value())
-        if schema in SCHEMAS_TO_DESERIALISERS:
-            return SCHEMAS_TO_DESERIALISERS[schema](last_msg.value())
-
-    def get_response_message_from_kafka(self):
-        data = []
-        consumer, topic_partitions = create_consumer(RESPONSE_TOPIC)
-        topic_part = topic_partitions[0]
-        # Move it to one from the end so we can read the final message
-        _, high_wm = consumer.get_watermark_offsets(topic_part)
-        last_highest = max(0, high_wm - 1)
-        consumer.seek(
-            TopicPartition(topic_part.topic, topic_part.partition, last_highest)
-        )
-
-        while not data:
-            msg = consumer.poll(0.005)
-            if msg:
-                data.append(msg)
-
-        last_msg = data[-1]
-        return last_msg.value()
-
-    def test_basic_operation(
-        self, just_bin_it
+    def wait_for_histograms_by_id(
+        self, expected_sums, expected_state, timeout=KAFKA_TIMEOUT_S
     ):
+        deadline = time.monotonic() + timeout
+        remaining = dict(expected_sums)
+        results = {}
+        last_infos = {}
+
+        while time.monotonic() < deadline:
+            msg = self.consumer.poll(POLL_INTERVAL_S)
+            if msg is None:
+                continue
+            if msg.error():
+                raise AssertionError(msg.error())
+
+            hist_data = deserialise_message(msg.value())
+            hist_info = json.loads(hist_data["info"])
+            hist_id = hist_info["id"]
+            last_infos[hist_id] = hist_info
+
+            if hist_id not in remaining:
+                continue
+            if (
+                hist_data["data"].sum() == remaining[hist_id]
+                and hist_info["state"] == expected_state
+            ):
+                results[hist_id] = hist_data
+                del remaining[hist_id]
+
+            if not remaining:
+                return results
+
+        raise AssertionError(
+            f"Timed out waiting for {expected_state} histograms. "
+            f"Remaining={remaining}, last infos={last_infos}"
+        )
+
+    def wait_for_response(self, msg_id, expected_response, timeout=KAFKA_TIMEOUT_S):
+        deadline = time.monotonic() + timeout
+        last_response = None
+
+        while time.monotonic() < deadline:
+            msg = self.response_consumer.poll(POLL_INTERVAL_S)
+            if msg is None:
+                continue
+            if msg.error():
+                raise AssertionError(msg.error())
+
+            last_response = json.loads(msg.value())
+            if (
+                last_response.get("msg_id") == msg_id
+                and last_response.get("response") == expected_response
+            ):
+                return last_response
+
+        raise AssertionError(
+            f"Timed out waiting for {expected_response} response to {msg_id}. "
+            f"Last response was {last_response}"
+        )
+
+    def test_basic_operation(self, just_bin_it):
         # Configure just-bin-it
         config = self.create_basic_config()
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
-
-        # Give it time to start counting
-        time.sleep(1)
+        self.wait_for_histogram(0, "INITIALISED")
 
         # Send fake data
         num_msgs = 10
 
         for i in range(num_msgs):
             self.generate_and_send_data(i + 1)
-            time.sleep(0.5)
 
         total_events = sum(self.num_events_per_msg)
 
-        time.sleep(10)
-
         # Get histogram data
-        hist_data = self.get_hist_data_from_kafka()
+        hist_data = self.wait_for_histogram(total_events, "COUNTING")
         hist_info = json.loads(hist_data["info"])
 
         assert hist_data["data"].sum() == total_events
@@ -195,13 +308,73 @@ class TestJustBinIt:
         assert hist_info["sum"] == total_events
 
         self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
-        time.sleep(1)
 
         # Get histogram data
-        hist_data = self.get_hist_data_from_kafka()
+        hist_data = self.wait_for_histogram(total_events, "FINISHED")
 
         assert hist_data["data"].sum() == total_events
         assert json.loads(hist_data["info"])["state"] == "FINISHED"
+
+    def test_basic_da00_operation(self, just_bin_it):
+        # Configure just-bin-it
+        config = self.create_da00_config()
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+        self.wait_for_histogram(0, "INITIALISED")
+
+        # Send fake data
+        num_msgs = 10
+
+        for _ in range(num_msgs):
+            self.generate_and_send_da00_data()
+
+        total_events = sum(self.num_events_per_msg)
+
+        # Get histogram data
+        hist_data = self.wait_for_histogram(total_events, "COUNTING")
+        hist_info = json.loads(hist_data["info"])
+
+        assert hist_data["data"].sum() == total_events
+        assert hist_info["state"] == "COUNTING"
+        assert hist_info["sum"] == total_events
+
+        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
+
+        # Get histogram data
+        hist_data = self.wait_for_histogram(total_events, "FINISHED")
+
+        assert hist_data["data"].sum() == total_events
+        assert json.loads(hist_data["info"])["state"] == "FINISHED"
+
+    def test_mixed_ev44_and_da00_operation(self, just_bin_it):
+        config = self.create_mixed_config()
+        self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
+        self.wait_for_histograms_by_id({"ev44_id": 0, "da00_id": 0}, "INITIALISED")
+
+        num_msgs = 10
+        ev44_events = 0
+        da00_events = 0
+
+        for i in range(num_msgs):
+            ev44_events += self.generate_and_send_data(i + 1, EV44_SOURCE)
+            da00_events += self.generate_and_send_da00_data(DA00_SOURCE)
+
+        hist_data = self.wait_for_histograms_by_id(
+            {"ev44_id": ev44_events, "da00_id": da00_events}, "COUNTING"
+        )
+
+        assert hist_data["ev44_id"]["data"].sum() == ev44_events
+        assert json.loads(hist_data["ev44_id"]["info"])["sum"] == ev44_events
+        assert hist_data["da00_id"]["data"].sum() == da00_events
+        assert json.loads(hist_data["da00_id"]["info"])["sum"] == da00_events
+
+        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
+
+        hist_data = self.wait_for_histograms_by_id(
+            {"ev44_id": ev44_events, "da00_id": da00_events}, "FINISHED"
+        )
+
+        assert hist_data["ev44_id"]["data"].sum() == ev44_events
+        assert hist_data["da00_id"]["data"].sum() == da00_events
 
     def test_supplying_msg_id_gets_acknowledgement_response(self, just_bin_it):
         # Configure just-bin-it
@@ -209,17 +382,14 @@ class TestJustBinIt:
         config["msg_id"] = f"{time_in_ns() // 1000}"
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
-        # Give it some time before stopping it
-        time.sleep(5)
-        self.send_message(CMD_TOPIC, bytes(json.dumps(STOP_CMD), "utf-8"))
-        time.sleep(1)
+        msg = self.wait_for_response(config["msg_id"], "ACK")
 
-        time.sleep(10)
+        assert msg["msg_id"] == config["msg_id"]
+        assert msg["response"] == "ACK"
 
-        msg = self.get_response_message_from_kafka()
-
-        assert json.loads(msg)["msg_id"] == config["msg_id"]
-        assert json.loads(msg)["response"] == "ACK"
+        stop_cmd = {"cmd": "stop", "msg_id": f"{time_in_ns() // 1000}"}
+        self.send_message(CMD_TOPIC, bytes(json.dumps(stop_cmd), "utf-8"))
+        self.wait_for_response(stop_cmd["msg_id"], "ACK")
 
     def test_supplying_msg_id_gets_error_response(self, just_bin_it):
         # Configure just-bin-it
@@ -228,12 +398,7 @@ class TestJustBinIt:
         config["msg_id"] = f"{time_in_ns() // 1000}"
         self.send_message(CMD_TOPIC, bytes(json.dumps(config), "utf-8"))
 
-        time.sleep(2)
-
-        time.sleep(10)
-
-        msg = self.get_response_message_from_kafka()
-        msg = json.loads(msg)
+        msg = self.wait_for_response(config["msg_id"], "ERR")
 
         assert msg["msg_id"] == config["msg_id"]
         assert msg["response"] == "ERR"

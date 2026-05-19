@@ -5,6 +5,7 @@ import pytest
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram2d import TOF_2D_TYPE
 from just_bin_it.histograms.histogram2d_map import MAP_TYPE
+from just_bin_it.histograms.histogram2d_roi import ROI_TYPE
 from just_bin_it.histograms.histogram_factory import parse_config
 
 CONFIG_FULL = {
@@ -87,6 +88,22 @@ CONFIG_NO_DET_RANGE = {
             "num_bins": 50,
             "topic": "hist-topic1",
             "id": "abcdef",
+        }
+    ],
+}
+
+CONFIG_ROI = {
+    "cmd": "config",
+    "histograms": [
+        {
+            "type": ROI_TYPE,
+            "data_brokers": ["localhost:9092"],
+            "data_topics": ["junk_data_4"],
+            "width": 10,
+            "left_edges": [1, 20],
+            "topic": "hist_topic4",
+            "id": "some_id4",
+            "source": "source4",
         }
     ],
 }
@@ -242,6 +259,74 @@ class TestConfigParser:
     def test_if_input_schema_unknown_then_parsing_throws(self):
         config = copy.deepcopy(CONFIG_INTERVAL)
         config["input_schema"] = ":: unknown ::"
+
+        with pytest.raises(Exception):
+            parse_config(config)
+
+    def test_if_da00_input_schema_defined_then_found(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        config["input_schema"] = "da00"
+        del config["histograms"][1]
+
+        _, _, hists, _, schema = parse_config(config)
+
+        assert schema == "da00"
+        assert len(hists) == 2
+        assert hists[0]["input_schema"] == "da00"
+        assert hists[1]["input_schema"] == "da00"
+
+    def test_per_histogram_input_schema_overrides_top_level_default(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        config["input_schema"] = "ev44"
+        config["histograms"][0]["input_schema"] = "da00"
+
+        _, _, hists, _, schema = parse_config(config)
+
+        assert schema == "ev44"
+        assert hists[0]["input_schema"] == "da00"
+        assert hists[1]["input_schema"] == "ev44"
+
+    def test_mixed_ev44_and_da00_histograms_are_valid(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        config["input_schema"] = "ev44"
+        config["histograms"][0]["input_schema"] = "da00"
+        del config["histograms"][1]
+
+        _, _, hists, _, schema = parse_config(config)
+
+        assert schema == "ev44"
+        assert hists[0]["input_schema"] == "da00"
+        assert hists[1]["input_schema"] == "ev44"
+
+    def test_da00_hist2d_config_throws(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        config["input_schema"] = "da00"
+
+        with pytest.raises(Exception):
+            parse_config(config)
+
+    def test_da00_roi_config_throws(self):
+        config = copy.deepcopy(CONFIG_ROI)
+        config["input_schema"] = "da00"
+
+        with pytest.raises(Exception):
+            parse_config(config)
+
+    def test_histogram_input_schema_can_override_unsupported_da00_default(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        config["input_schema"] = "da00"
+        config["histograms"][1]["input_schema"] = "ev44"
+
+        _, _, hists, _, schema = parse_config(config)
+
+        assert schema == "da00"
+        assert hists[0]["input_schema"] == "da00"
+        assert hists[1]["input_schema"] == "ev44"
+        assert hists[2]["input_schema"] == "da00"
+
+    def test_unknown_per_histogram_input_schema_throws(self):
+        config = copy.deepcopy(CONFIG_FULL)
+        config["histograms"][0]["input_schema"] = ":: unknown ::"
 
         with pytest.raises(Exception):
             parse_config(config)
