@@ -1,7 +1,8 @@
-import numpy as np
-
 import logging
 
+import numpy as np
+
+from just_bin_it.histograms.binned_data import rebin_counts
 from just_bin_it.histograms.input_validators import (
     check_bins,
     check_data_brokers,
@@ -115,6 +116,35 @@ class Histogram1d:
             self._histogram += np.histogram(
                 tofs, range=self.tof_range, bins=self.num_bins
             )[0]
+
+    def add_binned_data(self, pulse_time, binned_data, source=""):
+        """
+        Add pre-binned ToF data to the histogram.
+
+        :param pulse_time: The pulse time.
+        :param binned_data: The pre-binned data.
+        :param source: The source of the event.
+        """
+        # Discard any messages not from the specified source.
+        if self.source is not None and source != self.source:
+            return
+
+        self.last_pulse_time = pulse_time
+
+        counts = binned_data.counts
+        if self.det_range:
+            det_ids = np.arange(counts.shape[1])
+            included = (det_ids >= self.det_range[0]) & (det_ids <= self.det_range[1])
+            counts = counts[:, included]
+
+        rebinned = rebin_counts(binned_data.tof_edges, counts.sum(axis=1), self.x_edges)
+
+        if np.issubdtype(self._histogram.dtype, np.integer) and np.issubdtype(
+            rebinned.dtype, np.floating
+        ):
+            self._histogram = self._histogram.astype(rebinned.dtype)
+
+        self._histogram += rebinned
 
     @property
     def data(self):

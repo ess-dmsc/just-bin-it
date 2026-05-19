@@ -1,14 +1,40 @@
 import logging
+import time
 
 import graphyte
 
 
 class GraphiteSender:
-    def __init__(self, server, port, prefix):
-        self.sender = graphyte.Sender(server, port=port, prefix=prefix)
+    def __init__(
+        self, server, port, prefix, timeout=1, retry_interval_s=60, clock=None
+    ):
+        self.sender = graphyte.Sender(
+            server,
+            port=port,
+            prefix=prefix,
+            timeout=timeout,
+            raise_send_errors=True,
+        )
+        self.retry_interval_s = retry_interval_s
+        self.clock = clock or time.monotonic
+        self.next_retry_time = 0
 
     def send(self, name, value, timestamp):
-        self.sender.send(name, value, timestamp)
+        current_time = self.clock()
+        if current_time < self.next_retry_time:
+            return
+
+        try:
+            self.sender.send(name, value, timestamp)
+        except Exception as error:
+            self.next_retry_time = current_time + self.retry_interval_s
+            logging.warning(
+                "Could not send Graphite metric %s; skipping Graphite metrics for "
+                "%s seconds: %s",
+                name,
+                self.retry_interval_s,
+                error,
+            )
 
 
 class StatisticsPublisher:
@@ -50,13 +76,19 @@ class StatisticsPublisher:
             # Convert stats from ns to s
             time_stamp = stat["last_pulse_time"] / 10**9
 
-            self.sender.send(
+            self._send_stat(
                 f"{self.metric}{process_index}-{i}-sum",
                 stat["sum"],
                 timestamp=time_stamp,
             )
-            self.sender.send(
+            self._send_stat(
                 f"{self.metric}{process_index}-{i}-diff",
                 stat["diff"],
                 timestamp=time_stamp,
             )
+
+    def _send_stat(self, name, value, timestamp):
+        try:
+            self.sender.send(name, value, timestamp=timestamp)
+        except Exception as error:
+            logging.warning("Could not publish Graphite statistic %s: %s", name, error)

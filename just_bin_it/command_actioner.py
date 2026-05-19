@@ -112,7 +112,7 @@ class CommandActioner:
                         start,
                         stop,
                         hist_schema,
-                        event_schema,
+                        config.get("input_schema", event_schema),
                         self.kafka_security_config,
                         self.simulation,
                     )

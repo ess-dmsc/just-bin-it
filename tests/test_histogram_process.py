@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from just_bin_it.endpoints.histogram_sink import HistogramSink
+from just_bin_it.histograms.binned_data import BinnedData
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
 from just_bin_it.histograms.histogram_process import Processor
@@ -29,6 +30,11 @@ CONFIG_1D = {
 }
 
 STOP_CMD = {"cmd": "stop"}
+
+BINNED_DATA = BinnedData(
+    np.array([0, 10, 20, 30, 40, 50]),
+    np.array([[1], [2], [3], [4], [5]]),
+)
 
 
 class SpyHistogrammer:
@@ -75,6 +81,15 @@ class StubEventSource:
                 (123, pulse_time_ms),  # Kafka timestamp tuple of (type, timestamp)
                 123,  # Kafka offset (irrelevant for these tests)
                 (source_name, pulse_time_ms * 1e6, time_of_flight, detector_id),
+            )
+        )
+
+    def append_binned_data(self, source_name, pulse_time_ms, binned_data):
+        self.data.append(
+            (
+                (123, pulse_time_ms),  # Kafka timestamp tuple of (type, timestamp)
+                123,  # Kafka offset (irrelevant for these tests)
+                (source_name, pulse_time_ms * 1e6, binned_data, None),
             )
         )
 
@@ -386,6 +401,24 @@ class TestHistogramProcess:
         assert len(producer.messages) == 2
         assert json.loads(first_msg)["state"] == HISTOGRAM_STATES["INITIALISED"]
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
+
+    def test_binned_data_is_histogrammed_by_processor(self):
+        config = copy.deepcopy(CONFIG_1D)
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+
+        event_source, processor, producer, time_source, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
+        )
+        event_source.append_binned_data("source", 10, BINNED_DATA)
+        time_source.curr_time_ns = 2_000_000
+
+        processor.process()
+
+        _, (last_hist, _, last_msg) = producer.messages[~0]
+
+        assert np.array_equal(last_hist.data, [1, 2, 3, 4, 5])
+        assert json.loads(last_msg)["sum"] == 15
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["COUNTING"]
 
 
 @pytest.mark.slow

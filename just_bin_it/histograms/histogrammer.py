@@ -1,5 +1,7 @@
 import logging
 
+from just_bin_it.histograms.binned_data import BinnedData
+
 HISTOGRAM_STATES = {
     "COUNTING": "COUNTING",
     "FINISHED": "FINISHED",
@@ -46,7 +48,19 @@ class Histogrammer:
 
                 self._started = True
                 src = msg[0] if not simulation else hist.source
-                hist.add_data(msg[1], msg[2], msg[3], src)
+                if isinstance(msg[2], BinnedData):
+                    self._add_binned_data(hist, msg[1], msg[2], src)
+                else:
+                    hist.add_data(msg[1], msg[2], msg[3], src)
+
+    def _add_binned_data(self, hist, pulse_time, binned_data, source):
+        if not hasattr(hist, "add_binned_data"):
+            logging.warning(
+                "Histogram %s does not support binned data", hist.identifier
+            )  # pragma: no mutate
+            return
+
+        hist.add_binned_data(pulse_time, binned_data, source)
 
     def _generate_info(self, histogram):
         info = {"id": histogram.identifier}

@@ -151,6 +151,36 @@ class DetHistogram:
             det_ids, range=self.det_range, bins=self.num_bins
         )
 
+    def add_binned_data(self, pulse_time, binned_data, source=""):
+        """
+        Add pre-binned detector data to the histogram.
+
+        :param pulse_time: The pulse time.
+        :param binned_data: The pre-binned data.
+        :param source: The source of the event.
+        """
+        # Discard any messages not from the specified source.
+        if self.source is not None and source != self.source:
+            return
+
+        counts = binned_data.counts.sum(axis=0)
+        if counts.size != self.num_bins:
+            logging.warning(
+                "Skipping binned detector histogram data with %s pixels, expected %s",
+                counts.size,
+                self.num_bins,
+            )
+            return
+
+        self.last_pulse_time = pulse_time
+
+        if np.issubdtype(self._histogram.dtype, np.integer) and np.issubdtype(
+            counts.dtype, np.floating
+        ):
+            self._histogram = self._histogram.astype(counts.dtype)
+
+        self._histogram += counts
+
     def clear_data(self):
         """
         Clears the histogram data, but maintains the other values (e.g. edges etc.)

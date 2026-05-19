@@ -1,0 +1,77 @@
+default:
+  tags:
+    - docker
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+stages:
+  - checks
+  - test
+  - integration
+
+.python-job:
+  before_script:
+    - scl enable rh-python38 -- python --version
+    - scl enable rh-python38 -- python -m pip install --user -r requirements-dev.txt
+
+ruff:
+  extends: .python-job
+  stage: checks
+  script:
+    - scl enable rh-python38 -- python -m ruff check tests just_bin_it
+
+ruff-format:
+  extends: .python-job
+  stage: checks
+  script:
+    - scl enable rh-python38 -- python -m ruff format --check tests just_bin_it
+
+isort:
+  extends: .python-job
+  stage: checks
+  script:
+    - scl enable rh-python38 -- python -m isort --check-only .
+
+unit-tests:
+  extends: .python-job
+  stage: test
+  script:
+    - scl enable rh-python38 -- pyenv global 3.8 3.9 3.10
+    - scl enable rh-python38 -- pyenv versions
+    - export PATH="/home/jenkins/.pyenv/shims:$PATH"
+    - scl enable rh-python38 -- python -m nox -- --junitxml=test-output.xml
+  artifacts:
+    paths:
+      - test-output.xml
+    reports:
+      junit: test-output.xml
+
+integration-tests:
+  stage: integration
+  image: docker:28
+  resource_group: just-bin-it-integration-tests
+  variables:
+    JBI_COMPOSE_PROJECT: just-bin-it-$CI_JOB_ID
+    JBI_KAFKA_ADVERTISED_HOST_NAME: kafka
+    JBI_KAFKA_BROKERS: kafka:9092
+    JBI_KAFKA_MANAGED_EXTERNALLY: "1"
+    JBI_TEST_WORKDIR: /tmp/just-bin-it
+  script:
+    - cd integration-tests
+    - ./setup.sh
+    - ./run-integration-tests.sh
+  after_script:
+    - cd integration-tests && ./teardown.sh
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  timeout: 30m
+  artifacts:
+    when: always
+    paths:
+      - integration-tests/IntegrationTestsOutput.xml
+    reports:
+      junit: integration-tests/IntegrationTestsOutput.xml
