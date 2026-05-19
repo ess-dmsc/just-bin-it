@@ -3,10 +3,16 @@
 A lightweight program for histogramming neutron event data.
 
 ## Setup
-Python 3.8+ only.
+Python 3.12+ only.
 
 ```
->>> pip install -r requirements.txt
+uv sync
+```
+
+The legacy requirements files are kept for direct source-tree use:
+
+```
+python -m pip install -r requirements.txt
 ```
 
 ## Usage
@@ -67,7 +73,7 @@ For a quickstart guide to installing Kafka locally, see https://kafka.apache.org
 
 Start the histogrammer from the command-line:
 ```
-python bin/just-bin-it.py --brokers localhost:9092 --config-topic hist_commands
+uv run just-bin-it --brokers localhost:9092 --config-topic hist_commands
 ```
 
 Next send a JSON configuration via Kafka (the format of the message is described
@@ -241,7 +247,7 @@ When a heartbeat topic is supplied via the `hb-topic` option then just-bin-it
 will send periodic messages to that topic.
 
 ```
-python bin/just-bin-it.py --brokers localhost:9092 --config-topic hist_commands --hb-topic heartbeat
+uv run just-bin-it --brokers localhost:9092 --config-topic hist_commands --hb-topic heartbeat
 ```
 
 ### Enabling a response topic and getting messages from just-bin-it
@@ -403,12 +409,11 @@ For HTML output:
 pytest --cov --cov-report html .
 ```
 
-### Tox
-Tox allows the unit tests to be run against multiple versions of Python.
-See the tox.ini file for which versions are supported.
+### Nox
+Nox runs the unit tests using the supported Python version.
 From the top directory:
 ```
-tox
+nox
 ```
 
 ### Integration tests
@@ -428,6 +433,34 @@ They should be run before modified code is pushed to the code repository.
 Formatting is handled by [Ruff](https://docs.astral.sh/ruff/).
 
 It should be added as a commit hook (see above).
+
+## Release
+
+This project follows [Semantic Versioning](https://semver.org/).
+
+Releases are done in a few simple steps:
+
+1. Update the project version using `uv version`
+
+```
+uv version X.Y.Z
+```
+
+2. Open a merge request containing the dedicated release commit:
+
+```
+release: bump version to X.Y.Z
+```
+
+3. Once the MR is merged into the `main` branch, create and push a Git tag:
+
+```
+git tag X.Y.Z && git push origin X.Y.Z
+```
+
+Creating the tag triggers the GitLab CI pipeline. The pipeline builds the
+package, uploads it to the `ecdc-pypi` index, creates a GitLab Release, and
+publishes a Docker image tagged with the release version.
 
 ### mutmut
 Occasionally run mutmut to check that mutating the code causes tests to fail.

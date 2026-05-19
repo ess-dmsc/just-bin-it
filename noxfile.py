@@ -1,13 +1,14 @@
 import nox
 
 
-@nox.session(python=["3.8", "3.9", "3.10"])
+@nox.session(python=["3.12"])
 def tests(session):
-    session.install("-r", "requirements-dev.txt")
+    session.install("-e", ".")
+    session.install("mock", "pytest", "pytest-cov")
     session.run("pytest", *session.posargs)
 
 
-@nox.session(python=["3.9"])
+@nox.session(python=["3.12"])
 def ruff(session):
-    session.install("-r", "requirements-dev.txt")
-    session.run("ruff", "tests", "just_bin_it")
+    session.install("ruff==0.4.4")
+    session.run("ruff", "check", "tests", "just_bin_it", "bin")

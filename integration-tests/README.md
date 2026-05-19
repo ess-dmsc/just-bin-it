@@ -10,7 +10,9 @@ just-bin-it.
 
 ```
 cd integration-tests
-pytest test_just_bin_it.py
+./setup.sh
+./run-integration-tests.sh
+./teardown.sh
 ```
 Note: The event data topic has two partitions to confirm the just-bin-it can handle multiple data partitions.
 
@@ -24,5 +26,5 @@ pytest test_kafka_consumer.py
 ```
 
 It is also possible to run these tests against a local instance of Kafka, to do this
-rename the conftest.py file to something like conftest.py.old.
-This enables the tests to be run significantly faster.
+set `JBI_KAFKA_MANAGED_EXTERNALLY=1` and `JBI_KAFKA_BROKERS` before running pytest.
+Set `JBI_JUST_BIN_IT_MANAGED_EXTERNALLY=1` too if just-bin-it is already running.

@@ -1,0 +1,10 @@
+.git
+.mypy_cache
+.nox
+.pytest_cache
+.ruff_cache
+.venv
+__pycache__
+dist
+*.egg-info
+integration-tests/output-files
