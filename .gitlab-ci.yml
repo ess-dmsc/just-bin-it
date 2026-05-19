@@ -114,11 +114,12 @@ publish_docker_image:
   script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
     - |
-      docker build -t "$IMAGE_NAME:$DOCKER_IMAGE_TAG" \
+      docker build -t "$CI_REGISTRY_IMAGE:$DOCKER_IMAGE_TAG" \
+        --build-arg JBI_VERSION="${CI_COMMIT_TAG:-}" \
         --build-arg https_proxy="$HTTPS_PROXY" \
         --build-arg http_proxy="$HTTP_PROXY" \
         .
-    - docker push "$IMAGE_NAME:$DOCKER_IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE:$DOCKER_IMAGE_TAG"
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       variables:
@@ -129,6 +130,5 @@ publish_docker_image:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: never
   variables:
-    IMAGE_NAME: "registry.esss.lu.se/ecdc/just-bin-it"
     HTTP_PROXY: "http://172.20.72.11:8888"
     HTTPS_PROXY: "http://172.20.72.11:8888"

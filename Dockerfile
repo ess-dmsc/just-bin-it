@@ -6,6 +6,7 @@ RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
 WORKDIR /app
+ARG JBI_VERSION=""
 
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
@@ -20,6 +21,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY . /app
 
 RUN --mount=type=cache,target=/root/.cache/uv \
+    if [ -n "$JBI_VERSION" ]; then \
+        uv version --no-sync "$JBI_VERSION"; \
+    fi && \
     uv sync --locked
 
 ENV PATH="/app/.venv/bin:$PATH"
