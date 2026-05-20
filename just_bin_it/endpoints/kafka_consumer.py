@@ -41,13 +41,13 @@ class Consumer:
         # Only use the first topic
         topic = topics[0]
 
-        metadata = self.consumer.list_topics()
-        available_topics = set(metadata.topics.keys())
+        metadata = self.consumer.list_topics(topic)
+        topic_metadata = metadata.topics.get(topic)
 
-        if topic not in available_topics:
+        if topic_metadata is None or topic_metadata.error is not None:
             raise KafkaException(f"Requested topic {topic} not available")
 
-        partition_numbers = metadata.topics[topic].partitions.keys()
+        partition_numbers = topic_metadata.partitions.keys()
 
         for pn in partition_numbers:
             self.topic_partitions.append(TopicPartition(topic, pn))
