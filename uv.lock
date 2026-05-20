@@ -61,25 +61,15 @@ wheels = [
 
 [[package]]
 name = "confluent-kafka"
-version = "2.14.0"
+version = "2.4.0"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
-sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/40/52/2c71d8e0b2de51076f90cea05342dc9c20fa14ded11992827680db4bbdfa/confluent_kafka-2.14.0.tar.gz", hash = "sha256:34efddfd06766d1153d10a70c23a98f6035e253a906db8ed04cb0249fc3b0fd2" }
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/a7/ea/514e45f106979862aaba3d70098115b2aa991a456dbbc8da7c43633aeb21/confluent-kafka-2.4.0.tar.gz", hash = "sha256:201c6182304c5864c8a1b1aae2f99bf51fa332017abbec05a3a1fb2ff242c41d" }
 wheels = [
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/12/05/f27091396c1e5fb98844e3e8b114ec7b896d1b54209e796e3946649de2cd/confluent_kafka-2.14.0-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:737b63f2389c9d63f3da0923681aa95abad1cb2f96b10f38192ef19ab727c883" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/9e/49/b9de672412c4290b4719f99ac17b31ff35c64b221e4961a3047f6c1f334f/confluent_kafka-2.14.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:1610aa31880c874bfa3351d898d6e6cdbfab2a0f9443598fd64425bbc815cb06" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/fb/b6/d892b50a48bbd95e8937d557baf89ffa07fc48bc27f792141476a004334d/confluent_kafka-2.14.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:9cca8929bbc3d68a3299b21239c48def860f04e4661c7a59efe3104ecaea0e08" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/f2/27/04d0f106820219e2621cf9e9a3ab49e910b7a19e55a72a21768b82031a85/confluent_kafka-2.14.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:4d2e4718371c06579f649835239d1acf6ab5386a88f70e9cb9b839855c83c4a9" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/64/d9/46258cefee841d65dda31d20ce61d12f7573e07ef8d26f49169edfd0b0fa/confluent_kafka-2.14.0-cp312-cp312-win_amd64.whl", hash = "sha256:c37aff51512e817316edd6eafa8a2e59745052a7d1e61e09931b1caa11803266" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/26/a3/13ca4b42c580cb8e8d4bc0711467c7c501573f0133dcaf1ed6d7e34abb42/confluent_kafka-2.14.0-cp313-cp313-macosx_13_0_arm64.whl", hash = "sha256:a6dc0e49e8ac99854bd89ec7ac16c54af4488c7617baa633e615320dfbe44b25" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/27/f6/3b4744a8d1b7714500e830a615671d27f76bf64c15966740cc6ee1c960f7/confluent_kafka-2.14.0-cp313-cp313-macosx_13_0_x86_64.whl", hash = "sha256:308c972b23f44e4d0eb3e76b987872c9a7d04148a5a4f29313bbbec3841d75b4" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/48/9b/928775785983a2840c1944a689308e346badb2475765030f8e2a0db21f7a/confluent_kafka-2.14.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:9b0acf2fffa19a6ffc2d6f0b82f3b7f1771f5d3943312438f3532ae69b6f2e83" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/c7/37/c2d7a24f0c12673c763b25c2b32defe3b47b8458ad54befd842b6a3a0cde/confluent_kafka-2.14.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:0023a941dbd8a2325e9e0d13ed1b2236c7d4ff3279b3d99cf06cf1409ab26d22" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/be/fe/4c2e517a404110adbb5b560dafb5d0b3ba36c2af47d52b5508c90f65d5b0/confluent_kafka-2.14.0-cp313-cp313-win_amd64.whl", hash = "sha256:3da898df3ebb866f61312365e9108cbadcfe74fb73af8d03add856542e715cfe" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/f8/07/e217beea9a543c53484144164db337b33ec7f95912cc76f09f03fbc6ee7f/confluent_kafka-2.14.0-cp314-cp314-macosx_13_0_arm64.whl", hash = "sha256:05bbf9745cadb1a6fd3b03508572d2cd5455d8d9960a437537ddac9d3f89ee49" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/5c/73/cbb44df7afa3ac8746e0ebc37be5f457d0e91e32648c144226da26c5f682/confluent_kafka-2.14.0-cp314-cp314-macosx_13_0_x86_64.whl", hash = "sha256:32a72ff85d7b4428532aa477b8dfa4223a5c69f4e90fecaa64e1924cc99a06b6" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/ae/49/49d9e62ff70a06e68c96dd65d8e621583e6b51682ccc08051ec585bfdf96/confluent_kafka-2.14.0-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:4fd75d53e0e36f7ff9c5454f7a3cf4a54790db3bfda169c3b582ddc97111f6f6" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/33/6a/df467787418c24e063ed0c19e96aedf05c26eabc32d8adc75235d45d830b/confluent_kafka-2.14.0-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:eb17528ec7b177ec5e38214852f3dadb5d77172e0fb25c7c992c0cbc3dcfbaa2" },
-    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/f0/0a/c5ce2a48ece0ae2dd050ab28d4cd81b9efc610276a4e72f622582f5371d3/confluent_kafka-2.14.0-cp314-cp314-win_amd64.whl", hash = "sha256:578afb532ded604cb98174a14a88847367191bcbe4f52a1661f5238dc5cf75dd" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/b2/05/6f850cfee3226ffd60209a64304de00bfc6285de41c7ba466303d31b43e0/confluent_kafka-2.4.0-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:a11acfd79f0448095c6492d2ea34cd3df4864d78d72326bed0859d875eb7a62d" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/11/df/b43efc76536d50df78fe0d00fd8fe2c15732a0fc33bd608214664640e9ea/confluent_kafka-2.4.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:dd53d58a6648e4d5e435ff5178248b91af050a4478ed51a95b2b0eaedddafdb1" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/da/a6/40019d243344e12d2072365ed84caaa9e8f402a59c20ab880814b6593f26/confluent_kafka-2.4.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8a5e9cc9fff71c70f1520ab917f33cf66181b29c46cf9940da1af6a52cc086a6" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/5d/53/143b9c5652987af63ad19c4fa2b697f6f4d5c6b0b2c15ed5c34c7c525547/confluent_kafka-2.4.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:b0d5a2d7563b9ca9bef09668d6aae6e360f1e9455672dc0886d78d76ced682c9" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/61/84/519ee6557c260f809c33a66cdc1ee87cac6d8a21b4ad19f98df5c7b7c037/confluent_kafka-2.4.0-cp312-cp312-win_amd64.whl", hash = "sha256:d09aa0c67532c47ec6cd08c50feaa8338e77d18fc83181c46e5a5cb88a5b25ce" },
 ]
 
 [[package]]
@@ -430,7 +420,7 @@ integration = [
 [package.metadata]
 requires-dist = [
     { name = "configargparse", specifier = ">=1.7.5,<2" },
-    { name = "confluent-kafka", specifier = ">=2.14,<3" },
+    { name = "confluent-kafka", specifier = "==2.4.0" },
     { name = "ess-streaming-data-types", specifier = ">=0.27,<0.28" },
     { name = "fast-histogram", specifier = ">=0.14,<0.15" },
     { name = "graphyte", specifier = ">=1.7.1,<2" },

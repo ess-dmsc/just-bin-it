@@ -7,7 +7,7 @@ license = { text = "BSD-2-Clause" }
 requires-python = ">=3.12"
 dependencies = [
     "ConfigArgParse>=1.7.5,<2",
-    "confluent-kafka>=2.14,<3",
+    "confluent-kafka==2.4.0",
     "ess-streaming-data-types>=0.27,<0.28",
     "fast-histogram>=0.14,<0.15",
     "graphyte>=1.7.1,<2",
