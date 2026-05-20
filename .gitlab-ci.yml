@@ -89,8 +89,10 @@ integration_tests:
 
 publish_package:
   stage: release
+  dependencies: []
   script:
     - uv version $CI_COMMIT_TAG
+    - rm -rf dist
     - uv build
     - export UV_PUBLISH_USERNAME="ecdc"
     - export UV_PUBLISH_PASSWORD="$ESS_ARTIFACTORY_ECDC_PYPI_TOKEN"
