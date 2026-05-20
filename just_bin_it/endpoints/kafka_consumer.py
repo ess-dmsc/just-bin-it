@@ -18,18 +18,20 @@ class Consumer:
     Note: Can only handle one topic.
     """
 
-    def __init__(self, brokers, topics, security_config):
+    def __init__(self, brokers, topics, security_config, assign_to_end=True):
         """
         Constructor.
 
         :param brokers: The names of the brokers to connect to.
         :param topics: The names of the data topics.
         :param security_config: The security config for Kafka
+        :param assign_to_end: Whether to assign partitions to their latest offsets.
         """
         self.topic_partitions = []
+        self._assigned = False
         try:
             self.consumer = self._create_consumer(brokers, security_config)
-            self._assign_topics(topics)
+            self._assign_topics(topics, assign_to_end)
         except KafkaError as error:
             raise KafkaException(error)
 
@@ -37,7 +39,7 @@ class Consumer:
         options = {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
         return KafkaConsumer({**options, **security_config})
 
-    def _assign_topics(self, topics):
+    def _assign_topics(self, topics, assign_to_end):
         # Only use the first topic
         topic = topics[0]
 
@@ -52,12 +54,16 @@ class Consumer:
         for pn in partition_numbers:
             self.topic_partitions.append(TopicPartition(topic, pn))
 
-        # Seek to the end of each partition
-        for tp in self.topic_partitions:
-            high_watermark = self.consumer.get_watermark_offsets(tp, cached=False)[1]
-            tp.offset = high_watermark
+        if assign_to_end:
+            # Seek to the end of each partition
+            for tp in self.topic_partitions:
+                high_watermark = self.consumer.get_watermark_offsets(tp, cached=False)[
+                    1
+                ]
+                tp.offset = high_watermark
 
-        self.consumer.assign(self.topic_partitions)
+            self.consumer.assign(self.topic_partitions)
+            self._assigned = True
 
     def get_new_messages(self):
         """
@@ -108,8 +114,12 @@ class Consumer:
         for tp, offset in zip(self.topic_partitions, offsets):
             tp.offset = offset
 
-        for tp in self.topic_partitions:
-            self.consumer.seek(tp)
+        if self._assigned:
+            for tp in self.topic_partitions:
+                self.consumer.seek(tp)
+        else:
+            self.consumer.assign(self.topic_partitions)
+            self._assigned = True
 
     def get_offset_range(self):
         """

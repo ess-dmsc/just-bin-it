@@ -36,7 +36,7 @@ class StubConsumer(Consumer):
     def _create_consumer(self, brokers, security_config):
         return {"brokers": brokers}
 
-    def _assign_topics(self, topics):
+    def _assign_topics(self, topics, assign_to_end=True):
         pass
 
     def get_new_messages(self):

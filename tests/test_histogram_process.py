@@ -10,7 +10,7 @@ from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.histograms.binned_data import BinnedData
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
-from just_bin_it.histograms.histogram_process import Processor
+from just_bin_it.histograms.histogram_process import Processor, create_event_source
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from tests.doubles.producers import SpyProducer
 
@@ -102,6 +102,26 @@ class StubTime:
         return self.curr_time_ns
 
 
+class SpyDelayedAssignConsumer:
+    instances = []
+
+    def __init__(self, brokers, topics, security_config, assign_to_end=True):
+        self.assigned_before_start_seek = assign_to_end
+        self.offsets = None
+        self.__class__.instances.append(self)
+
+    def get_offset_range(self):
+        if self.assigned_before_start_seek:
+            raise AssertionError("Consumer assigned before start-time seek")
+        return [(0, 10)]
+
+    def offset_for_time(self, start_time):
+        return [5]
+
+    def seek_by_offsets(self, offsets):
+        self.offsets = offsets
+
+
 class TestHistogramProcess:
     @staticmethod
     def generate_histogrammer(producer, start_time, stop_time, hist_configs):
@@ -121,6 +141,26 @@ class TestHistogramProcess:
             histogrammer, event_source, hist_sink, msg_queue, Queue(), 1000, time_source
         )
         return event_source, processor, producer, time_source, msg_queue
+
+    def test_started_event_source_does_not_assign_consumer_before_seek(self):
+        SpyDelayedAssignConsumer.instances = []
+        config = {
+            "data_brokers": ["broker"],
+            "data_topics": ["topic"],
+        }
+
+        create_event_source(
+            config,
+            start=123,
+            stop=None,
+            deserialise_func=lambda x: x,
+            kafka_security_config={},
+            consumer_factory=SpyDelayedAssignConsumer,
+        )
+
+        consumer = SpyDelayedAssignConsumer.instances[0]
+        assert not consumer.assigned_before_start_seek
+        assert consumer.offsets == [5]
 
     def test_counting_for_an_interval_gets_all_data_during_interval(self):
         config = copy.deepcopy(CONFIG_1D)
