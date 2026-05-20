@@ -23,16 +23,25 @@ def create_topics(admin_client, topics):
         future.result(timeout=KAFKA_TIMEOUT_S)
 
 
-def wait_for_messages(consumer, timeout=KAFKA_TIMEOUT_S):
+def wait_for_messages(consumer, number_messages, timeout=KAFKA_TIMEOUT_S):
     deadline = time.monotonic() + timeout
+    messages = []
 
     while time.monotonic() < deadline:
-        messages = consumer.get_new_messages()
-        if messages:
+        messages.extend(consumer.get_new_messages())
+        if len(messages) == number_messages:
             return messages
+        if len(messages) > number_messages:
+            raise AssertionError(
+                f"Received {len(messages)} Kafka messages, "
+                f"expected {number_messages}"
+            )
         time.sleep(POLL_INTERVAL_S)
 
-    raise AssertionError("Timed out waiting for Kafka messages")
+    raise AssertionError(
+        f"Timed out waiting for Kafka messages: "
+        f"received {len(messages)} of {number_messages}"
+    )
 
 
 class TestKafkaConsumer:
@@ -82,7 +91,7 @@ class TestKafkaConsumer:
         # Move to beginning
         consumer.seek_by_offsets([0])
 
-        data = wait_for_messages(consumer)
+        data = wait_for_messages(consumer, self.num_messages)
 
         assert isinstance(data, list)
         # Total messages
@@ -100,7 +109,7 @@ class TestKafkaConsumer:
         # Move to beginning
         consumer.seek_by_offsets([0, 0, 0])
 
-        data = wait_for_messages(consumer)
+        data = wait_for_messages(consumer, self.num_messages)
 
         assert isinstance(data, list)
         # Total messages across all partitions
@@ -159,9 +168,12 @@ class TestKafkaConsumer:
 
         consumer.seek_by_offsets(new_offsets)
 
-        num_messages_since_offset = len(wait_for_messages(consumer))
+        expected_num_messages = self.num_messages - sum(new_offsets)
+        num_messages_since_offset = len(
+            wait_for_messages(consumer, expected_num_messages)
+        )
 
-        assert num_messages_since_offset == self.num_messages - sum(new_offsets)
+        assert num_messages_since_offset == expected_num_messages
 
 
 class TestKafkaTools:
