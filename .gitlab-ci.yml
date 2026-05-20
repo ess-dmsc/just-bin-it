@@ -6,7 +6,7 @@ workflow:
 
 variables:
   UV_VERSION: "0.10"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.14"
   BASE_LAYER: trixie-slim
   UV_LINK_MODE: copy
 
@@ -24,8 +24,8 @@ stages:
 checks:
   stage: check
   script:
-    - uv run ruff check tests just_bin_it bin
-    - uv run ruff format --check tests just_bin_it bin
+    - uv run ruff check tests integration-tests just_bin_it
+    - uv run ruff format --check tests integration-tests just_bin_it
     - uv run isort --check-only .
 
 unit_tests:

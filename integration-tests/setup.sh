@@ -25,7 +25,6 @@ tar \
     -C "$PROJECT_DIR" \
     --exclude=.git \
     --exclude=.mypy_cache \
-    --exclude=.nox \
     --exclude=.pytest_cache \
     --exclude=.ruff_cache \
     --exclude=.venv \

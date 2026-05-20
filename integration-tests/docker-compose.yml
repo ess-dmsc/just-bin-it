@@ -44,7 +44,7 @@ services:
       - hist_responses
 
   test-runner:
-    image: ghcr.io/astral-sh/uv:0.10-python3.12-trixie-slim
+    image: ghcr.io/astral-sh/uv:0.10-python3.14-trixie-slim
     depends_on:
       - kafka
       - just-bin-it

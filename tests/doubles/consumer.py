@@ -20,8 +20,23 @@ class StubConsumerRecord:
 
 
 class StubConsumer(Consumer):
-    def __init__(self, brokers, topics, num_partitions=1):
-        super().__init__(brokers, topics, {})
+    def __init__(
+        self,
+        brokers,
+        topics,
+        security_config=None,
+        num_partitions=1,
+        assign_to_end=True,
+    ):
+        if isinstance(security_config, int):
+            num_partitions = security_config
+            security_config = None
+
+        self.assigned_to_end = None
+        self.seek_offsets = None
+        super().__init__(
+            brokers, topics, security_config or {}, assign_to_end=assign_to_end
+        )
         self.topic_names = topics
         self.topic_partitions = {}
         for i in range(num_partitions):
@@ -37,7 +52,7 @@ class StubConsumer(Consumer):
         return {"brokers": brokers}
 
     def _assign_topics(self, topics, assign_to_end=True):
-        pass
+        self.assigned_to_end = assign_to_end
 
     def get_new_messages(self):
         # From Kafka we get a dictionary of topics which contains a list of
@@ -53,6 +68,7 @@ class StubConsumer(Consumer):
         return data
 
     def seek_by_offsets(self, offsets):
+        self.seek_offsets = offsets
         for tp, offset in zip(self.topic_partitions.values(), offsets):
             tp["offset"] = offset
 

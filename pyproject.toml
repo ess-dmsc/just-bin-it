@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A lightweight program for histogramming neutron event data"
 readme = "README.md"
 license = { text = "BSD-2-Clause" }
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "ConfigArgParse>=1.7.5,<2",
     "confluent-kafka>=2.14,<3",
@@ -23,8 +23,6 @@ gui = [
 [dependency-groups]
 dev = [
     "isort==5.13.2",
-    "mock>=5.2.0",
-    "nox>=2025.11.12",
     "pre-commit>=4.5.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",

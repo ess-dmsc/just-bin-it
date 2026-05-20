@@ -1,6 +1,0 @@
-ConfigArgParse==1.7.5
-confluent-kafka==2.14.0
-ess-streaming-data-types==0.27.0
-fast-histogram==0.14
-graphyte==1.7.1
-numpy==2.4.6
