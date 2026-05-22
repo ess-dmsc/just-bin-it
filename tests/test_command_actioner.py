@@ -1,6 +1,6 @@
 from copy import deepcopy
+from unittest import mock
 
-import mock
 import pytest
 
 from just_bin_it.command_actioner import (

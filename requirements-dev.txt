@@ -1,9 +1,0 @@
--r requirements.txt
-ruff==0.4.4   # Pinned to match pre-commit config
-isort==5.13.2 # Pinned to match pre-commit config
-mock
-mutmut==3.2.3  # Newer releases require libcst versions unavailable on Python 3.8
-pre-commit
-pytest
-pytest-cov
-nox

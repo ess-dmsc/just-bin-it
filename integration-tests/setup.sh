@@ -18,7 +18,16 @@ compose() {
 docker info
 
 compose down --volumes --remove-orphans || true
-compose up -d zookeeper kafka test-runner
+compose up -d --build zookeeper kafka just-bin-it test-runner
 compose exec -T test-runner mkdir -p "$JBI_TEST_WORKDIR"
 
-tar -C "$PROJECT_DIR" -cf - . | compose exec -T test-runner tar -C "$JBI_TEST_WORKDIR" -xf -
+tar \
+    -C "$PROJECT_DIR" \
+    --exclude=.git \
+    --exclude=.mypy_cache \
+    --exclude=.pytest_cache \
+    --exclude=.ruff_cache \
+    --exclude=.venv \
+    --exclude=dist \
+    --exclude='*.egg-info' \
+    -cf - . | compose exec -T test-runner tar -C "$JBI_TEST_WORKDIR" -xf -

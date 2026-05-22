@@ -1,18 +1,14 @@
-import os
-import sys
 import uuid
 
 import configargparse as argparse
 from confluent_kafka import Consumer, TopicPartition
 
+from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_schema
 from just_bin_it.exceptions import KafkaException
 from just_bin_it.utilities.sasl_utils import (
     add_sasl_commandline_options,
     generate_kafka_security_config,
 )
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from just_bin_it.endpoints.serialisation import SCHEMAS_TO_DESERIALISERS, get_schema
 
 
 def main(brokers, topic, kafka_security_config):
@@ -54,7 +50,7 @@ def main(brokers, topic, kafka_security_config):
                 print(f"Total events: {ans['data'].sum()}")
 
 
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser()
 
     required_args = parser.add_argument_group("required arguments")

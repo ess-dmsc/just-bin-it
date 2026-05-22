@@ -1,7 +1,7 @@
 import copy
 import logging
+from unittest import mock
 
-import mock
 import pytest
 
 from just_bin_it.endpoints.statistics_publisher import (

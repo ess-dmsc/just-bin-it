@@ -23,16 +23,25 @@ def create_topics(admin_client, topics):
         future.result(timeout=KAFKA_TIMEOUT_S)
 
 
-def wait_for_messages(consumer, timeout=KAFKA_TIMEOUT_S):
+def wait_for_messages(consumer, number_messages, timeout=KAFKA_TIMEOUT_S):
     deadline = time.monotonic() + timeout
+    messages = []
 
     while time.monotonic() < deadline:
-        messages = consumer.get_new_messages()
-        if messages:
+        messages.extend(consumer.get_new_messages())
+        if len(messages) == number_messages:
             return messages
+        if len(messages) > number_messages:
+            raise AssertionError(
+                f"Received {len(messages)} Kafka messages, "
+                f"expected {number_messages}"
+            )
         time.sleep(POLL_INTERVAL_S)
 
-    raise AssertionError("Timed out waiting for Kafka messages")
+    raise AssertionError(
+        f"Timed out waiting for Kafka messages: "
+        f"received {len(messages)} of {number_messages}"
+    )
 
 
 class TestKafkaConsumer:
@@ -61,11 +70,15 @@ class TestKafkaConsumer:
 
         self.num_messages = 50
 
-    def put_messages_in(self, topic_name, number_messages):
-        # Put messages in
+    def put_messages_in(self, topic_name, number_messages, partitions=None):
         for i in range(number_messages):
             msg = f"msg-{i}"
-            self.producer.produce(topic_name, msg.encode())
+            if partitions is None:
+                self.producer.produce(topic_name, msg.encode())
+            else:
+                self.producer.produce(
+                    topic_name, msg.encode(), partition=i % partitions
+                )
         self.producer.flush()
 
     def create_consumer(self, topic):
@@ -78,7 +91,7 @@ class TestKafkaConsumer:
         # Move to beginning
         consumer.seek_by_offsets([0])
 
-        data = wait_for_messages(consumer)
+        data = wait_for_messages(consumer, self.num_messages)
 
         assert isinstance(data, list)
         # Total messages
@@ -89,12 +102,14 @@ class TestKafkaConsumer:
         assert isinstance(data[0].value(), bytes)
 
     def test_all_data_retrieved_when_three_partitions(self):
-        self.put_messages_in(self.three_partition_topic_name, self.num_messages)
+        self.put_messages_in(
+            self.three_partition_topic_name, self.num_messages, partitions=3
+        )
         consumer = self.create_consumer(self.three_partition_topic_name)
         # Move to beginning
         consumer.seek_by_offsets([0, 0, 0])
 
-        data = wait_for_messages(consumer)
+        data = wait_for_messages(consumer, self.num_messages)
 
         assert isinstance(data, list)
         # Total messages across all partitions
@@ -105,7 +120,9 @@ class TestKafkaConsumer:
         assert isinstance(data[0].value(), bytes)
 
     def test_get_offsets_for_time_after_last_message(self):
-        self.put_messages_in(self.three_partition_topic_name, self.num_messages)
+        self.put_messages_in(
+            self.three_partition_topic_name, self.num_messages, partitions=3
+        )
         current_time = time_in_ns() // 1_000_000
         consumer = self.create_consumer(self.three_partition_topic_name)
 
@@ -116,7 +133,9 @@ class TestKafkaConsumer:
 
     def test_get_offsets_for_time_before_first_message(self):
         current_time = time_in_ns() // 1_000_000
-        self.put_messages_in(self.three_partition_topic_name, self.num_messages)
+        self.put_messages_in(
+            self.three_partition_topic_name, self.num_messages, partitions=3
+        )
         consumer = self.create_consumer(self.three_partition_topic_name)
 
         offsets = consumer.offset_for_time(current_time)
@@ -125,7 +144,9 @@ class TestKafkaConsumer:
         assert offsets == [0, 0, 0]
 
     def test_get_offset_ranges(self):
-        self.put_messages_in(self.three_partition_topic_name, self.num_messages)
+        self.put_messages_in(
+            self.three_partition_topic_name, self.num_messages, partitions=3
+        )
         consumer = self.create_consumer(self.three_partition_topic_name)
 
         offsets = consumer.get_offset_range()
@@ -136,7 +157,9 @@ class TestKafkaConsumer:
         assert sum([end for _, end in offsets]) == self.num_messages
 
     def test_seek_and_get_position(self):
-        self.put_messages_in(self.three_partition_topic_name, self.num_messages)
+        self.put_messages_in(
+            self.three_partition_topic_name, self.num_messages, partitions=3
+        )
         consumer = self.create_consumer(self.three_partition_topic_name)
 
         offsets = consumer.get_offset_range()
@@ -145,9 +168,12 @@ class TestKafkaConsumer:
 
         consumer.seek_by_offsets(new_offsets)
 
-        num_messages_since_offset = len(wait_for_messages(consumer))
+        expected_num_messages = self.num_messages - sum(new_offsets)
+        num_messages_since_offset = len(
+            wait_for_messages(consumer, expected_num_messages)
+        )
 
-        assert num_messages_since_offset == self.num_messages - sum(new_offsets)
+        assert num_messages_since_offset == expected_num_messages
 
 
 class TestKafkaTools:

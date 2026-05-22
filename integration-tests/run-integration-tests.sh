@@ -5,19 +5,22 @@ set -eu
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 export JBI_COMPOSE_PROJECT="${JBI_COMPOSE_PROJECT:-just-bin-it-integration-tests}"
+export JBI_TEST_WORKDIR="${JBI_TEST_WORKDIR:-/tmp/just-bin-it}"
 
 compose() {
     docker compose -f "$SCRIPT_DIR/docker-compose.yml" -p "$JBI_COMPOSE_PROJECT" "$@"
 }
 
-compose exec -T test-runner bash -lc '
+set +e
+compose exec -T test-runner sh -lc '
 cd "$JBI_TEST_WORKDIR" &&
-scl enable rh-python38 -- python -m venv test_env &&
-source test_env/bin/activate &&
-python -m pip install --upgrade pip &&
-python -m pip install -r requirements-dev.txt &&
-python -m pip install -r integration-tests/requirements.txt &&
-python -m pip install "requests<2.30.0" &&
-cd integration-tests &&
-python -m pytest -s --junitxml=./IntegrationTestsOutput.xml .
+uv run --no-dev --group integration pytest -s --junitxml=./integration-tests/IntegrationTestsOutput.xml integration-tests
 '
+test_rc=$?
+set -e
+
+compose cp \
+    "test-runner:${JBI_TEST_WORKDIR}/integration-tests/IntegrationTestsOutput.xml" \
+    "$SCRIPT_DIR/IntegrationTestsOutput.xml" || true
+
+exit "$test_rc"

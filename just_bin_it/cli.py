@@ -1,12 +1,10 @@
 import json
 import logging
 import os
-import sys
 import time
 
 import configargparse as argparse
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.command_actioner import CommandActioner, ResponsePublisher
 from just_bin_it.endpoints.config_listener import ConfigListener
 from just_bin_it.endpoints.heartbeat_publisher import HeartbeatPublisher
@@ -144,7 +142,7 @@ class Main:
         )
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
 
     required_args = parser.add_argument_group("required arguments")
@@ -236,7 +234,7 @@ if __name__ == "__main__":
         args.ssl_cafile,
     )
 
-    main = Main(
+    app = Main(
         args.brokers,
         args.config_topic,
         args.simulation_mode,
@@ -245,4 +243,4 @@ if __name__ == "__main__":
         statistics_publisher,
         args.response_topic,
     )
-    main.run()
+    app.run()
