@@ -83,6 +83,16 @@ class TestHistogram2dMapFunctionality:
                 expected += 1
                 assert data[x][y] == expected
 
+    def test_binning_with_offset_detector_range_keeps_map_orientation(self):
+        hist = DetHistogram(IRRELEVANT_TOPIC, (10, 999), 3, 2)
+        det_ids = [10, 11, 11, 12, 12, 12, 13, 13, 13, 13]
+        det_ids.extend([14] * 5)
+        det_ids.extend([15] * 6)
+
+        hist.add_data(self.pulse_time, [], det_ids)
+
+        assert np.array_equal(hist.data, [[1, 4], [2, 5], [3, 6]])
+
     def test_adding_data_accumulates_histogram(self):
         self.hist.add_data(self.pulse_time, [], self.data)
         first_sum = self.hist.data.sum()

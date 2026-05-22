@@ -113,20 +113,7 @@ class DetHistogram:
 
     @property
     def data(self):
-        # Create an empty 2d histogram
-        hist2d, _, _ = np.histogram2d(
-            [],
-            [],
-            range=((0, self.width), (0, self.height)),
-            bins=(self.width, self.height),
-        )
-
-        # Copy the data over
-        for i, value in enumerate(self._histogram):
-            x = i % self.width
-            y = i // self.width
-            hist2d[x][y] = value
-        return hist2d
+        return self._histogram.reshape((self.height, self.width)).T.copy()
 
     @property
     def shape(self):
@@ -187,3 +174,6 @@ class DetHistogram:
         """
         logging.info("Clearing data")  # pragma: no mutate
         self._create_empty_histogram()
+
+    def counts_sum(self):
+        return self._histogram.sum()

@@ -87,7 +87,7 @@ class Histogrammer:
         last_recorded_pulse_time = self._hist_stats[histogram.identifier].get(
             "last_pulse_time", 0
         )
-        total_counts = int(histogram.data.sum())
+        total_counts = int(self._counts_sum(histogram))
         diff = total_counts - self._previous_sum[histogram.identifier]
         if last_pulse_time == last_recorded_pulse_time and diff == 0:
             # If we are resending "duplicate" data,
@@ -107,6 +107,12 @@ class Histogrammer:
             "rate": rate,
         }
         return self._hist_stats[histogram.identifier]
+
+    def _counts_sum(self, histogram):
+        counts_sum = getattr(histogram, "counts_sum", None)
+        if counts_sum:
+            return counts_sum()
+        return histogram.data.sum()
 
     def clear_histograms(self):
         """

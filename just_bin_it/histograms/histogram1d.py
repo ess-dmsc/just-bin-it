@@ -1,6 +1,7 @@
 import logging
 
 import numpy as np
+from fast_histogram import histogram1d
 
 from just_bin_it.histograms.binned_data import rebin_counts
 from just_bin_it.histograms.input_validators import (
@@ -103,19 +104,17 @@ class Histogram1d:
         self.last_pulse_time = pulse_time
 
         if self.det_range:
-            # Create 2D histogram so we can filter on det-id then reduce to 1D.
-            # This is the quickest way to filter on det-id (probably).
-            histogram, _, _ = np.histogram2d(
-                tofs,
-                det_ids,
-                range=(self.tof_range, self.det_range),
-                bins=self.num_bins,
-            )
-            self._histogram = self._histogram + histogram.sum(1)
+            det_ids = np.asarray(det_ids)
+            tofs = np.asarray(tofs)
+            included = (det_ids >= self.det_range[0]) & (det_ids <= self.det_range[1])
+            self._histogram += self._histogram_tof(tofs[included])
         else:
-            self._histogram += np.histogram(
-                tofs, range=self.tof_range, bins=self.num_bins
-            )[0]
+            self._histogram += self._histogram_tof(tofs)
+
+    def _histogram_tof(self, tofs):
+        counts = histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
+        counts[~0] += np.count_nonzero(np.asarray(tofs) == self.tof_range[1])
+        return counts.astype(self._histogram.dtype, copy=False)
 
     def add_binned_data(self, pulse_time, binned_data, source=""):
         """
@@ -160,3 +159,6 @@ class Histogram1d:
         """
         logging.info("Clearing data")  # pragma: no mutate
         self._initialise_histogram()
+
+    def counts_sum(self):
+        return self._histogram.sum()

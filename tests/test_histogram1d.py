@@ -53,6 +53,14 @@ class TestHistogram1dFunctionality:
         # Sum should be double
         assert self.hist.data.sum() == first_sum * 2
 
+    def test_adding_tof_data_counts_expected_bins(self):
+        hist = Histogram1d(IRRELEVANT_TOPIC, 5, (0, 5))
+        tof_data = [-1, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6]
+
+        hist.add_data(self.pulse_time, tof_data)
+
+        assert np.array_equal(hist.data, [2, 2, 2, 2, 3])
+
     def test_adding_data_outside_initial_bins_is_ignored(self):
         self.hist.add_data(self.pulse_time, self.data)
         first_sum = self.hist.data.sum()
@@ -125,6 +133,15 @@ class TestHistogram1dFunctionality:
 
         assert hist.data.sum() == 2
         assert np.array_equal(hist.data, [0, 1, 1, 0, 0])
+
+    def test_detector_range_filter_is_applied_before_tof_binning(self):
+        hist = Histogram1d(IRRELEVANT_TOPIC, 5, (0, 5), (10, 20))
+        tof_data = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 2]
+        det_data = [9, 10, 11, 20, 21, 15, 15, 19, 20, 10, 20, 5]
+
+        hist.add_data(self.pulse_time, tof_data, det_data)
+
+        assert np.array_equal(hist.data, [1, 2, 1, 2, 3])
 
     def test_matching_binned_data_bins_adds_counts_directly(self):
         hist = Histogram1d(IRRELEVANT_TOPIC, 3, (0, 30))

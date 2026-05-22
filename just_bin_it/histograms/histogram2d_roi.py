@@ -70,6 +70,7 @@ class RoiHistogram:
         self.x_edges = [x for x in range(width)]
         self.y_edges = [y for y in range(len(left_edges))]
         self.mask = []
+        self._ignored_bin_mask = None
         self.bins = []
         self.left_edges = left_edges
         self.width = width
@@ -82,6 +83,9 @@ class RoiHistogram:
 
     def _initialise_histogram(self):
         self._calculate_bins()
+        self._ignored_bin_mask = np.asarray(
+            self.mask[: len(self.bins) - 1], dtype=bool
+        )
         self._create_empty_histogram()
 
     def _create_empty_histogram(self):
@@ -116,15 +120,8 @@ class RoiHistogram:
 
     @property
     def data(self):
-        hist2d, _, _ = np.histogram2d([], [], bins=self.shape)
-        i = 0
-        for mask, value in zip(self.mask, self._histogram):
-            if not mask:
-                x = i % self.width
-                y = i // self.width
-                hist2d[x][y] = value
-                i += 1
-        return hist2d
+        roi_counts = self._histogram[~self._ignored_bin_mask]
+        return roi_counts.reshape((len(self.left_edges), self.width)).T.copy()
 
     @property
     def shape(self):
@@ -153,3 +150,6 @@ class RoiHistogram:
         """
         logging.info("Clearing data")  # pragma: no mutate
         self._create_empty_histogram()
+
+    def counts_sum(self):
+        return self._histogram[~self._ignored_bin_mask].sum()

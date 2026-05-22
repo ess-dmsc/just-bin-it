@@ -45,6 +45,15 @@ class TestHistogram2dFunctionality:
         # Sum should be double
         assert self.hist.data.sum() == first_sum * 2
 
+    def test_adding_tof_and_detector_data_counts_expected_bins(self):
+        hist = Histogram2d("topic", (2, 3), (0, 2), (10, 13))
+        tof_data = [-1, 0, 0, 0, 1, 1, 2, 3]
+        det_data = [10, 10, 10, 11, 12, 12, 13, 12]
+
+        hist.add_data(self.pulse_time, tof_data, det_data)
+
+        assert np.array_equal(hist.data, [[2, 1, 0], [0, 0, 3]])
+
     def test_adding_data_outside_initial_bins_is_ignored(self):
         self.hist.add_data(self.pulse_time, self.data, self.data)
         first_sum = self.hist.data.sum()
