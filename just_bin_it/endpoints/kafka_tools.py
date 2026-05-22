@@ -15,22 +15,34 @@ def are_kafka_settings_valid(brokers, topics, kafka_security_config):
     :return: True if settings valid.
     """
     # The Consumer constructor does not throw even if the brokers don't exist!
-    options = {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
+    options = {
+        "bootstrap.servers": ",".join(brokers),
+        "group.id": uuid.uuid4(),
+        "allow.auto.create.topics": False,
+    }
     consumer = Consumer({**options, **kafka_security_config})
 
     try:
-        metadata = consumer.list_topics(timeout=10)
+        for topic in topics:
+            metadata = consumer.list_topics(topic=topic, timeout=10)
+            topic_metadata = metadata.topics.get(topic)
+            if topic_metadata is None:
+                logging.error("Could not find topic(s): %s", topic)
+                return False
+            if topic_metadata.error is not None:
+                logging.error(
+                    "Could not get metadata for topic %s: %s",
+                    topic,
+                    topic_metadata.error,
+                )
+                return False
     except KafkaError as error:
         logging.error(
             "Could not get metadata from Kafka (is the broker address " "correct?): %s",
             error,
         )
         return False
-
-    missing_topics = [tp for tp in topics if tp not in set(metadata.topics.keys())]
-
-    if missing_topics:
-        logging.error("Could not find topic(s): %s", ", ".join(missing_topics))
-        return False
+    finally:
+        consumer.close()
 
     return True

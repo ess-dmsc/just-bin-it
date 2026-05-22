@@ -10,8 +10,9 @@ from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.histograms.binned_data import BinnedData
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
-from just_bin_it.histograms.histogram_process import Processor
+from just_bin_it.histograms.histogram_process import Processor, create_event_source
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
+from tests.doubles.consumer import StubConsumer, StubConsumerRecord
 from tests.doubles.producers import SpyProducer
 
 CONFIG_1D = {
@@ -121,6 +122,39 @@ class TestHistogramProcess:
             histogrammer, event_source, hist_sink, msg_queue, Queue(), 1000, time_source
         )
         return event_source, processor, producer, time_source, msg_queue
+
+    def test_started_event_source_does_not_assign_consumer_before_seek(self):
+        config = {
+            "data_brokers": ["broker"],
+            "data_topics": ["topic"],
+        }
+        consumer = None
+
+        def create_consumer(brokers, topics, security_config, assign_to_end=True):
+            nonlocal consumer
+            consumer = StubConsumer(
+                brokers, topics, security_config, assign_to_end=assign_to_end
+            )
+            consumer.add_messages(
+                [
+                    StubConsumerRecord(0, 0, b""),
+                    StubConsumerRecord(123, 1, b""),
+                ]
+            )
+            return consumer
+
+        create_event_source(
+            config,
+            start=123,
+            stop=None,
+            deserialise_func=lambda x: x,
+            kafka_security_config={},
+            consumer_factory=create_consumer,
+        )
+
+        assert consumer is not None
+        assert consumer.assigned_to_end is False
+        assert consumer.seek_offsets == [1]
 
     def test_counting_for_an_interval_gets_all_data_during_interval(self):
         config = copy.deepcopy(CONFIG_1D)

@@ -7,10 +7,13 @@ import uuid
 from subprocess import Popen
 
 import pytest
-from compose.cli.main import TopLevelCommand, project_from_options
 from confluent_kafka import OFFSET_END, Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient
-from integration_settings import BROKERS, KAFKA_MANAGED_EXTERNALLY
+from integration_settings import (
+    BROKERS,
+    JUST_BIN_IT_MANAGED_EXTERNALLY,
+    KAFKA_MANAGED_EXTERNALLY,
+)
 
 common_options = {
     "--no-deps": False,
@@ -99,7 +102,7 @@ def wait_until_kafka_ready(docker_cmd=None, docker_options=None):
         raise Exception("Kafka topics were not ready after 60 seconds, aborting tests.")
 
 
-def wait_until_just_bin_it_ready(proc, timeout=15):
+def wait_until_just_bin_it_ready(proc=None, timeout=15):
     conf = {
         "bootstrap.servers": ",".join(BROKERS),
         "group.id": uuid.uuid4(),
@@ -120,7 +123,7 @@ def wait_until_just_bin_it_ready(proc, timeout=15):
 
     try:
         while time.monotonic() < deadline:
-            if proc.poll() is not None:
+            if proc is not None and proc.poll() is not None:
                 raise Exception("just-bin-it process exited during startup")
 
             now = time.monotonic()
@@ -153,6 +156,8 @@ def start_kafka(request):
         wait_until_kafka_ready()
         return
 
+    from compose.cli.main import TopLevelCommand, project_from_options
+
     options = common_options
     options["--project-name"] = "kafka"
     options["--file"] = ["docker-compose.yml"]
@@ -176,10 +181,18 @@ def start_kafka(request):
 @pytest.fixture(scope="module")
 def just_bin_it(request):
     print("Started preparing test environment...", flush=True)
+
+    if JUST_BIN_IT_MANAGED_EXTERNALLY:
+        print("just-bin-it is managed externally", flush=True)
+        wait_until_just_bin_it_ready()
+        return
+
+    just_bin_it_executable = os.path.join(
+        os.path.dirname(sys.executable), "just-bin-it"
+    )
     proc = Popen(
         [
-            sys.executable,
-            "../bin/just-bin-it.py",
+            just_bin_it_executable,
             "-b",
             *BROKERS,
             "-t",

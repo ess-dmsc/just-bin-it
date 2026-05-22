@@ -1,18 +1,12 @@
-import os
-import sys
-
 import configargparse as argparse
 import numpy as np
 
+from just_bin_it.endpoints.kafka_consumer import Consumer
+from just_bin_it.endpoints.sources import HistogramSource
 from just_bin_it.utilities.sasl_utils import (
     add_sasl_commandline_options,
     generate_kafka_security_config,
 )
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from just_bin_it.endpoints.kafka_consumer import Consumer
-from just_bin_it.endpoints.sources import HistogramSource
-from just_bin_it.utilities.plotter import plot_histograms
 
 
 def convert_for_plotting(histogram_data):
@@ -60,11 +54,13 @@ def main(brokers, topic, log_scale_for_2d, kafka_security_config):
     # Only care about the most recent histogram and don't care about kafka timestamps
     _, _, hist_data = buffs[-1]
 
+    from just_bin_it.utilities.plotter import plot_histograms
+
     hists = convert_for_plotting(hist_data)
     plot_histograms(hists, log_scale_for_2d)
 
 
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser()
 
     required_args = parser.add_argument_group("required arguments")

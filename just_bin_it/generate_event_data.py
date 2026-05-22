@@ -1,10 +1,7 @@
-import os
-import sys
 import time
 
 import configargparse as argparse
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 from just_bin_it.endpoints.kafka_producer import Producer
 from just_bin_it.endpoints.serialisation import serialise_ev42
 from just_bin_it.utilities import time_in_ns
@@ -71,7 +68,7 @@ def main(brokers, topic, num_msgs, num_points, kafka_security_config, det_hist=F
     print(f"Start timestamp = {start_time}, end_timestamp = {end_time}")
 
 
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser()
 
     required_args = parser.add_argument_group("required arguments")

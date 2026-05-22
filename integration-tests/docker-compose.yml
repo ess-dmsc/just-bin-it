@@ -23,12 +23,39 @@ services:
     image: zookeeper:3.4
     platform: linux/amd64
 
-  test-runner:
-    image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
+  just-bin-it:
+    build:
+      context: ..
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+        no_proxy: ${no_proxy:-}
     depends_on:
       - kafka
+    command:
+      - just-bin-it
+      - -b
+      - ${JBI_KAFKA_BROKERS:-kafka:9092}
+      - -t
+      - hist_commands
+      - -rt
+      - hist_responses
+
+  test-runner:
+    image: ghcr.io/astral-sh/uv:0.10-python3.14-trixie-slim
+    depends_on:
+      - kafka
+      - just-bin-it
     command: sleep infinity
     environment:
-      JBI_KAFKA_BROKERS: ${JBI_KAFKA_BROKERS:-localhost:9092}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      JBI_KAFKA_BROKERS: ${JBI_KAFKA_BROKERS:-kafka:9092}
+      JBI_JUST_BIN_IT_MANAGED_EXTERNALLY: "1"
       JBI_KAFKA_MANAGED_EXTERNALLY: ${JBI_KAFKA_MANAGED_EXTERNALLY:-}
       JBI_TEST_WORKDIR: ${JBI_TEST_WORKDIR:-/tmp/just-bin-it}
+      http_proxy: ${http_proxy:-}
+      https_proxy: ${https_proxy:-}
+      no_proxy: ${no_proxy:-}

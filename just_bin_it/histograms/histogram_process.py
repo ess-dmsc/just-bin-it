@@ -29,7 +29,12 @@ def create_simulated_event_source(configuration, start, stop):
 
 
 def create_event_source(
-    configuration, start, stop, deserialise_func, kafka_security_config
+    configuration,
+    start,
+    stop,
+    deserialise_func,
+    kafka_security_config,
+    consumer_factory=Consumer,
 ):
     """
     Create an event source.
@@ -41,10 +46,11 @@ def create_event_source(
     :param kafka_security_config: The security config for kafka.
     :return: The created event source.
     """
-    consumer = Consumer(
+    consumer = consumer_factory(
         configuration["data_brokers"],
         configuration["data_topics"],
         kafka_security_config,
+        assign_to_end=not start,
     )
     event_source = EventSource(consumer, start, stop, deserialise_func)
 
