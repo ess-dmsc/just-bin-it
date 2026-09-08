@@ -217,3 +217,37 @@ class TestHistogram2dMapFunctionality:
         hist.add_binned_data(123, WRONG_SHAPE_BINNED_DATA)
 
         assert hist.data.sum() == 0
+
+    @pytest.mark.parametrize(
+        "dtype, start",
+        [(np.int32, 2**31 - 8), (np.uint32, 2**32 - 8), (np.float64, 10.5)],
+    )
+    def test_detector_map_offset_and_last_pixel_are_preserved(self, dtype, start):
+        hist = DetHistogram(IRRELEVANT_TOPIC, (start, start), 3, 2)
+        dets = np.array(
+            [start - 1, start, start + 2, start + 2, start + 5, start + 6], dtype=dtype
+        )
+
+        hist.add_data(1, [], dets)
+
+        assert np.array_equal(hist.data, [[1, 0], [0, 0], [2, 1]])
+        assert hist.counts_sum() == 4
+
+    def test_detector_map_events_and_fractional_binned_data_share_geometry(self):
+        hist = DetHistogram(IRRELEVANT_TOPIC, (10, 999), 4, 2)
+        hist.add_data(1, [], np.array([10, 10, 13, 14, 17], dtype=np.int32))
+        hist.add_binned_data(
+            2, BinnedData(np.array([0, 1]), np.array([[0.5, 1, 2, 3, 4, 5, 6, 7]]))
+        )
+
+        assert np.array_equal(hist.data, [[2.5, 5], [1, 5], [2, 6], [4, 8]])
+        assert hist.shape == (4, 2)
+        assert hist.counts_sum() == 33.5
+        assert hist.last_pulse_time == 2
+        # A retained output snapshot must survive updates and reset unchanged.
+        snapshot = hist.data
+        hist.clear_data()
+        hist.add_data(3, [], [17])
+        assert snapshot.sum() == 33.5
+        assert hist.counts_sum() == 1
+        assert hist.data[3, 1] == 1

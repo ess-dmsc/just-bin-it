@@ -180,3 +180,100 @@ class TestHistogram1dFunctionality:
         hist.add_binned_data(123, SPATIAL_BINNED_DATA)
 
         assert np.array_equal(hist.data, [5, 13])
+
+    @pytest.mark.parametrize("dtype", [np.int32, np.uint32, np.int64])
+    @pytest.mark.parametrize(
+        "bins, limits",
+        [(1000, (0, 100_000_000)), (50, (0, 14)), (4, (5, 5)), ([1, 10], (0, 20))],
+    )
+    def test_integer_tof_counts_match_numpy_at_boundaries(self, dtype, bins, limits):
+        edges = np.histogram_bin_edges([], bins=bins, range=limits)
+        tofs = np.concatenate((edges, edges - 1, edges + 1)).astype(dtype)
+        hist = Histogram1d(IRRELEVANT_TOPIC, bins, limits)
+
+        hist.add_data(1, tofs)
+
+        assert np.array_equal(hist.data, np.histogram(tofs, bins=bins, range=limits)[0])
+        assert np.array_equal(hist.x_edges, edges)
+
+    @pytest.mark.parametrize(
+        "bins, limits",
+        [
+            (10, (0, 1)),
+            (7, (0.1, 1.3)),
+            (50, (0, 14)),
+            (4, (5, 5)),
+            ([1, 10, 10, 20], (0, 20)),
+        ],
+    )
+    @pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
+    def test_float_tof_counts_match_numpy_on_and_next_to_edges(
+        self, dtype, bins, limits
+    ):
+        edges = np.histogram_bin_edges([], bins=bins, range=limits)
+        tofs = np.concatenate(
+            (
+                edges,
+                np.nextafter(edges, -np.inf),
+                np.nextafter(edges, np.inf),
+                [np.nan, -np.inf, np.inf],
+            )
+        ).astype(dtype)
+        hist = Histogram1d(IRRELEVANT_TOPIC, bins, limits)
+
+        hist.add_data(1, tofs)
+
+        assert np.array_equal(hist.data, np.histogram(tofs, bins=bins, range=limits)[0])
+
+    @pytest.mark.parametrize("det_range", [(10, 20), (15, 15)])
+    def test_detector_filter_and_tof_edges_are_independent(self, det_range):
+        tofs = np.array([-1, 0, 7, 7, 14, 15, 7, 7, 7], dtype=np.int32)
+        dets = np.array([15, 10, 15, 20, 15, 15, 9, 21, 15], dtype=np.int32)
+        hist = Histogram1d(IRRELEVANT_TOPIC, 50, (0, 14), det_range)
+        expected = np.histogram2d(tofs, dets, bins=50, range=((0, 14), det_range))[
+            0
+        ].sum(axis=1)
+
+        hist.add_data(1, tofs, dets)
+
+        assert np.array_equal(hist.data, expected)
+        assert hist.data.dtype == np.float64
+
+    def test_equal_detector_limits_use_expanded_numpy_range(self):
+        hist = Histogram1d(IRRELEVANT_TOPIC, 5, (0, 10), (15, 15))
+        tofs = np.array([1, 1, 1, 1, 1])
+        dets = np.array([14.4, 14.5, 15, 15.5, 15.6])
+        expected = np.histogram2d(tofs, dets, bins=5, range=((0, 10), (15, 15)))[0]
+
+        hist.add_data(self.pulse_time, tofs, dets)
+
+        assert np.array_equal(hist.data, expected.sum(axis=1))
+
+    @pytest.mark.parametrize("dtype", [np.int32, np.uint32, np.float64])
+    def test_random_batches_accumulate_like_numpy(self, dtype):
+        rng = np.random.default_rng(5095)
+        hist = Histogram1d(IRRELEVANT_TOPIC, 31, (100, 999), (10, 90))
+        expected = np.zeros(hist.shape)
+        for pulse_time in range(3):
+            tofs = rng.uniform(0, 1100, 2000).astype(dtype)
+            dets = rng.uniform(0, 100, 2000).astype(dtype)
+
+            hist.add_data(pulse_time, tofs, dets)
+
+            expected += np.histogram(
+                tofs[(dets >= 10) & (dets <= 90)], bins=31, range=(100, 999)
+            )[0]
+        assert np.array_equal(hist.data, expected)
+
+    def test_fractional_tof_data_can_be_followed_by_events_and_reset(self):
+        hist = Histogram1d(IRRELEVANT_TOPIC, 2, (0, 3))
+        hist.add_binned_data(
+            1, BinnedData(np.array([0, 1, 2, 3]), np.array([[1], [1], [1]]))
+        )
+        hist.add_data(2, [0, 1.5, 3])
+
+        assert np.array_equal(hist.data, [2.5, 3.5])
+        hist.clear_data()
+        hist.add_data(3, [0, 1.5, 3])
+        assert np.array_equal(hist.data, [1, 2])
+        assert hist.data.dtype == np.int64

@@ -1,8 +1,8 @@
 import logging
 
 import numpy as np
-from fast_histogram import histogram2d as fast_histogram2d
 
+from just_bin_it.histograms.binning import BinMapper, accumulate_counts
 from just_bin_it.histograms.input_validators import (
     check_bins,
     check_data_brokers,
@@ -88,9 +88,16 @@ class Histogram2d:
         self._initialise_histogram()
 
     def _initialise_histogram(self):
-        self._histogram, self.x_edges, self.y_edges = np.histogram2d(
-            [], [], range=(self.tof_range, self.det_range), bins=self.num_bins
+        bins = (
+            (self.num_bins, self.num_bins)
+            if np.isscalar(self.num_bins)
+            else self.num_bins
         )
+        self._tof_bins = BinMapper(bins[0], self.tof_range)
+        self._det_bins = BinMapper(bins[1], self.det_range)
+        self.x_edges = self._tof_bins.edges
+        self.y_edges = self._det_bins.edges
+        self._histogram = np.zeros((self._tof_bins.size, self._det_bins.size))
 
     def add_data(self, pulse_time, tof, det_ids, source=""):
         """
@@ -107,41 +114,14 @@ class Histogram2d:
 
         self.last_pulse_time = pulse_time
 
-        self._histogram += self._histogram_tof_detector(tof, det_ids)
-
-    def _histogram_tof_detector(self, tof, det_ids):
-        tof = np.asarray(tof)
-        det_ids = np.asarray(det_ids)
-        histogram = fast_histogram2d(
-            tof,
-            det_ids,
-            range=(self.tof_range, self.det_range),
-            bins=self.num_bins,
-        )
-        self._add_upper_edge_counts(histogram, tof, det_ids)
-        return histogram
-
-    def _add_upper_edge_counts(self, histogram, tof, det_ids):
-        tof_bins, det_bins = self.shape
-        tof_min, tof_max = self.tof_range
-        det_min, det_max = self.det_range
-
-        on_tof_max = (tof == tof_max) & (det_ids >= det_min) & (det_ids <= det_max)
-        if np.any(on_tof_max):
-            det_indices = self._bin_indices(det_ids[on_tof_max], self.det_range, det_bins)
-            tof_indices = np.full(det_indices.shape, tof_bins - 1)
-            np.add.at(histogram, (tof_indices, det_indices), 1)
-
-        on_det_max = (det_ids == det_max) & (tof >= tof_min) & (tof < tof_max)
-        if np.any(on_det_max):
-            tof_indices = self._bin_indices(tof[on_det_max], self.tof_range, tof_bins)
-            det_indices = np.full(tof_indices.shape, det_bins - 1)
-            np.add.at(histogram, (tof_indices, det_indices), 1)
-
-    def _bin_indices(self, values, value_range, num_bins):
-        value_min, value_max = value_range
-        indices = np.floor((values - value_min) * num_bins / (value_max - value_min))
-        return np.clip(indices.astype(np.intp), 0, num_bins - 1)
+        tof = np.asarray(tof).ravel()
+        det_ids = np.asarray(det_ids).ravel()
+        if tof.shape != det_ids.shape:
+            raise ValueError("ToF and detector arrays must have the same length")
+        included = self._tof_bins.contains(tof) & self._det_bins.contains(det_ids)
+        tof_indices = self._tof_bins.indices(tof[included])
+        det_indices = self._det_bins.indices(det_ids[included])
+        accumulate_counts(self._histogram, tof_indices * self.shape[1] + det_indices)
 
     @property
     def data(self):
@@ -156,7 +136,7 @@ class Histogram2d:
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self._initialise_histogram()
+        self._histogram = np.zeros(self.shape)
 
     def counts_sum(self):
         return self._histogram.sum()

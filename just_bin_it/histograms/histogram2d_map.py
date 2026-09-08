@@ -2,8 +2,8 @@ import logging
 import numbers
 
 import numpy as np
-from fast_histogram import histogram1d
 
+from just_bin_it.histograms.binning import accumulate_counts
 from just_bin_it.histograms.input_validators import (
     check_data_brokers,
     check_data_topics,
@@ -99,25 +99,20 @@ class DetHistogram:
         self._create_empty_histogram()
 
     def _create_empty_histogram(self):
-        # The data is actually stored as a 1d histogram, it is converted to 2d
-        # when read - this speeds things up significantly.
-        self._histogram = histogram1d([], range=self.det_range, bins=self.num_bins)
+        # Store output in (x, y) order; width/height retain the input geometry.
+        self._histogram = np.zeros((self.width, self.height))
 
     def _calculate_edges(self):
-        _, self.x_edges, self.y_edges = np.histogram2d(
-            [],
-            [],
-            range=((0, self.width), (0, self.height)),
-            bins=(self.width, self.height),
-        )
+        self.x_edges = np.arange(self.width + 1, dtype=np.float64)
+        self.y_edges = np.arange(self.height + 1, dtype=np.float64)
 
     @property
     def data(self):
-        return self._histogram.reshape((self.height, self.width)).T.copy()
+        return self._histogram.copy()
 
     @property
     def shape(self):
-        return self.width, self.height
+        return self._histogram.shape
 
     def add_data(self, pulse_time, tofs, det_ids, source=""):
         """
@@ -134,9 +129,14 @@ class DetHistogram:
 
         self.last_pulse_time = pulse_time
 
-        self._histogram += histogram1d(
-            det_ids, range=self.det_range, bins=self.num_bins
+        det_ids = np.asarray(det_ids).ravel()
+        included = (det_ids >= self.det_range[0]) & (det_ids < self.det_range[1])
+        # Filter before converting, and subtract before rounding fractional IDs.
+        pixels = (det_ids[included].astype(np.float64) - self.det_range[0]).astype(
+            np.intp
         )
+        x, y = pixels % self.width, pixels // self.width
+        accumulate_counts(self._histogram, x * self.shape[1] + y)
 
     def add_binned_data(self, pulse_time, binned_data, source=""):
         """
@@ -166,14 +166,14 @@ class DetHistogram:
         ):
             self._histogram = self._histogram.astype(counts.dtype)
 
-        self._histogram += counts
+        self._histogram += counts.reshape((self.height, self.width)).T
 
     def clear_data(self):
         """
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self._create_empty_histogram()
+        self._histogram.fill(0)
 
     def counts_sum(self):
         return self._histogram.sum()

@@ -102,6 +102,15 @@ class TestHistogram2dFunctionality:
 
         assert self.hist.data.sum() == 0
 
+    def test_clearing_histogram_preserves_previously_returned_data(self):
+        self.hist.add_data(self.pulse_time, self.data, self.data)
+        data = self.hist.data
+
+        self.hist.clear_data()
+
+        assert data.sum() == len(self.data)
+        assert self.hist.counts_sum() == 0
+
     def test_after_clearing_histogram_can_add_data(self):
         self.hist.add_data(self.pulse_time, self.data, self.data)
         self.hist.clear_data()
@@ -122,3 +131,71 @@ class TestHistogram2dFunctionality:
         self.hist.add_data(1236, self.data, self.data)
 
         assert self.hist.last_pulse_time == 1236
+
+    @pytest.mark.parametrize("dtype", [np.int32, np.uint32, np.float64])
+    def test_random_batches_accumulate_like_numpy(self, dtype):
+        rng = np.random.default_rng(5095)
+        hist = Histogram2d(IRRELEVANT_TOPIC, (31, 17), (100, 999), (10, 90))
+        expected = np.zeros(hist.shape)
+        for pulse_time in range(3):
+            tofs = rng.uniform(0, 1100, 2000).astype(dtype)
+            dets = rng.uniform(0, 100, 2000).astype(dtype)
+
+            hist.add_data(pulse_time, tofs, dets)
+
+            expected += np.histogram2d(
+                tofs, dets, bins=(31, 17), range=((100, 999), (10, 90))
+            )[0]
+        assert np.array_equal(hist.data, expected)
+
+    @pytest.mark.parametrize("dtype", [np.int32, np.uint32])
+    @pytest.mark.parametrize(
+        "bins, tof_range, det_range, tof, det",
+        [
+            ((4, 4096), (0, 100), (0, 4096**2), 100, 4096**2 - 1),
+            ((4096, 4), (0, 100_000_000), (0, 10), 99_999_999, 10),
+            ((4, 4), (0, 10), (5, 5), 5, 5),
+        ],
+    )
+    def test_2d_upper_edges_do_not_overflow_event_dtypes(
+        self, dtype, bins, tof_range, det_range, tof, det
+    ):
+        tofs = np.array([tof, tof, tof_range[-1]], dtype=dtype)
+        dets = np.array([det, det, det_range[-1]], dtype=dtype)
+        hist = Histogram2d(IRRELEVANT_TOPIC, bins, tof_range, det_range)
+
+        hist.add_data(1, tofs, dets)
+
+        expected = np.histogram2d(tofs, dets, bins=bins, range=(tof_range, det_range))[
+            0
+        ]
+        assert np.array_equal(hist.data, expected)
+        assert hist.counts_sum() == 3
+
+    @pytest.mark.parametrize("bins", [(7, 9), ([0.1, 0.3, 1.3], [10, 11, 11, 13])])
+    def test_2d_boundary_pairs_match_numpy(self, bins):
+        hist = Histogram2d(IRRELEVANT_TOPIC, bins, (0.1, 1.3), (10, 13))
+        tofs = np.concatenate(
+            (
+                hist.x_edges,
+                np.nextafter(hist.x_edges, -np.inf),
+                np.nextafter(hist.x_edges, np.inf),
+                [np.nan, np.inf],
+            )
+        )
+        dets = np.concatenate(
+            (
+                hist.y_edges,
+                np.nextafter(hist.y_edges, -np.inf),
+                np.nextafter(hist.y_edges, np.inf),
+                [np.nan, -np.inf],
+            )
+        )
+        tofs, dets = (values.ravel() for values in np.meshgrid(tofs, dets))
+
+        hist.add_data(1, tofs, dets)
+
+        assert np.array_equal(
+            hist.data,
+            np.histogram2d(tofs, dets, bins=bins, range=((0.1, 1.3), (10, 13)))[0],
+        )

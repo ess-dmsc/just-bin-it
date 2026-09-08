@@ -1,9 +1,9 @@
 import logging
 
 import numpy as np
-from fast_histogram import histogram1d
 
 from just_bin_it.histograms.binned_data import rebin_counts
+from just_bin_it.histograms.binning import BinMapper, accumulate_counts
 from just_bin_it.histograms.input_validators import (
     check_bins,
     check_data_brokers,
@@ -84,9 +84,11 @@ class Histogram1d:
         self._initialise_histogram()
 
     def _initialise_histogram(self):
-        self._histogram, self.x_edges = np.histogram(
-            [], range=self.tof_range, bins=self.num_bins
-        )
+        self._tof_bins = BinMapper(self.num_bins, self.tof_range)
+        self.x_edges = self._tof_bins.edges
+        self._histogram = np.zeros(self._tof_bins.size, dtype=np.int64)
+        if self.det_range:
+            self._det_edges = np.histogram_bin_edges([], bins=1, range=self.det_range)
 
     def add_data(self, pulse_time, tofs, det_ids=None, source=""):
         """
@@ -103,18 +105,26 @@ class Histogram1d:
 
         self.last_pulse_time = pulse_time
 
+        tofs = np.asarray(tofs).ravel()
+        if not self.det_range and tofs.dtype.kind == "f" and tofs.dtype.itemsize < 8:
+            # NumPy's 1D histogram uses the input precision for floating edges.
+            self._histogram += np.histogram(
+                tofs, bins=self.num_bins, range=self.tof_range
+            )[0]
+            return
+        included = self._tof_bins.contains(tofs)
         if self.det_range:
-            det_ids = np.asarray(det_ids)
-            tofs = np.asarray(tofs)
-            included = (det_ids >= self.det_range[0]) & (det_ids <= self.det_range[1])
-            self._histogram += self._histogram_tof(tofs[included])
-        else:
-            self._histogram += self._histogram_tof(tofs)
-
-    def _histogram_tof(self, tofs):
-        counts = histogram1d(tofs, range=self.tof_range, bins=self.num_bins)
-        counts[~0] += np.count_nonzero(np.asarray(tofs) == self.tof_range[1])
-        return counts.astype(self._histogram.dtype, copy=False)
+            det_ids = np.asarray(det_ids).ravel()
+            if det_ids.shape != tofs.shape:
+                raise ValueError("ToF and detector arrays must have the same length")
+            included &= (det_ids >= self._det_edges[0]) & (
+                det_ids <= self._det_edges[-1]
+            )
+            # Detector-filtered histograms have historically used floating counts.
+            if np.issubdtype(self._histogram.dtype, np.integer):
+                self._histogram = self._histogram.astype(np.float64)
+        indices = self._tof_bins.indices(tofs[included])
+        accumulate_counts(self._histogram, indices)
 
     def add_binned_data(self, pulse_time, binned_data, source=""):
         """
@@ -158,7 +168,7 @@ class Histogram1d:
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self._initialise_histogram()
+        self._histogram = np.zeros(self._tof_bins.size, dtype=np.int64)
 
     def counts_sum(self):
         return self._histogram.sum()
