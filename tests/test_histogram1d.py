@@ -250,9 +250,10 @@ class TestHistogram1dFunctionality:
         assert np.array_equal(hist.data, expected.sum(axis=1))
 
     @pytest.mark.parametrize("dtype", [np.int32, np.uint32, np.float64])
-    def test_random_batches_accumulate_like_numpy(self, dtype):
+    @pytest.mark.parametrize("det_range", [None, (10, 90)])
+    def test_random_batches_accumulate_like_numpy(self, dtype, det_range):
         rng = np.random.default_rng(5095)
-        hist = Histogram1d(IRRELEVANT_TOPIC, 31, (100, 999), (10, 90))
+        hist = Histogram1d(IRRELEVANT_TOPIC, 31, (100, 999), det_range)
         expected = np.zeros(hist.shape)
         for pulse_time in range(3):
             tofs = rng.uniform(0, 1100, 2000).astype(dtype)
@@ -260,9 +261,9 @@ class TestHistogram1dFunctionality:
 
             hist.add_data(pulse_time, tofs, dets)
 
-            expected += np.histogram(
-                tofs[(dets >= 10) & (dets <= 90)], bins=31, range=(100, 999)
-            )[0]
+            if det_range:
+                tofs = tofs[(dets >= det_range[0]) & (dets <= det_range[1])]
+            expected += np.histogram(tofs, bins=31, range=(100, 999))[0]
         assert np.array_equal(hist.data, expected)
 
     def test_fractional_tof_data_can_be_followed_by_events_and_reset(self):

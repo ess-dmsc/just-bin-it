@@ -106,23 +106,22 @@ class Histogram1d:
         self.last_pulse_time = pulse_time
 
         tofs = np.asarray(tofs).ravel()
-        if not self.det_range and tofs.dtype.kind == "f" and tofs.dtype.itemsize < 8:
-            # NumPy's 1D histogram uses the input precision for floating edges.
-            self._histogram += np.histogram(
-                tofs, bins=self.num_bins, range=self.tof_range
-            )[0]
+        if not self.det_range:
+            bins = self.x_edges
+            if tofs.dtype.kind == "f" and tofs.dtype.itemsize < 8:
+                # NumPy's 1D histogram uses the input precision for floating edges.
+                bins = self.num_bins
+            self._histogram += np.histogram(tofs, bins=bins, range=self.tof_range)[0]
             return
+
+        det_ids = np.asarray(det_ids).ravel()
+        if det_ids.shape != tofs.shape:
+            raise ValueError("ToF and detector arrays must have the same length")
         included = self._tof_bins.contains(tofs)
-        if self.det_range:
-            det_ids = np.asarray(det_ids).ravel()
-            if det_ids.shape != tofs.shape:
-                raise ValueError("ToF and detector arrays must have the same length")
-            included &= (det_ids >= self._det_edges[0]) & (
-                det_ids <= self._det_edges[-1]
-            )
-            # Detector-filtered histograms have historically used floating counts.
-            if np.issubdtype(self._histogram.dtype, np.integer):
-                self._histogram = self._histogram.astype(np.float64)
+        included &= (det_ids >= self._det_edges[0]) & (det_ids <= self._det_edges[-1])
+        # Detector-filtered histograms have historically used floating counts.
+        if np.issubdtype(self._histogram.dtype, np.integer):
+            self._histogram = self._histogram.astype(np.float64)
         indices = self._tof_bins.indices(tofs[included])
         accumulate_counts(self._histogram, indices)
 
