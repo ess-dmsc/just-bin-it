@@ -30,36 +30,21 @@ class TestHistogramRoiFunctionality:
 
         self.hist = RoiHistogram("topic", self.roi_left_edges, self.roi_width)
 
-    def test_top_left_is_first_bin(self):
-        assert self.hist.bins[0] == 16
+    @pytest.mark.parametrize("det_id", [15, 20, 24, 29, 33, 38, 39])
+    def test_row_gaps_and_pixels_after_final_row_are_excluded(self, det_id):
+        self.hist.add_data(self.pulse_time, TOF_IS_IGNORED, [det_id])
 
-    def test_last_bin_is_bottom_right_plus_two(self):
-        # See implementation for why +2 is important!
-        assert self.hist.bins[~0] == 37 + 2
+        assert self.hist.counts_sum() == 0
+        assert not self.hist.data.any()
 
-    def test_extra_ignored_bin_at_end_of_first_row(self):
-        assert self.hist.bins[4] == 20
+    @pytest.mark.parametrize(
+        "det_id, pixel", [(16, (0, 0)), (19, (3, 0)), (37, (3, 2))]
+    )
+    def test_boundary_pixels_are_counted(self, det_id, pixel):
+        self.hist.add_data(self.pulse_time, TOF_IS_IGNORED, [det_id, det_id])
 
-    def test_all_bins_are_correct(self):
-        hand_calculated_bins = [
-            16,
-            17,
-            18,
-            19,
-            20,
-            25,
-            26,
-            27,
-            28,
-            29,
-            34,
-            35,
-            36,
-            37,
-            38,
-            39,
-        ]
-        assert np.array_equal(self.hist.bins, hand_calculated_bins)
+        assert self.hist.counts_sum() == 2
+        assert self.hist.data[pixel] == 2
 
     def test_adding_data_outside_bins_is_ignored(self):
         ids_outside = [15, 40]
@@ -130,6 +115,38 @@ class TestHistogramRoiFunctionality:
         self.hist.add_data(1236, TOF_IS_IGNORED, self.data)
 
         assert self.hist.last_pulse_time == 1236
+
+    @pytest.mark.parametrize("dtype", [np.int32, np.uint32, np.float64])
+    def test_roi_mapping_matches_independent_per_pixel_counts(self, dtype):
+        hist = RoiHistogram(IRRELEVANT_TOPIC, [10, 20, 40], 4)
+        dets = np.array(
+            [9, 10, 10, 13, 14, 19, 20, 21, 23, 24, 39, 40, 43, 44, 45], dtype=dtype
+        )
+        if dtype == np.float64:
+            dets = np.concatenate(
+                (dets, [10.5, 13.9, 20.5, 23.9, 43.9, np.nan, np.inf])
+            )
+        expected = np.array(
+            [
+                [
+                    np.count_nonzero((dets >= left + x) & (dets < left + x + 1))
+                    for left in [10, 20, 40]
+                ]
+                for x in range(4)
+            ],
+            dtype=np.float64,
+        )
+
+        hist.add_data(1, [], dets)
+
+        assert np.array_equal(hist.data, expected)
+        assert hist.data.dtype == np.float64
+        snapshot = hist.data
+        hist.clear_data()
+        hist.add_data(2, [], [43, 43])
+        assert np.array_equal(snapshot, expected)
+        assert hist.counts_sum() == 2
+        assert hist.data[3, 2] == 2
 
 
 class TestHistogramRoiEdgeCases:

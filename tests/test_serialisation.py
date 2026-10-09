@@ -5,12 +5,17 @@ from just_bin_it.endpoints.serialisation import (
     deserialise_da00,
     deserialise_ev42,
     deserialise_hs00,
+    deserialise_hs01,
     serialise_da00,
     serialise_ev42,
     serialise_hs00,
+    serialise_hs01,
 )
+from just_bin_it.histograms.binned_data import BinnedData
 from just_bin_it.histograms.histogram1d import Histogram1d
 from just_bin_it.histograms.histogram2d import Histogram2d
+from just_bin_it.histograms.histogram2d_map import DetHistogram
+from just_bin_it.histograms.histogram2d_roi import RoiHistogram
 
 NUM_BINS = 5
 X_RANGE = (0, 5)
@@ -99,6 +104,64 @@ class TestSerialisationHs00:
 
         hist = deserialise_hs00(buf)
         assert hist["info"] == info_message
+
+
+@pytest.mark.parametrize(
+    "serialise, deserialise",
+    [(serialise_hs00, deserialise_hs00), (serialise_hs01, deserialise_hs01)],
+)
+class TestHistogramSerialisation:
+    def test_detector_map_preserves_mixed_counts_and_geometry(
+        self, serialise, deserialise
+    ):
+        hist = DetHistogram("topic", (10, 999), 3, 2)
+        hist.add_data(PULSE_TIME, [], [10, 10, 12, 13, 15])
+        hist.add_binned_data(
+            PULSE_TIME,
+            BinnedData(
+                np.array([0, 1, 2]),
+                np.array([[0.5, 1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6]]),
+            ),
+        )
+
+        result = deserialise(serialise(hist, PULSE_TIME))
+
+        assert result["timestamp"] == PULSE_TIME
+        assert result["current_shape"] == [3, 2]
+        assert result["data"].dtype == np.float64
+        assert np.array_equal(result["data"], [[3.5, 8], [3, 9], [6, 12]])
+        assert np.array_equal(result["dim_metadata"][0]["bin_boundaries"], [0, 1, 2, 3])
+        assert np.array_equal(result["dim_metadata"][1]["bin_boundaries"], [0, 1, 2])
+        assert result["dim_metadata"][0]["length"] == 3
+        assert result["dim_metadata"][1]["length"] == 2
+        assert result["data"].sum() == hist.counts_sum()
+
+    def test_roi_preserves_counts_and_geometry(self, serialise, deserialise):
+        hist = RoiHistogram("topic", [10, 20], 3)
+        hist.add_data(PULSE_TIME, [], [9, 10, 10, 12, 13, 19, 20, 22, 23])
+
+        result = deserialise(serialise(hist, PULSE_TIME))
+
+        assert result["current_shape"] == [3, 2]
+        assert result["data"].dtype == np.float64
+        assert np.array_equal(result["data"], [[2, 1], [0, 0], [1, 1]])
+        assert np.array_equal(result["dim_metadata"][0]["bin_boundaries"], hist.x_edges)
+        assert np.array_equal(result["dim_metadata"][1]["bin_boundaries"], hist.y_edges)
+        assert result["data"].sum() == hist.counts_sum()
+
+    @pytest.mark.parametrize(
+        "det_range, dtype", [(None, np.integer), ((10, 20), np.float64)]
+    )
+    def test_tof_preserves_count_dtype(self, serialise, deserialise, det_range, dtype):
+        hist = Histogram1d("topic", 5, (0, 5), det_range)
+        hist.add_data(PULSE_TIME, [0, 1, 5], [10, 15, 20])
+
+        result = deserialise(serialise(hist, PULSE_TIME))
+
+        # hs00 uses uint64 for integer counts; hs01 retains int64.
+        assert np.issubdtype(result["data"].dtype, dtype)
+        assert result["data"].dtype.itemsize == 8
+        assert np.array_equal(result["data"], [1, 1, 0, 0, 1])
 
 
 class TestSerialisationEv42:

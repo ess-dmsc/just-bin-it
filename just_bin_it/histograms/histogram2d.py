@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 
+from just_bin_it.histograms.binning import BinMapper, accumulate_counts
 from just_bin_it.histograms.input_validators import (
     check_bins,
     check_data_brokers,
@@ -87,9 +88,16 @@ class Histogram2d:
         self._initialise_histogram()
 
     def _initialise_histogram(self):
-        self._histogram, self.x_edges, self.y_edges = np.histogram2d(
-            [], [], range=(self.tof_range, self.det_range), bins=self.num_bins
+        bins = (
+            (self.num_bins, self.num_bins)
+            if np.isscalar(self.num_bins)
+            else self.num_bins
         )
+        self._tof_bins = BinMapper(bins[0], self.tof_range)
+        self._det_bins = BinMapper(bins[1], self.det_range)
+        self.x_edges = self._tof_bins.edges
+        self.y_edges = self._det_bins.edges
+        self._histogram = np.zeros((self._tof_bins.size, self._det_bins.size))
 
     def add_data(self, pulse_time, tof, det_ids, source=""):
         """
@@ -106,9 +114,14 @@ class Histogram2d:
 
         self.last_pulse_time = pulse_time
 
-        self._histogram += np.histogram2d(
-            tof, det_ids, range=(self.tof_range, self.det_range), bins=self.num_bins
-        )[0]
+        tof = np.asarray(tof).ravel()
+        det_ids = np.asarray(det_ids).ravel()
+        if tof.shape != det_ids.shape:
+            raise ValueError("ToF and detector arrays must have the same length")
+        included = self._tof_bins.contains(tof) & self._det_bins.contains(det_ids)
+        tof_indices = self._tof_bins.indices(tof[included])
+        det_indices = self._det_bins.indices(det_ids[included])
+        accumulate_counts(self._histogram, tof_indices * self.shape[1] + det_indices)
 
     @property
     def data(self):
@@ -123,4 +136,7 @@ class Histogram2d:
         Clears the histogram data, but maintains the other values (e.g. edges etc.)
         """
         logging.info("Clearing data")  # pragma: no mutate
-        self._initialise_histogram()
+        self._histogram = np.zeros(self.shape)
+
+    def counts_sum(self):
+        return self._histogram.sum()

@@ -33,6 +33,7 @@ The configuration parameters:
 ```
 
 ## Information for developers
-The actual histogramming is done using a 1-D histogram as that is quicker to update than a 2-D one.
-The data is converted to a 2-D detector when read. As the data is only read once per second compared to multiple updates per second,
-we gain some performance from doing this.
+Events accumulate directly into a persistent 2-D array in `(x, y)` order.
+Reading the data returns a copy, and statistics are calculated from the accumulator.
+The original detector width and height determine how detector IDs and pre-binned
+`da00` counts map to pixels.

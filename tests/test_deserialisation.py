@@ -17,6 +17,7 @@ from just_bin_it.endpoints.serialisation import (
 )
 from just_bin_it.exceptions import JustBinItException
 from just_bin_it.histograms.histogram1d import Histogram1d
+from just_bin_it.histograms.histogram2d_map import DetHistogram
 
 
 def make_da00_buffer(
@@ -191,6 +192,28 @@ class TestDeserialisationDa00:
         assert np.array_equal(
             binned_data.counts, np.moveaxis(signal, 1, 0).reshape(3, 4)
         )
+
+    def test_deserialised_counts_can_be_added_to_tof_histogram(self):
+        signal = np.array([[1, 2, 3], [4, 5, 6]])
+        buf = make_da00_buffer(signal, ["frame_time", "pixel"], [0, 10, 20])
+        _, pulse_time, binned_data, _ = deserialise_da00(buf)
+        hist = Histogram1d("topic", 2, (0, 20))
+
+        hist.add_binned_data(pulse_time, binned_data)
+
+        assert np.array_equal(hist.data, [6, 15])
+        assert hist.last_pulse_time == 123
+
+    def test_deserialised_counts_can_be_added_to_detector_map_histogram(self):
+        signal = np.array([[1, 2, 3, 4], [10, 20, 30, 40]])
+        buf = make_da00_buffer(signal, ["frame_time", "pixel"], [0, 10, 20])
+        _, pulse_time, binned_data, _ = deserialise_da00(buf)
+        hist = DetHistogram("topic", (0, 999), 2, 2)
+
+        hist.add_binned_data(pulse_time, binned_data)
+
+        assert np.array_equal(hist.data, [[11, 33], [22, 44]])
+        assert hist.last_pulse_time == 123
 
     def test_rejects_unknown_frame_time_units(self):
         buf = make_da00_buffer([1, 2], ["frame_time"], [0, 1, 2], "::unit::")
