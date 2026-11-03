@@ -10,7 +10,7 @@ def plot_histograms(histograms, log_scale_for_2d=False):
     """
     import matplotlib
 
-    matplotlib.use("Qt5Agg")
+    matplotlib.use("QtAgg")
     from matplotlib import pyplot as plt
 
     fig = plt.figure(1)
