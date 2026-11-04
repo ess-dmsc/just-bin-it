@@ -212,7 +212,7 @@ class TestDeserialisationDa00:
 
         hist.add_binned_data(pulse_time, binned_data)
 
-        assert np.array_equal(hist.data, [[11, 33], [22, 44]])
+        assert np.array_equal(hist.data, [[33, 11], [44, 22]])
         assert hist.last_pulse_time == 123
 
     def test_rejects_unknown_frame_time_units(self):

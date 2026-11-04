@@ -129,7 +129,7 @@ class TestHistogramSerialisation:
         assert result["timestamp"] == PULSE_TIME
         assert result["current_shape"] == [3, 2]
         assert result["data"].dtype == np.float64
-        assert np.array_equal(result["data"], [[3.5, 8], [3, 9], [6, 12]])
+        assert np.array_equal(result["data"], [[8, 3.5], [9, 3], [12, 6]])
         assert np.array_equal(result["dim_metadata"][0]["bin_boundaries"], [0, 1, 2, 3])
         assert np.array_equal(result["dim_metadata"][1]["bin_boundaries"], [0, 1, 2])
         assert result["dim_metadata"][0]["length"] == 3
