@@ -205,10 +205,10 @@ class TestHistogram2dMapFunctionality:
 
         hist.add_binned_data(123, MAPPED_BINNED_DATA)
 
-        assert hist.data[0][0] == 11
-        assert hist.data[1][0] == 22
-        assert hist.data[0][1] == 33
-        assert hist.data[1][1] == 44
+        assert hist.data[0][1] == 11
+        assert hist.data[1][1] == 22
+        assert hist.data[0][0] == 33
+        assert hist.data[1][0] == 44
 
     def test_incompatible_binned_data_spatial_size_is_skipped(self):
         hist = DetHistogram(IRRELEVANT_TOPIC, (10, 20), 2, 2)
@@ -239,7 +239,7 @@ class TestHistogram2dMapFunctionality:
             2, BinnedData(np.array([0, 1]), np.array([[0.5, 1, 2, 3, 4, 5, 6, 7]]))
         )
 
-        assert np.array_equal(hist.data, [[2.5, 5], [1, 5], [2, 6], [4, 8]])
+        assert np.array_equal(hist.data, [[5, 2.5], [5, 1], [6, 2], [8, 4]])
         assert hist.shape == (4, 2)
         assert hist.counts_sum() == 33.5
         assert hist.last_pulse_time == 2
@@ -249,4 +249,4 @@ class TestHistogram2dMapFunctionality:
         hist.add_data(3, [], [17])
         assert snapshot.sum() == 33.5
         assert hist.counts_sum() == 1
-        assert hist.data[3, 1] == 1
+        assert hist.data[3, 0] == 1
