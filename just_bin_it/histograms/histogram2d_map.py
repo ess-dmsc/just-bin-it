@@ -135,7 +135,8 @@ class DetHistogram:
         pixels = (det_ids[included].astype(np.float64) - self.det_range[0]).astype(
             np.intp
         )
-        x, y = pixels % self.width, pixels // self.width
+        x = pixels % self.width
+        y = self.height - 1 - pixels // self.width
         accumulate_counts(self._histogram, x * self.shape[1] + y)
 
     def add_binned_data(self, pulse_time, binned_data, source=""):
