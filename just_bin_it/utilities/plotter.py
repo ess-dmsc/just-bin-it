@@ -1,5 +1,5 @@
 import numpy as np
-from matplotlib import colors
+from matplotlib import colors, pyplot as plt
 
 
 def plot_histograms(histograms, log_scale_for_2d=False):
@@ -8,10 +8,6 @@ def plot_histograms(histograms, log_scale_for_2d=False):
 
     :param histograms: The histograms to plot.
     """
-    import matplotlib
-
-    from matplotlib import pyplot as plt
-
     fig = plt.figure(1)
 
     # See matplotlib.org for an explanation

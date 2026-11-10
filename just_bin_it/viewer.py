@@ -26,8 +26,8 @@ def convert_for_plotting(histogram_data):
         hist.x_edges = np.array(histogram_data["dim_metadata"][0]["bin_boundaries"])
     else:
         # 2-D
-        hist.x_edges = np.array(histogram_data["dim_metadata"][0]["bin_boundaries"])
-        hist.y_edges = np.array(histogram_data["dim_metadata"][1]["bin_boundaries"])
+        hist.x_edges = np.array(histogram_data["dim_metadata"][1]["bin_boundaries"])
+        hist.y_edges = np.array(histogram_data["dim_metadata"][0]["bin_boundaries"])
 
     hist.data = np.array(histogram_data["data"])
 
