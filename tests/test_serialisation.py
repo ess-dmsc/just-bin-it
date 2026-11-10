@@ -142,9 +142,9 @@ class TestHistogramSerialisation:
 
         result = deserialise(serialise(hist, PULSE_TIME))
 
-        assert result["current_shape"] == [3, 2]
+        assert result["current_shape"] == [2, 3]
         assert result["data"].dtype == np.float64
-        assert np.array_equal(result["data"], [[2, 1], [0, 0], [1, 1]])
+        assert np.array_equal(result["data"], [[2, 0, 1], [1, 0, 1]])
         assert np.array_equal(result["dim_metadata"][0]["bin_boundaries"], hist.x_edges)
         assert np.array_equal(result["dim_metadata"][1]["bin_boundaries"], hist.y_edges)
         assert result["data"].sum() == hist.counts_sum()

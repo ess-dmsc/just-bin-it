@@ -7,10 +7,9 @@ from tests.test_histogram2d_map import generate_image
 IRRELEVANT_TOPIC = "some-topic"
 TOF_IS_IGNORED = None
 EXPECTED_RESULT_AFTER_TWO_ADDS = [
-    [32, 50, 68],
-    [34, 52, 70],
-    [36, 54, 72],
-    [38, 56, 74],
+    [32, 34, 36, 38],
+    [50, 52, 54, 56],
+    [68, 70, 72, 74],
 ]
 
 
@@ -23,7 +22,7 @@ class TestHistogramRoiFunctionality:
         self.height = 5
         self.roi_left_edges = [16, 25, 34]
         self.roi_width = 4
-        self.shape = (self.roi_width, len(self.roi_left_edges))
+        self.shape = (len(self.roi_left_edges), self.roi_width)
 
         self.pulse_time = 1234
         self.data = generate_image(self.width, self.height)
@@ -38,7 +37,7 @@ class TestHistogramRoiFunctionality:
         assert not self.hist.data.any()
 
     @pytest.mark.parametrize(
-        "det_id, pixel", [(16, (0, 0)), (19, (3, 0)), (37, (3, 2))]
+        "det_id, pixel", [(16, (0, 0)), (19, (0, 3)), (34, (2, 0)), (37, (2, 3))]
     )
     def test_boundary_pixels_are_counted(self, det_id, pixel):
         self.hist.add_data(self.pulse_time, TOF_IS_IGNORED, [det_id, det_id])
@@ -130,12 +129,13 @@ class TestHistogramRoiFunctionality:
             [
                 [
                     np.count_nonzero((dets >= left + x) & (dets < left + x + 1))
-                    for left in [10, 20, 40]
+                    for x in range(4)
                 ]
-                for x in range(4)
+                for left in [10, 20, 40]
             ],
             dtype=np.float64,
         )
+        print(expected)
 
         hist.add_data(1, [], dets)
 
@@ -146,7 +146,7 @@ class TestHistogramRoiFunctionality:
         hist.add_data(2, [], [43, 43])
         assert np.array_equal(snapshot, expected)
         assert hist.counts_sum() == 2
-        assert hist.data[3, 2] == 2
+        assert hist.data[2, 3] == 2
 
 
 class TestHistogramRoiEdgeCases:
@@ -160,11 +160,10 @@ class TestHistogramRoiEdgeCases:
         left_edges = [1, 6, 11, 16]
         roi_width = 5
         expected_result = [
-            [1, 6, 11, 16],
-            [2, 7, 12, 17],
-            [3, 8, 13, 18],
-            [4, 9, 14, 19],
-            [5, 10, 15, 20],
+            [1,   2,  3,  4,  5],
+            [6,   7,  8,  9, 10],
+            [11, 12, 13, 14, 15],
+            [16, 17, 18, 19, 20],
         ]
         hist = RoiHistogram("topic", left_edges, roi_width)
 
@@ -175,7 +174,7 @@ class TestHistogramRoiEdgeCases:
     def test_roi_with_one_pixel_border(self):
         left_edges = [7, 12]
         roi_width = 3
-        expected_result = [[7, 12], [8, 13], [9, 14]]
+        expected_result = [[7, 8, 9], [12, 13, 14]]
 
         hist = RoiHistogram("topic", left_edges, roi_width)
         hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
@@ -185,7 +184,7 @@ class TestHistogramRoiEdgeCases:
     def test_top_left_roi(self):
         left_edges = [1, 6]
         roi_width = 2
-        expected_result = [[1, 6], [2, 7]]
+        expected_result = [[1, 2], [6, 7]]
 
         hist = RoiHistogram("topic", left_edges, roi_width)
         hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
@@ -195,7 +194,7 @@ class TestHistogramRoiEdgeCases:
     def test_top_right_roi(self):
         left_edges = [4, 9]
         roi_width = 2
-        expected_result = [[4, 9], [5, 10]]
+        expected_result = [[4, 5], [9, 10]]
 
         hist = RoiHistogram("topic", left_edges, roi_width)
         hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
@@ -205,7 +204,7 @@ class TestHistogramRoiEdgeCases:
     def test_bottom_left_roi(self):
         left_edges = [11, 16]
         roi_width = 2
-        expected_result = [[11, 16], [12, 17]]
+        expected_result = [[11, 12], [16, 17]]
 
         hist = RoiHistogram("topic", left_edges, roi_width)
         hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
@@ -215,7 +214,7 @@ class TestHistogramRoiEdgeCases:
     def test_bottom_right_roi(self):
         left_edges = [14, 19]
         roi_width = 2
-        expected_result = [[14, 19], [15, 20]]
+        expected_result = [[14, 15], [19, 20]]
 
         hist = RoiHistogram("topic", left_edges, roi_width)
         hist.add_data(self.pulse_time, TOF_IS_IGNORED, self.data)
