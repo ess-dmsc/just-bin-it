@@ -167,7 +167,7 @@ class DetHistogram:
         ):
             self._histogram = self._histogram.astype(counts.dtype)
 
-        self._histogram += counts.reshape((self.height, self.width)).T
+        self._histogram += counts.reshape((self.height, self.width))
 
     def clear_data(self):
         """

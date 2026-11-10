@@ -127,13 +127,13 @@ class TestHistogramSerialisation:
         result = deserialise(serialise(hist, PULSE_TIME))
 
         assert result["timestamp"] == PULSE_TIME
-        assert result["current_shape"] == [3, 2]
+        assert result["current_shape"] == [2, 3]
         assert result["data"].dtype == np.float64
-        assert np.array_equal(result["data"], [[3.5, 8], [3, 9], [6, 12]])
+        assert np.array_equal(result["data"], [[3.5, 3, 6], [8, 9, 12]])
         assert np.array_equal(result["dim_metadata"][0]["bin_boundaries"], [0, 1, 2, 3])
         assert np.array_equal(result["dim_metadata"][1]["bin_boundaries"], [0, 1, 2])
-        assert result["dim_metadata"][0]["length"] == 3
-        assert result["dim_metadata"][1]["length"] == 2
+        assert result["dim_metadata"][0]["length"] == 2
+        assert result["dim_metadata"][1]["length"] == 3
         assert result["data"].sum() == hist.counts_sum()
 
     def test_roi_preserves_counts_and_geometry(self, serialise, deserialise):
