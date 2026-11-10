@@ -68,8 +68,16 @@ def serialise_hs00(histogram, timestamp: int = 0, info_message: str = ""):
     # 2D data is represented as row column, so write the row bin boundaries first
     if hasattr(histogram, "y_edges"):
         dim_metadata = [
-            {"bin_boundaries": histogram.y_edges, "length": histogram.shape[0], "label": "y"},
-            {"bin_boundaries": histogram.x_edges, "length": histogram.shape[1], "label": "x"}
+            {
+                "bin_boundaries": histogram.y_edges,
+                "length": histogram.shape[0],
+                "label": "y",
+            },
+            {
+                "bin_boundaries": histogram.x_edges,
+                "length": histogram.shape[1],
+                "label": "x",
+            },
         ]
     else:
         dim_metadata = [
@@ -101,8 +109,16 @@ def serialise_hs01(histogram, timestamp: int = 0, info_message: str = ""):
     # 2D data is represented as row column, so write the row bin boundaries first
     if hasattr(histogram, "y_edges"):
         dim_metadata = [
-            {"bin_boundaries": histogram.y_edges, "length": histogram.shape[0], "label": "y"},
-            {"bin_boundaries": histogram.x_edges, "length": histogram.shape[1], "label": "x"}
+            {
+                "bin_boundaries": histogram.y_edges,
+                "length": histogram.shape[0],
+                "label": "y",
+            },
+            {
+                "bin_boundaries": histogram.x_edges,
+                "length": histogram.shape[1],
+                "label": "x",
+            },
         ]
     else:
         dim_metadata = [
