@@ -1,5 +1,6 @@
 import numpy as np
-from matplotlib import colors, pyplot as plt
+from matplotlib import colors
+from matplotlib import pyplot as plt
 
 
 def plot_histograms(histograms, log_scale_for_2d=False):
