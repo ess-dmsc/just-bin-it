@@ -86,10 +86,10 @@ class TestSerialisationHs00:
         assert hist["source"] == "just-bin-it"
         assert hist["current_shape"] == [self.hist_2d.num_bins, self.hist_2d.num_bins]
         assert np.array_equal(
-            hist["dim_metadata"][0]["bin_boundaries"], self.hist_2d.x_edges.tolist()
+            hist["dim_metadata"][0]["bin_boundaries"], self.hist_2d.y_edges.tolist()
         )
         assert np.array_equal(
-            hist["dim_metadata"][1]["bin_boundaries"], self.hist_2d.y_edges.tolist()
+            hist["dim_metadata"][1]["bin_boundaries"], self.hist_2d.x_edges.tolist()
         )
         assert hist["dim_metadata"][0]["length"] == self.hist_2d.num_bins
         assert hist["dim_metadata"][1]["length"] == self.hist_2d.num_bins
@@ -130,8 +130,8 @@ class TestHistogramSerialisation:
         assert result["current_shape"] == [2, 3]
         assert result["data"].dtype == np.float64
         assert np.array_equal(result["data"], [[3.5, 3, 6], [8, 9, 12]])
-        assert np.array_equal(result["dim_metadata"][0]["bin_boundaries"], [0, 1, 2, 3])
-        assert np.array_equal(result["dim_metadata"][1]["bin_boundaries"], [0, 1, 2])
+        assert np.array_equal(result["dim_metadata"][0]["bin_boundaries"], [0, 1, 2])
+        assert np.array_equal(result["dim_metadata"][1]["bin_boundaries"], [0, 1, 2, 3])
         assert result["dim_metadata"][0]["length"] == 2
         assert result["dim_metadata"][1]["length"] == 3
         assert result["data"].sum() == hist.counts_sum()
@@ -145,8 +145,8 @@ class TestHistogramSerialisation:
         assert result["current_shape"] == [2, 3]
         assert result["data"].dtype == np.float64
         assert np.array_equal(result["data"], [[2, 0, 1], [1, 0, 1]])
-        assert np.array_equal(result["dim_metadata"][0]["bin_boundaries"], hist.x_edges)
-        assert np.array_equal(result["dim_metadata"][1]["bin_boundaries"], hist.y_edges)
+        assert np.array_equal(result["dim_metadata"][0]["bin_boundaries"], hist.y_edges)
+        assert np.array_equal(result["dim_metadata"][1]["bin_boundaries"], hist.x_edges)
         assert result["data"].sum() == hist.counts_sum()
 
     @pytest.mark.parametrize(

@@ -108,7 +108,6 @@ class DetHistogram:
 
     @property
     def data(self):
-        print(self._histogram)
         return self._histogram.copy()
 
     @property
