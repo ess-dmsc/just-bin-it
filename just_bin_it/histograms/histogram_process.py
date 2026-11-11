@@ -15,6 +15,8 @@ from just_bin_it.histograms.histogram_factory import HistogramFactory
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from just_bin_it.utilities import time_in_ns
 
+FINAL_FLUSH_S = 5
+
 
 def create_simulated_event_source(configuration, start, stop):
     """
@@ -71,6 +73,7 @@ def create_histogrammer(configuration, start, stop, hist_schema, kafka_security_
     :return: The created histogrammer.
     """
     producer = Producer(configuration["data_brokers"], kafka_security_config)
+    producer.prepare_topic(configuration["topic"])
     hist_sink = HistogramSink(producer, SCHEMAS_TO_SERIALISERS[hist_schema])
     histograms = HistogramFactory.generate([configuration])
     return Histogrammer(histograms, start, stop), hist_sink
@@ -256,6 +259,7 @@ def run_processing(
         while not processor.processing_finished:
             processor.process()
             time.sleep(0.001)
+        _flush(hist_sink)
     except Exception as error:
         logging.error("Histogram process failed: %s", error)
         if histogrammer and hist_sink:
@@ -267,8 +271,17 @@ def run_processing(
                     hist_sink.send_histogram(
                         hist.topic, hist, time_in_ns(), json.dumps(info)
                     )
+                _flush(hist_sink)
             except Exception as send_error:
                 logging.error("Could not send failure message: %s", send_error)
+
+
+def _flush(hist_sink):
+    """
+    Deliver the last histograms before the process ends.
+    """
+    if hist_sink.producer.flush(FINAL_FLUSH_S):
+        logging.error("Could not deliver the last histograms")  # pragma: no mutate
 
 
 class HistogramProcess:

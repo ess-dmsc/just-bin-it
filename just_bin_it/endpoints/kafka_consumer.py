@@ -7,6 +7,8 @@ from confluent_kafka import TopicPartition
 
 from just_bin_it.exceptions import KafkaException
 
+REQUEST_TIMEOUT_S = 10
+
 
 class Consumer:
     """
@@ -36,14 +38,19 @@ class Consumer:
             raise KafkaException(error)
 
     def _create_consumer(self, brokers, security_config):
-        options = {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
+        options = {
+            "bootstrap.servers": ",".join(brokers),
+            "group.id": uuid.uuid4(),
+            # Offsets come from seeking, committing only makes close() slow
+            "enable.auto.commit": False,
+        }
         return KafkaConsumer({**options, **security_config})
 
     def _assign_topics(self, topics, assign_to_end):
         # Only use the first topic
         topic = topics[0]
 
-        metadata = self.consumer.list_topics(topic)
+        metadata = self.consumer.list_topics(topic, timeout=REQUEST_TIMEOUT_S)
         topic_metadata = metadata.topics.get(topic)
 
         if topic_metadata is None or topic_metadata.error is not None:
@@ -57,9 +64,9 @@ class Consumer:
         if assign_to_end:
             # Seek to the end of each partition
             for tp in self.topic_partitions:
-                high_watermark = self.consumer.get_watermark_offsets(tp, cached=False)[
-                    1
-                ]
+                high_watermark = self.consumer.get_watermark_offsets(
+                    tp, timeout=REQUEST_TIMEOUT_S, cached=False
+                )[1]
                 tp.offset = high_watermark
 
             self.consumer.assign(self.topic_partitions)
@@ -98,7 +105,7 @@ class Consumer:
             TopicPartition(tp.topic, tp.partition, start_time)
             for tp in self.topic_partitions
         ]
-        offsets = self.consumer.offsets_for_times(partitions)
+        offsets = self.consumer.offsets_for_times(partitions, timeout=REQUEST_TIMEOUT_S)
         result = []
         for tp in self.topic_partitions:
             offset_and_timestamp = offsets[offsets.index(tp)]
@@ -129,15 +136,10 @@ class Consumer:
         """
         offset_ranges = []
         for tp in self.topic_partitions:
-            try:
-                (low, high) = self.consumer.get_watermark_offsets(tp)
-                offset_ranges.append((low, high))
-            except KafkaError as error:
-                logging.error(
-                    "Could not get watermark offsets for topic-partition %s: %s",
-                    tp,
-                    error,
-                )
+            (low, high) = self.consumer.get_watermark_offsets(
+                tp, timeout=REQUEST_TIMEOUT_S, cached=False
+            )
+            offset_ranges.append((low, high))
         return offset_ranges
 
     def get_positions(self):

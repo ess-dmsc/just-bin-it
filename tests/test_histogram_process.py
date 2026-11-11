@@ -1,7 +1,9 @@
 import copy
 import json
+import logging
 import time
 from multiprocessing import Queue
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -10,7 +12,12 @@ from just_bin_it.endpoints.histogram_sink import HistogramSink
 from just_bin_it.histograms.binned_data import BinnedData
 from just_bin_it.histograms.histogram1d import TOF_1D_TYPE
 from just_bin_it.histograms.histogram_factory import HistogramFactory, parse_config
-from just_bin_it.histograms.histogram_process import Processor, create_event_source
+from just_bin_it.histograms.histogram_process import (
+    FINAL_FLUSH_S,
+    Processor,
+    _flush,
+    create_event_source,
+)
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from tests.doubles.consumer import StubConsumer, StubConsumerRecord
 from tests.doubles.producers import SpyProducer
@@ -552,3 +559,21 @@ class TestHistogramProcessPublishing:
 
         # Once on initialisation and once per time run
         assert self._get_number_of_stats_messages() == times_processed + 1
+
+
+class TestFinalFlush:
+    def test_last_histograms_are_flushed(self):
+        producer = SpyProducer()
+
+        _flush(HistogramSink(producer, lambda x, y, z: (x, y, z)))
+
+        assert producer.flush_timeout == FINAL_FLUSH_S
+
+    def test_undelivered_histograms_are_logged(self, caplog):
+        producer = SpyProducer()
+        producer.flush = mock.Mock(return_value=2)
+
+        with caplog.at_level(logging.ERROR):
+            _flush(HistogramSink(producer, lambda x, y, z: (x, y, z)))
+
+        assert "Could not deliver" in caplog.text

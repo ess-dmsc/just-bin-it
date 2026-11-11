@@ -19,6 +19,7 @@ def are_kafka_settings_valid(brokers, topics, kafka_security_config):
         "bootstrap.servers": ",".join(brokers),
         "group.id": uuid.uuid4(),
         "allow.auto.create.topics": False,
+        "enable.auto.commit": False,
     }
     consumer = Consumer({**options, **kafka_security_config})
 

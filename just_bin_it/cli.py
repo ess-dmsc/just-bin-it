@@ -108,6 +108,9 @@ class Main:
         Create the publishers.
         """
         self.producer = Producer(self.config_brokers, self.kafka_security_config)
+        for topic in (self.response_topic, self.heartbeat_topic):
+            if topic:
+                self.producer.prepare_topic(topic)
 
         self.command_actioner = CommandActioner(
             ResponsePublisher(self.producer, self.response_topic),
