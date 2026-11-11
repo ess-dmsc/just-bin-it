@@ -1,5 +1,6 @@
 import json
 import logging
+import queue
 import time
 from multiprocessing import Process, Queue
 
@@ -14,6 +15,8 @@ from just_bin_it.endpoints.sources import EventSource, SimulatedEventSource
 from just_bin_it.histograms.histogram_factory import HistogramFactory
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from just_bin_it.utilities import time_in_ns
+
+STOP_TIMEOUT_S = 10
 
 
 def create_simulated_event_source(configuration, start, stop):
@@ -315,14 +318,44 @@ class HistogramProcess:
         self._process.start()
 
     def stop(self):
+        self.request_stop()
+        self.wait_until_stopped()
+
+    def request_stop(self):
+        """
+        Ask the process to stop without waiting for it.
+        """
         if self._process.is_alive():
             self._msg_queue.put("stop")
+
+    def wait_until_stopped(self, timeout_s=STOP_TIMEOUT_S):
+        """
+        Wait for the process to end, terminate it if it takes too long.
+        """
+        deadline = time.monotonic() + timeout_s
+        while self._process.is_alive() and time.monotonic() < deadline:
             # Must empty the stats queue otherwise it could potentially stop
             # the process from closing.
-            while not self._stats_queue.empty():
-                self._stats_queue.get()
+            self._drain_stats()
+            self._process.join(timeout=0.01)
+        if self._process.is_alive():
+            logging.error(
+                "Histogram process did not stop within %s s, terminating it",
+                timeout_s,
+            )  # pragma: no mutate
+            self._process.terminate()
+            self._process.join(timeout=1)
+            if self._process.is_alive():
+                self._process.kill()
+                self._process.join(timeout=1)
+        self._drain_stats()
 
-            self._process.join()
+    def _drain_stats(self):
+        try:
+            while not self._stats_queue.empty():
+                self._stats_queue.get_nowait()
+        except queue.Empty:
+            pass
 
     def clear(self):
         if self._process.is_alive():

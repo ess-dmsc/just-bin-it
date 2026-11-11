@@ -1,10 +1,11 @@
 import json
 import logging
+import time
 
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
 from just_bin_it.exceptions import KafkaException
 from just_bin_it.histograms.histogram_factory import parse_config
-from just_bin_it.histograms.histogram_process import HistogramProcess
+from just_bin_it.histograms.histogram_process import STOP_TIMEOUT_S, HistogramProcess
 
 
 class ProcessFactory:
@@ -98,15 +99,11 @@ class CommandActioner:
             self._stop_processes(hist_processes)
 
             try:
-                for config in hist_configs:
-                    # Check brokers and data topics exist (skip in simulation)
-                    if not self.simulation and not are_kafka_settings_valid(
-                        config["data_brokers"],
-                        config["data_topics"],
-                        self.kafka_security_config,
-                    ):
-                        raise KafkaException("Invalid Kafka settings")
+                # Check brokers and data topics exist (skip in simulation)
+                if not self.simulation:
+                    self._check_kafka_settings(hist_configs)
 
+                for config in hist_configs:
                     process = self.process_factory.create(
                         config,
                         start,
@@ -125,6 +122,23 @@ class CommandActioner:
         else:
             raise Exception(f"Unknown command type '{message['cmd']}'")
 
+    def _check_kafka_settings(self, hist_configs):
+        """
+        Check the brokers and topics, once per set of brokers.
+        """
+        topics_by_brokers = {}
+        for config in hist_configs:
+            topics = topics_by_brokers.setdefault(tuple(config["data_brokers"]), [])
+            for topic in config["data_topics"]:
+                if topic not in topics:
+                    topics.append(topic)
+
+        for brokers, topics in topics_by_brokers.items():
+            if not are_kafka_settings_valid(
+                list(brokers), topics, self.kafka_security_config
+            ):
+                raise KafkaException("Invalid Kafka settings")
+
     def _stop_processes(self, hist_processes):
         """
         Request the processes to stop.
@@ -132,8 +146,14 @@ class CommandActioner:
         logging.info("Stopping any existing histogram processes")
         for process in hist_processes:
             try:
-                process.stop()
+                process.request_stop()
             except Exception as error:
                 # Process might have killed itself already
                 logging.info("Stopping process failed %s", error)
+        deadline = time.monotonic() + STOP_TIMEOUT_S
+        for process in hist_processes:
+            try:
+                process.wait_until_stopped(max(0.1, deadline - time.monotonic()))
+            except Exception as error:
+                logging.info("Waiting for process to stop failed %s", error)
         hist_processes.clear()

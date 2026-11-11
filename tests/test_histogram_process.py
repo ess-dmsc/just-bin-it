@@ -552,3 +552,59 @@ class TestHistogramProcessPublishing:
 
         # Once on initialisation and once per time run
         assert self._get_number_of_stats_messages() == times_processed + 1
+
+
+def _write_lots_of_stats_until_stopped(msg_queue, stats_queue):
+    # Enough data to fill the pipe behind the queue, so the child can only
+    # exit once the parent has read it.
+    for _ in range(200):
+        stats_queue.put({"sum": 1, "padding": "x" * 1000})
+    msg_queue.get()
+
+
+class TestHistogramProcessStopping:
+    def _process_with_target(self, target):
+        from multiprocessing import Process
+
+        from just_bin_it.histograms.histogram_process import HistogramProcess
+
+        process = HistogramProcess({}, None, None, "hs01", "ev44", {})
+        process._process = Process(
+            target=target, args=(process._msg_queue, process._stats_queue)
+        )
+        return process
+
+    def test_wait_until_stopped_reads_stats_so_a_busy_process_can_exit(self):
+        process = self._process_with_target(_write_lots_of_stats_until_stopped)
+        process.start()
+
+        process.request_stop()
+        process.wait_until_stopped()
+
+        assert not process._process.is_alive()
+
+    def test_request_stop_does_not_wait(self):
+        process = self._process_with_target(_write_lots_of_stats_until_stopped)
+        process.start()
+
+        start = time.monotonic()
+        process.request_stop()
+        assert time.monotonic() - start < 0.5
+
+        process.wait_until_stopped()
+
+    def test_a_process_that_does_not_stop_is_terminated(self):
+        process = self._process_with_target(_ignore_stop)
+        process.start()
+
+        start = time.monotonic()
+        process.request_stop()
+        process.wait_until_stopped(timeout_s=0.5)
+
+        assert not process._process.is_alive()
+        assert time.monotonic() - start < 3
+
+
+def _ignore_stop(msg_queue, stats_queue):
+    while True:
+        time.sleep(0.05)

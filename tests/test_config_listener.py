@@ -45,13 +45,24 @@ class TestConfigListener:
 
         assert not self.config_listener.check_for_messages()
 
-    def test_consuming_waiting_message_gets_latest_message(self):
+    def test_consuming_waiting_messages_gets_every_message_in_order(self):
         mock_record = [StubConsumerRecord(i, i, f'"message{i+1}"') for i in range(3)]
         self.consumer.add_messages(mock_record)
         self.config_listener.check_for_messages()
 
-        msg = self.config_listener.consume_message()
-        assert msg == "message3"
+        msgs = [self.config_listener.consume_message() for _ in range(3)]
+
+        assert msgs == ["message1", "message2", "message3"]
+        assert not self.config_listener.check_for_messages()
+
+    def test_messages_arriving_while_others_wait_are_queued_behind_them(self):
+        self.consumer.add_messages([StubConsumerRecord(0, 0, '"config"')])
+        self.config_listener.check_for_messages()
+        self.consumer.add_messages([StubConsumerRecord(1, 1, '"stop"')])
+        self.config_listener.check_for_messages()
+
+        assert self.config_listener.consume_message() == "config"
+        assert self.config_listener.consume_message() == "stop"
 
     def test_when_no_messages_trying_to_consume_throws(self):
         with pytest.raises(Exception):

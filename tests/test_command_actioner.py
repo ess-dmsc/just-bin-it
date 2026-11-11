@@ -1,3 +1,4 @@
+import time
 from copy import deepcopy
 from unittest import mock
 
@@ -114,8 +115,10 @@ class TestCommandActioner:
 
         self.actioner.handle_command_message(CONFIG_CMD, processes)
 
-        self.process_1.stop.assert_called_once()
-        self.process_2.stop.assert_called_once()
+        self.process_1.request_stop.assert_called_once()
+        self.process_2.request_stop.assert_called_once()
+        self.process_1.wait_until_stopped.assert_called_once()
+        self.process_2.wait_until_stopped.assert_called_once()
 
     def test_on_unknown_config_command_existing_processes_not_stopped(self):
         processes = [self.process_1, self.process_2]
@@ -123,8 +126,8 @@ class TestCommandActioner:
 
         self.actioner.handle_command_message({"cmd": "::unknown::"}, processes)
 
-        self.process_1.stop.assert_not_called()
-        self.process_2.stop.assert_not_called()
+        self.process_1.request_stop.assert_not_called()
+        self.process_2.request_stop.assert_not_called()
 
     def test_on_stop_command_existing_processes_stopped(self):
         processes = [self.process_1, self.process_2]
@@ -132,8 +135,35 @@ class TestCommandActioner:
 
         self.actioner.handle_command_message(STOP_CMD, processes)
 
-        self.process_1.stop.assert_called_once()
-        self.process_2.stop.assert_called_once()
+        self.process_1.request_stop.assert_called_once()
+        self.process_2.request_stop.assert_called_once()
+        self.process_1.wait_until_stopped.assert_called_once()
+        self.process_2.wait_until_stopped.assert_called_once()
+        assert len(processes) == 0
+
+    def test_on_stop_command_every_process_is_asked_before_any_is_waited_for(self):
+        calls = mock.Mock()
+        calls.attach_mock(self.process_1, "p1")
+        calls.attach_mock(self.process_2, "p2")
+
+        self.actioner.handle_command_message(STOP_CMD, [self.process_1, self.process_2])
+
+        assert calls.mock_calls == [
+            mock.call.p1.request_stop(),
+            mock.call.p2.request_stop(),
+            mock.call.p1.wait_until_stopped(mock.ANY),
+            mock.call.p2.wait_until_stopped(mock.ANY),
+        ]
+
+    def test_a_process_that_fails_to_stop_does_not_stop_the_others(self):
+        self.process_1.request_stop.side_effect = Exception("already dead")
+        self.process_1.wait_until_stopped.side_effect = Exception("already dead")
+        processes = [self.process_1, self.process_2]
+
+        self.actioner.handle_command_message(STOP_CMD, processes)
+
+        self.process_2.request_stop.assert_called_once()
+        self.process_2.wait_until_stopped.assert_called_once()
         assert len(processes) == 0
 
     def test_on_reset_command_existing_processes_cleared(self):
@@ -142,7 +172,90 @@ class TestCommandActioner:
 
         self.actioner.handle_command_message(RESET_CMD, processes)
 
-        self.process_1.stop.assert_not_called()
-        self.process_2.stop.assert_not_called()
+        self.process_1.request_stop.assert_not_called()
+        self.process_2.request_stop.assert_not_called()
         self.process_1.clear.assert_called_once()
         self.process_2.clear.assert_called_once()
+
+
+class TestCommandActionerStopDeadline:
+    def test_stuck_processes_share_one_stop_deadline(self):
+        actioner = CommandActioner(
+            mock.create_autospec(ResponsePublisher), {}, True, mock.Mock()
+        )
+        waits = []
+
+        def stuck(timeout):
+            waits.append(timeout)
+            time.sleep(timeout)
+
+        processes = [mock.create_autospec(HistogramProcess) for _ in range(3)]
+        for process in processes:
+            process.wait_until_stopped.side_effect = stuck
+
+        with mock.patch("just_bin_it.command_actioner.STOP_TIMEOUT_S", 0.3):
+            start = time.monotonic()
+            actioner.handle_command_message({"cmd": "stop"}, processes)
+
+        assert time.monotonic() - start < 0.8
+        assert waits[0] == pytest.approx(0.3, abs=0.05)
+        assert waits[1] == waits[2] == 0.1
+
+
+class TestCommandActionerKafkaCheck:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        self.response_publisher = mock.create_autospec(ResponsePublisher)
+        self.process_factory = mock.create_autospec(ProcessFactory)
+        self.actioner = CommandActioner(
+            self.response_publisher, {}, False, self.process_factory
+        )
+
+    def _config_with(self, brokers_and_topics):
+        cmd = deepcopy(CONFIG_CMD)
+        template = cmd["histograms"][0]
+        cmd["histograms"] = []
+        for i, (brokers, topics) in enumerate(brokers_and_topics):
+            hist = deepcopy(template)
+            hist["data_brokers"] = brokers
+            hist["data_topics"] = topics
+            hist["topic"] = f"output_{i}"
+            hist["id"] = f"hist_{i}"
+            cmd["histograms"].append(hist)
+        return cmd
+
+    def test_each_set_of_brokers_is_checked_once_for_all_its_topics(self):
+        cmd = self._config_with(
+            [
+                (["broker1"], ["bank0"]),
+                (["broker1"], ["bank1"]),
+                (["broker1"], ["bank0"]),
+                (["broker2"], ["monitors"]),
+            ]
+        )
+
+        with mock.patch(
+            "just_bin_it.command_actioner.are_kafka_settings_valid",
+            return_value=True,
+        ) as check:
+            self.actioner.handle_command_message(cmd, [])
+
+        assert check.call_args_list == [
+            mock.call(["broker1"], ["bank0", "bank1"], {}),
+            mock.call(["broker2"], ["monitors"], {}),
+        ]
+        assert self.process_factory.create.call_count == 4
+
+    def test_invalid_kafka_settings_start_no_processes_and_send_error(self):
+        cmd = self._config_with([(["broker1"], ["missing"])])
+        cmd["msg_id"] = "abc"
+
+        with mock.patch(
+            "just_bin_it.command_actioner.are_kafka_settings_valid",
+            return_value=False,
+        ):
+            self.actioner.handle_command_message(cmd, [])
+
+        self.process_factory.create.assert_not_called()
+        self.response_publisher.send_error_response.assert_called_once()
+        self.response_publisher.send_ack_response.assert_not_called()

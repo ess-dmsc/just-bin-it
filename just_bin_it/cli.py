@@ -84,7 +84,7 @@ class Main:
 
         while True:
             # Handle configuration messages
-            if self.config_listener.check_for_messages():
+            while self.config_listener.check_for_messages():
                 msg = self.config_listener.consume_message()
 
                 logging.warning("New command received")
