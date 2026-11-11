@@ -234,6 +234,7 @@ In order to stop counting send the stop command:
 }
 ```
 This will cause histogramming to stop and the final histogram to be published.
+If the window was not over yet, the final `info` has `"interrupted": true`.
 
 ### Simulation mode
 When in simulation mode just-bin-it will try to provide simulated data matching

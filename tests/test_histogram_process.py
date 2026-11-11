@@ -42,6 +42,7 @@ class SpyHistogrammer:
     def __init__(self):
         self.cleared = False
         self.histogramming_stopped = False
+        self.interrupted = False
         self.times_publish_called = 0
         self.stop = None
         self.data_received = []
@@ -50,6 +51,10 @@ class SpyHistogrammer:
         self.cleared = True
 
     def set_finished(self):
+        self.histogramming_stopped = True
+
+    def set_interrupted(self):
+        self.interrupted = True
         self.histogramming_stopped = True
 
     def get_histogram_stats(self):
@@ -359,6 +364,41 @@ class TestHistogramProcess:
         assert json.loads(last_msg)["rate"] == 0
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
+    def test_stop_command_before_the_window_is_over_marks_it_interrupted(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 0
+        config["stop"] = 10_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+        event_source, processor, producer, _, msg_queue = self.generate_processor(
+            hist_configs, start_time, stop_time
+        )
+        event_source.append_data("::source::", 1000, [5, 15], [123, 123])
+        processor.process()
+
+        msg_queue.put("stop")
+        time.sleep(0.1)
+        processor.process()
+
+        info = json.loads(producer.messages[~0][1][2])
+        assert info["state"] == HISTOGRAM_STATES["FINISHED"]
+        assert info["interrupted"] is True
+
+    def test_window_that_ends_normally_is_not_interrupted(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 0
+        config["stop"] = 2_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+        event_source, processor, producer, _, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
+        )
+        for time_offset in [1000, 2000, 3000]:
+            event_source.append_data("::source::", time_offset, [5, 15], [123, 123])
+            processor.process()
+
+        info = json.loads(producer.messages[~0][1][2])
+        assert info["state"] == HISTOGRAM_STATES["FINISHED"]
+        assert "interrupted" not in info
+
     def test_open_ended_counting_for_a_while_then_stop_command_triggers_finished(self):
         config = copy.deepcopy(CONFIG_1D)
         config["start"] = 0
@@ -497,6 +537,7 @@ class TestHistogramProcessCommands:
 
         assert self.processor.processing_finished
         assert self.histogrammer.histogramming_stopped
+        assert self.histogrammer.interrupted
 
 
 @pytest.mark.slow

@@ -124,8 +124,9 @@ class Processor:
         if self.processing_finished:
             return
 
-        if not self.msg_queue.empty():
-            self.processing_finished |= self.process_command_message()
+        if not self.msg_queue.empty() and self.process_command_message():
+            self.histogrammer.set_interrupted()
+            self.processing_finished = True
 
         if not self.processing_finished:
             event_buffer = self.event_source.get_new_data()

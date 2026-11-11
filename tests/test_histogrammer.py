@@ -266,6 +266,21 @@ class TestHistogrammer:
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
         assert len(histogrammer.histograms) == 2
 
+    def test_interrupted_histograms_are_finished_and_say_so(self):
+        histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
+        histogrammer.set_interrupted()
+
+        info = next(histogrammer.histogram_info())[1]
+        assert info["state"] == HISTOGRAM_STATES["FINISHED"]
+        assert info["interrupted"] is True
+
+    def test_finished_histograms_are_not_interrupted(self):
+        histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
+        histogrammer.set_finished()
+
+        info = next(histogrammer.histogram_info())[1]
+        assert "interrupted" not in info
+
     def test_data_only_added_if_pulse_time_is_later_or_equal_to_start(self):
         histogrammer = create_histogrammer(self.hist_sink, START_CONFIG)
         histogrammer.add_data(EVENT_DATA)

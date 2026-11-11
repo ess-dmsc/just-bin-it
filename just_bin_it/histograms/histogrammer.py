@@ -25,6 +25,7 @@ class Histogrammer:
         self.start = start
         self.stop = stop
         self._stop_time_exceeded = False
+        self._interrupted = False
         self._started = False
         self._previous_sum = {hist.identifier: 0 for hist in self.histograms}
         self._hist_stats = {hist.identifier: {} for hist in self.histograms}
@@ -69,6 +70,9 @@ class Histogrammer:
 
         if self.stop:
             info["stop"] = self.stop
+
+        if self._interrupted:
+            info["interrupted"] = True
 
         if self._stop_time_exceeded:
             info["state"] = HISTOGRAM_STATES["FINISHED"]
@@ -151,6 +155,13 @@ class Histogrammer:
         return results
 
     def set_finished(self):
+        self._stop_time_exceeded = True
+
+    def set_interrupted(self):
+        """
+        The histograms were stopped before the end of their window.
+        """
+        self._interrupted = True
         self._stop_time_exceeded = True
 
     def is_finished(self):
