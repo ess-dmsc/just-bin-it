@@ -41,7 +41,7 @@ class TestHistogram2dMapFunctionality:
 
     def test_on_construction_histogram_is_uninitialised(self):
         assert self.hist.x_edges is not None
-        assert self.hist.shape == (self.width, self.height)
+        assert self.hist.shape == (self.height, self.width)
         assert len(self.hist.x_edges) == self.width + 1
         assert len(self.hist.y_edges) == self.height + 1
         assert self.hist.x_edges[0] == 0
@@ -59,8 +59,8 @@ class TestHistogram2dMapFunctionality:
         assert hist.data.sum() == len(self.data) - self.data.count(1) - self.data.count(
             2
         )
-        assert hist.data[3][5] == 0
-        assert hist.data[4][5] == 0
+        assert hist.data[5][3] == 0
+        assert hist.data[5][4] == 0
 
     def test_data_after_detector_range_ignored(self):
         hist = DetHistogram(IRRELEVANT_TOPIC, (0, 30), self.width, self.height)
@@ -73,15 +73,15 @@ class TestHistogram2dMapFunctionality:
     def test_check_binning(self):
         self.hist.add_data(self.pulse_time, [], self.data)
 
-        shape = self.hist.shape
+        num_rows, num_cols = self.hist.shape
         data = self.hist.data
 
         # The data should be 1 for the first bin, 2 for the second, and so on...
         expected = 0
-        for y in range(shape[1]):
-            for x in range(shape[0]):
+        for r in range(num_rows):
+            for c in range(num_cols):
                 expected += 1
-                assert data[x][y] == expected
+                assert data[r][c] == expected
 
     def test_binning_with_offset_detector_range_keeps_map_orientation(self):
         hist = DetHistogram(IRRELEVANT_TOPIC, (10, 999), 3, 2)
@@ -91,7 +91,7 @@ class TestHistogram2dMapFunctionality:
 
         hist.add_data(self.pulse_time, [], det_ids)
 
-        assert np.array_equal(hist.data, [[1, 4], [2, 5], [3, 6]])
+        assert np.array_equal(hist.data, [[1, 2, 3], [4, 5, 6]])
 
     def test_adding_data_accumulates_histogram(self):
         self.hist.add_data(self.pulse_time, [], self.data)
@@ -128,9 +128,9 @@ class TestHistogram2dMapFunctionality:
 
         assert self.hist.data.sum() == len(data)
         assert self.hist.data[0][0] == 2
-        assert self.hist.data[3][2] == 3
-        assert self.hist.data[0][3] == 2
-        assert self.hist.data[4][5] == 1
+        assert self.hist.data[2][3] == 3
+        assert self.hist.data[3][0] == 2
+        assert self.hist.data[5][4] == 1
 
     def test_if_no_id_supplied_then_defaults_to_empty_string(self):
         assert self.hist.identifier == ""
@@ -174,7 +174,7 @@ class TestHistogram2dMapFunctionality:
 
         self.hist.add_data(self.pulse_time, IRRELEVANT_TOF_RANGE, self.data)
 
-        assert self.hist.shape == (self.width, self.height)
+        assert self.hist.shape == (self.height, self.width)
         assert self.hist.data.sum() == len(self.data)
 
     def test_adding_empty_data_does_nothing(self):
@@ -197,9 +197,9 @@ class TestHistogram2dMapFunctionality:
         self.hist.add_data(1236, IRRELEVANT_TOF_RANGE, [30, 30, 30, 30])
 
         assert self.hist.data[0][0] == 1
-        assert self.hist.data[4][0] == 2
-        assert self.hist.data[0][5] == 3
-        assert self.hist.data[4][5] == 4
+        assert self.hist.data[0][4] == 2
+        assert self.hist.data[5][0] == 3
+        assert self.hist.data[5][4] == 4
 
     def test_binned_data_is_mapped_to_detector_bins(self):
         hist = DetHistogram(IRRELEVANT_TOPIC, (10, 20), 2, 2)
@@ -207,8 +207,8 @@ class TestHistogram2dMapFunctionality:
         hist.add_binned_data(123, MAPPED_BINNED_DATA)
 
         assert hist.data[0][0] == 11
-        assert hist.data[1][0] == 22
-        assert hist.data[0][1] == 33
+        assert hist.data[0][1] == 22
+        assert hist.data[1][0] == 33
         assert hist.data[1][1] == 44
 
     def test_incompatible_binned_data_spatial_size_is_skipped(self):
@@ -230,7 +230,7 @@ class TestHistogram2dMapFunctionality:
 
         hist.add_data(1, [], dets)
 
-        assert np.array_equal(hist.data, [[1, 0], [0, 0], [2, 1]])
+        assert np.array_equal(hist.data, [[1, 0, 2], [0, 0, 1]])
         assert hist.counts_sum() == 4
 
     def test_detector_map_events_and_fractional_binned_data_share_geometry(self):
@@ -240,8 +240,8 @@ class TestHistogram2dMapFunctionality:
             2, BinnedData(np.array([0, 1]), np.array([[0.5, 1, 2, 3, 4, 5, 6, 7]]))
         )
 
-        assert np.array_equal(hist.data, [[2.5, 5], [1, 5], [2, 6], [4, 8]])
-        assert hist.shape == (4, 2)
+        assert np.array_equal(hist.data, [[2.5, 1, 2, 4], [5, 5, 6, 8]])
+        assert hist.shape == (2, 4)
         assert hist.counts_sum() == 33.5
         assert hist.last_pulse_time == 2
         # A retained output snapshot must survive updates and reset unchanged.
@@ -250,4 +250,4 @@ class TestHistogram2dMapFunctionality:
         hist.add_data(3, [], [17])
         assert snapshot.sum() == 33.5
         assert hist.counts_sum() == 1
-        assert hist.data[3, 1] == 1
+        assert hist.data[1, 3] == 1

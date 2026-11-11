@@ -33,7 +33,7 @@ The configuration parameters:
 ```
 
 ## Information for developers
-Events accumulate directly into a persistent 2-D array in `(x, y)` order.
+Events accumulate directly into a persistent 2-D array in `(row, column)` order.
 Reading the data returns a copy, and statistics are calculated from the accumulator.
 The original detector width and height determine how detector IDs and pre-binned
 `da00` counts map to pixels.

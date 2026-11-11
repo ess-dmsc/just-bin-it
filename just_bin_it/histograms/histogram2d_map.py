@@ -99,8 +99,8 @@ class DetHistogram:
         self._create_empty_histogram()
 
     def _create_empty_histogram(self):
-        # Store output in (x, y) order; width/height retain the input geometry.
-        self._histogram = np.zeros((self.width, self.height))
+        # Store output in (row, column) order; width/height retain the input geometry.
+        self._histogram = np.zeros((self.height, self.width))
 
     def _calculate_edges(self):
         self.x_edges = np.arange(self.width + 1, dtype=np.float64)
@@ -136,7 +136,7 @@ class DetHistogram:
             np.intp
         )
         x, y = pixels % self.width, pixels // self.width
-        accumulate_counts(self._histogram, x * self.shape[1] + y)
+        accumulate_counts(self._histogram, y * self.shape[1] + x)
 
     def add_binned_data(self, pulse_time, binned_data, source=""):
         """
@@ -166,7 +166,7 @@ class DetHistogram:
         ):
             self._histogram = self._histogram.astype(counts.dtype)
 
-        self._histogram += counts.reshape((self.height, self.width)).T
+        self._histogram += counts.reshape((self.height, self.width))
 
     def clear_data(self):
         """

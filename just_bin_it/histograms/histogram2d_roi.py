@@ -83,7 +83,7 @@ class RoiHistogram:
         self._create_empty_histogram()
 
     def _create_empty_histogram(self):
-        self._histogram = np.zeros((self.width, len(self.left_edges)))
+        self._histogram = np.zeros((len(self.left_edges), self.width))
 
     @property
     def data(self):
@@ -116,7 +116,9 @@ class RoiHistogram:
         rows = np.searchsorted(self._row_starts, det_ids, side="right") - 1
         columns = det_ids.astype(np.float64) - self._row_starts[rows]
         included = columns < self.width
-        indices = columns[included].astype(np.intp) * self.shape[1] + rows[included]
+        indices = (
+            rows[included].astype(np.intp) * self.shape[1] + columns[included]
+        ).astype(np.intp)
         accumulate_counts(self._histogram, indices)
 
     def clear_data(self):
