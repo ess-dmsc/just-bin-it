@@ -146,3 +146,47 @@ class TestCommandActioner:
         self.process_2.stop.assert_not_called()
         self.process_1.clear.assert_called_once()
         self.process_2.clear.assert_called_once()
+
+
+class TestStopAtTime:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        self.response_publisher = mock.create_autospec(ResponsePublisher)
+        self.process_1 = mock.create_autospec(HistogramProcess)
+        self.process_2 = mock.create_autospec(HistogramProcess)
+        self.actioner = CommandActioner(
+            self.response_publisher, {}, True, mock.create_autospec(ProcessFactory)
+        )
+
+    def test_stop_with_time_sets_stop_time_on_every_process_without_stopping(self):
+        processes = [self.process_1, self.process_2]
+
+        self.actioner.handle_command_message(
+            {"cmd": "stop", "stop": 1564727668779, "msg_id": "id"}, processes
+        )
+
+        self.process_1.set_stop_time.assert_called_once_with(1564727668779)
+        self.process_2.set_stop_time.assert_called_once_with(1564727668779)
+        self.process_1.stop.assert_not_called()
+        assert processes == [self.process_1, self.process_2]
+        self.response_publisher.send_ack_response.assert_called_once_with("id")
+
+    def test_stop_with_null_time_stops_immediately(self):
+        processes = [self.process_1]
+
+        self.actioner.handle_command_message({"cmd": "stop", "stop": None}, processes)
+
+        self.process_1.set_stop_time.assert_not_called()
+        assert processes == []
+
+    @pytest.mark.parametrize("stop", [-1, 1.5, "123", True])
+    def test_invalid_stop_time_is_rejected(self, stop):
+        processes = [self.process_1]
+
+        self.actioner.handle_command_message(
+            {"cmd": "stop", "stop": stop, "msg_id": "id"}, processes
+        )
+
+        self.process_1.set_stop_time.assert_not_called()
+        self.response_publisher.send_error_response.assert_called_once()
+        assert processes == [self.process_1]

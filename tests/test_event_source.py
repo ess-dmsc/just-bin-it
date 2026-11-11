@@ -282,3 +282,32 @@ class TestEventSourceEmptyPartitions:
         event_source = EventSource(consumer, -1, deserialise_function=lambda x: x)
 
         assert event_source.seek_to_start_time() == [0, 0]
+
+
+class TestEventSourceSeekMargin:
+    def _consumer(self, timestamps):
+        consumer = StubConsumer(["broker"], ["topic"])
+        consumer.add_messages(
+            [StubConsumerRecord(ts, i, b"") for i, ts in enumerate(timestamps)]
+        )
+        return consumer
+
+    def test_seeks_the_margin_before_the_start(self):
+        consumer = self._consumer([0, 1_000, 2_000, 3_000, 4_000])
+        event_source = EventSource(consumer, 3_500, seek_margin_ms=1_000)
+
+        assert event_source.seek_to_start_time() == [3]
+
+    def test_start_is_not_too_old_just_because_the_margin_reaches_past_the_data(self):
+        consumer = self._consumer([1_000, 2_000, 3_000])
+        event_source = EventSource(consumer, 1_500, seek_margin_ms=1_000)
+
+        assert event_source.seek_to_start_time() == [0]
+
+    def test_start_before_the_first_message_left_is_still_too_old(self):
+        consumer = self._consumer([0, 1_000, 2_000, 3_000])
+        consumer.delete_messages(1)
+        event_source = EventSource(consumer, 500, seek_margin_ms=1_000)
+
+        with pytest.raises(TooOldTimeRequestedException):
+            event_source.seek_to_start_time()

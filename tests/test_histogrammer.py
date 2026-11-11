@@ -516,3 +516,102 @@ class TestHistogrammer:
 
         assert stats[0]["sum"] == 500_000_000
         assert stats[0]["diff"] == 500_000_000
+
+
+def _message(kafka_time_ms, source, pulse_time_ns, tofs=(1,), dets=(1,)):
+    return (
+        (TIMESTAMP_CREATE_TIME, kafka_time_ms),
+        0,
+        (source, pulse_time_ns, list(tofs), list(dets), None),
+    )
+
+
+WINDOW_CONFIG = {
+    "cmd": "config",
+    "start": 1_000_000,
+    "stop": 1_001_000,
+    "histograms": [
+        {
+            "data_brokers": ["fakehost:9092"],
+            "data_topics": ["LOQ_events"],
+            "type": TOF_1D_TYPE,
+            "tof_range": [0, 100000000],
+            "num_bins": 50,
+            "topic": "hist-topic",
+            "source": "det",
+        }
+    ],
+}
+
+
+class TestHistogrammerPulseTimeWindow:
+    @pytest.fixture(autouse=True)
+    def prepare(self):
+        self.histogrammer = create_histogrammer(
+            HistogramSink(SpyProducer(), serialise_hs00), WINDOW_CONFIG
+        )
+
+    def test_window_uses_pulse_time_not_kafka_time(self):
+        self.histogrammer.add_data(
+            [
+                # Pulse inside the window, published 2 s after the stop time
+                _message(1_003_000, "det", 1_000_500 * 10**6),
+                # Pulse before the start, published inside the window
+                _message(1_000_500, "det", 999_999 * 10**6),
+            ]
+        )
+
+        assert self.histogrammer.histograms[0].data.sum() == 1
+        assert not self.histogrammer.is_finished()
+
+    def test_window_includes_pulses_at_start_and_stop(self):
+        self.histogrammer.add_data(
+            [
+                _message(0, "det", 1_000_000 * 10**6),
+                _message(0, "det", 1_001_000 * 10**6),
+                _message(0, "det", 1_001_000 * 10**6 + 1),
+            ]
+        )
+
+        assert self.histogrammer.histograms[0].data.sum() == 2
+
+    def test_only_a_pulse_after_stop_from_own_source_finishes(self):
+        self.histogrammer.add_data([_message(0, "monitor", 1_002_000 * 10**6)])
+        assert not self.histogrammer.is_finished()
+
+        self.histogrammer.add_data([_message(0, "det", 1_002_000 * 10**6)])
+        assert self.histogrammer.is_finished()
+
+    def test_new_stop_time_after_counted_data_reports_overrun(self):
+        self.histogrammer.add_data([_message(0, "det", 1_000_800 * 10**6)])
+
+        self.histogrammer.set_stop_time(1_000_500)
+
+        info = next(self.histogrammer.histogram_info())[1]
+        assert info["stop"] == 1_000_500
+        assert info["stop_overrun_ms"] == 300
+        assert self.histogrammer.is_finished()
+
+    def test_new_stop_time_later_than_counted_data_is_no_overrun(self):
+        self.histogrammer.add_data([_message(0, "det", 1_000_400 * 10**6)])
+
+        self.histogrammer.set_stop_time(1_000_500)
+
+        info = next(self.histogrammer.histogram_info())[1]
+        assert "stop_overrun_ms" not in info
+        assert not self.histogrammer.is_finished()
+
+    def test_later_stop_time_does_not_extend_the_window(self):
+        self.histogrammer.set_stop_time(1_000_500)
+        self.histogrammer.set_stop_time(1_002_000)
+
+        info = next(self.histogrammer.histogram_info())[1]
+        assert info["stop"] == 1_000_500
+
+    def test_overrun_only_counts_own_source(self):
+        self.histogrammer.add_data([_message(0, "monitor", 1_000_800 * 10**6)])
+
+        self.histogrammer.set_stop_time(1_000_500)
+
+        info = next(self.histogrammer.histogram_info())[1]
+        assert "stop_overrun_ms" not in info

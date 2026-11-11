@@ -15,17 +15,20 @@ class Histogrammer:
         """
         Constructor.
 
-        All times are given in ns since the Unix epoch.
+        A message is histogrammed if its pulse time is within [start, stop].
 
         :param histograms: The histograms.
-        :param start: When to start histogramming from.
-        :param stop: When to histogram until.
+        :param start: When to start histogramming from (ms since the Unix epoch).
+        :param stop: When to histogram until (ms since the Unix epoch).
         """
         self.histograms = histograms
         self.start = start
         self.stop = stop
         self._stop_time_exceeded = False
+        self._no_data_after_stop = False
         self._started = False
+        self._last_counted_pulse_ns = None
+        self._stop_overrun_ms = None
         self._previous_sum = {hist.identifier: 0 for hist in self.histograms}
         self._hist_stats = {hist.identifier: {} for hist in self.histograms}
 
@@ -36,18 +39,26 @@ class Histogrammer:
         :param event_buffer: The new data received.
         :param simulation: Indicates whether in simulation.
         """
+        start_ns = self.start * 1_000_000 if self.start else None
+        stop_ns = self.stop * 1_000_000 if self.stop else None
         for hist in self.histograms:
-            for (_, msg_time), _, msg in event_buffer:
-                if self.start:
-                    if msg_time < self.start:
-                        continue
-                if self.stop:
-                    if msg_time > self.stop:
+            for _, _, msg in event_buffer:
+                pulse_time = msg[1]
+                src = msg[0] if not simulation else hist.source
+                if start_ns is not None and pulse_time < start_ns:
+                    continue
+                if stop_ns is not None and pulse_time > stop_ns:
+                    # Only the histogram's own source ends the window
+                    if not hist.source or src == hist.source:
                         self._stop_time_exceeded = True
-                        continue
+                    continue
 
                 self._started = True
-                src = msg[0] if not simulation else hist.source
+                if (not hist.source or src == hist.source) and (
+                    self._last_counted_pulse_ns is None
+                    or pulse_time > self._last_counted_pulse_ns
+                ):
+                    self._last_counted_pulse_ns = pulse_time
                 if isinstance(msg[2], BinnedData):
                     self._add_binned_data(hist, msg[1], msg[2], src)
                 else:
@@ -69,6 +80,12 @@ class Histogrammer:
 
         if self.stop:
             info["stop"] = self.stop
+
+        if self._stop_overrun_ms:
+            info["stop_overrun_ms"] = self._stop_overrun_ms
+
+        if self._no_data_after_stop:
+            info["no_data_after_stop"] = True
 
         if self._stop_time_exceeded:
             info["state"] = HISTOGRAM_STATES["FINISHED"]
@@ -150,8 +167,42 @@ class Histogrammer:
 
         return results
 
+    def set_stop_time(self, stop):
+        """
+        Change the stop time while histogramming. Only an earlier stop time
+        is used, data already histogrammed after it is reported as
+        "stop_overrun_ms".
+
+        :param stop: The new stop time (ms since the Unix epoch).
+        """
+        if self.stop is not None and stop >= self.stop:
+            logging.info(
+                "Stop time %s is not before the current one %s, keeping it",
+                stop,
+                self.stop,
+            )  # pragma: no mutate
+            return
+        self.stop = stop
+        stop_ns = stop * 1_000_000
+        if (
+            self._last_counted_pulse_ns is not None
+            and self._last_counted_pulse_ns > stop_ns
+        ):
+            self._stop_overrun_ms = (self._last_counted_pulse_ns - stop_ns) / 1e6
+            logging.warning(
+                "Data up to %s ms after the new stop time was already histogrammed",
+                self._stop_overrun_ms,
+            )
+            self._stop_time_exceeded = True
+
     def set_finished(self):
         self._stop_time_exceeded = True
+
+    def set_no_data_after_stop(self):
+        """
+        The window ended by the leeway, without a pulse after the stop time.
+        """
+        self._no_data_after_stop = True
 
     def is_finished(self):
         return self._stop_time_exceeded

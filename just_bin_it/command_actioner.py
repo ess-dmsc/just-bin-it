@@ -89,8 +89,22 @@ class CommandActioner:
             for process in hist_processes:
                 process.clear()
         elif message["cmd"] == "stop":
-            logging.info("Stop command received")
-            self._stop_processes(hist_processes)
+            stop_time = message.get("stop")
+            if stop_time is None:
+                logging.info("Stop command received")
+                self._stop_processes(hist_processes)
+            else:
+                logging.info("Stop command received, stopping at %s", stop_time)
+                if (
+                    isinstance(stop_time, bool)
+                    or not isinstance(stop_time, int)
+                    or stop_time < 0
+                ):
+                    raise Exception(
+                        f"Stop time must be a non-negative integer (ms), got {stop_time!r}"
+                    )
+                for process in hist_processes:
+                    process.set_stop_time(stop_time)
         elif message["cmd"] == "config":
             logging.info("Config command received")
             start, stop, hist_configs, hist_schema, event_schema = parse_config(message)

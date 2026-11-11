@@ -116,8 +116,8 @@ A JSON histogramming configuration has the following parameters:
 
 * "cmd" (string): the command type (config, stop, etc.).
 * "msg_id" (string): a unique identifier for the message.
-* "start" (seconds since epoch in ms): only histogram data after this UTC time (optional).
-* "stop" (seconds since epoch in ms): only histogram data up to this UTC time (optional).
+* "start" (ms since epoch): only histogram pulses at or after this UTC time (optional).
+* "stop" (ms since epoch): only histogram pulses up to and including this UTC time (optional).
 * "interval" (seconds): only histogram for this interval (optional).
 * "input_schema" (string): the input schema, one of ev42, ev44 or da00 (optional, default ev42).
 * "output_schema" (string): the output schema, one of hs00 or hs01 (optional, default hs00).
@@ -182,8 +182,12 @@ If `stop` is supplied then histogramming will stop at that time.
 If both `start` and `stop` are in the past then historic data will be used
 (provided it still exists).
 
-Histogramming finishes once `stop` has passed and the data topic has been read
-to its end, or 5 seconds after `stop` if the end cannot be confirmed.
+`start` and `stop` are compared with the pulse time of each message (ev44
+`reference_time`, ev42 `pulse_time`, da00 `timestamp`), not the Kafka time.
+
+A histogram finishes when its source has sent a pulse after `stop` and the data
+topic has been read to its end. If the source sends nothing after `stop` it
+finishes 5 seconds after `stop` with `"no_data_after_stop": true` in `info`.
 An empty data topic gives empty histograms.
 
 `interval` starts counting immediately and stops after the interval time is exceeded.
@@ -238,6 +242,18 @@ In order to stop counting send the stop command:
 }
 ```
 This will cause histogramming to stop and the final histogram to be published.
+
+To end the histograms at a given pulse time instead, send that time with the
+stop command:
+```json
+{
+  "cmd" : "stop",
+  "stop" : 1564727668779
+}
+```
+The histograms then finish as if configured with that `stop`. Data after it that
+was already histogrammed is reported as `stop_overrun_ms` in `info`. A `stop`
+later than the current one is ignored.
 
 ### Simulation mode
 When in simulation mode just-bin-it will try to provide simulated data matching

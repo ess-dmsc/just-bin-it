@@ -17,6 +17,10 @@ from just_bin_it.utilities import time_in_ns
 
 STOP_LEEWAY_MS = 5000
 
+# Seek this far before the start, the Kafka time is set after the pulse time
+# and clocks can differ.
+SEEK_MARGIN_MS = 1000
+
 # A producer can deliver a backlog to the partitions out of order, so the end
 # of the data has to hold for this long.
 END_SETTLE_MS = 250
@@ -58,7 +62,9 @@ def create_event_source(
         kafka_security_config,
         assign_to_end=not start,
     )
-    event_source = EventSource(consumer, start, stop, deserialise_func)
+    event_source = EventSource(
+        consumer, start, stop, deserialise_func, seek_margin_ms=SEEK_MARGIN_MS
+    )
 
     if start:
         event_source.seek_to_start_time()
@@ -147,7 +153,7 @@ class Processor:
                     self._end_since_ms = None
 
             self.processing_finished |= self.is_window_over(
-                self.time.time_in_ns() // 1_000_000, data_arriving=bool(event_buffer)
+                self.time.time_in_ns() // 1_000_000
             )
 
         if self.processing_finished:
@@ -164,46 +170,47 @@ class Processor:
         stop = self.histogrammer.stop
         if stop is None:
             return False
-        return any(msg_time <= stop for (_, msg_time), _, _ in event_buffer)
+        sources = {hist.source for hist in self.histogrammer.histograms}
+        any_source = any(not source for source in sources)
+        return any(
+            msg[1] <= stop * 1_000_000 and (any_source or msg[0] in sources)
+            for _, _, msg in event_buffer
+        )
 
-    def is_window_over(
-        self, current_time_ms, stop_leeway_ms=STOP_LEEWAY_MS, data_arriving=False
-    ):
+    def is_window_over(self, current_time_ms, stop_leeway_ms=STOP_LEEWAY_MS):
         """
-        The window is over when the stop time has passed and all partitions
-        have been read to their end for END_SETTLE_MS. If the end cannot be
-        confirmed it is over after the leeway.
+        The window is over when the source has sent a pulse after the stop
+        time and all partitions have been read to their end for END_SETTLE_MS.
+        If the source sends nothing after the stop time it is over after the
+        leeway.
 
         :param current_time_ms: The "wall-clock" time.
-        :param stop_leeway_ms: How long to wait for data that cannot be confirmed.
-        :param data_arriving: Whether data came in just now (then keep reading).
+        :param stop_leeway_ms: How long to wait for a silent source.
         """
         stop_time_ms = self.histogrammer.stop
         if stop_time_ms is None:
             return False
-        past_stop = self.histogrammer.is_finished() or (
-            not data_arriving and current_time_ms > stop_time_ms
-        )
-        if not past_stop:
+        passed = self.histogrammer.is_finished()
+        silent = current_time_ms > stop_time_ms + stop_leeway_ms
+        if not (passed or silent):
             self._end_since_ms = None
             return False
-
         if self._end_since_ms is None:
             self._end_since_ms = current_time_ms
-        if (
-            current_time_ms - self._end_since_ms >= self.end_settle_ms
-            and self.event_source.at_end()
-        ):
-            return True
+        if current_time_ms - self._end_since_ms < self.end_settle_ms:
+            return False
+        if not self.event_source.at_end():
+            return False
 
-        if not data_arriving and current_time_ms > stop_time_ms + stop_leeway_ms:
+        if not passed:
             logging.warning(
-                "Stopping %s ms after the stop time without reaching the end of the "
-                "data",
+                "No pulse after the stop time from the source, stopping %s ms "
+                "after the stop time",
                 stop_leeway_ms,
             )
-            return True
-        return False
+            # Could also be data that is late, let the client know
+            self.histogrammer.set_no_data_after_stop()
+        return True
 
     def process_command_message(self):
         """
@@ -212,7 +219,10 @@ class Processor:
         :return: True, if a stop has been requested.
         """
         msg = self.msg_queue.get(block=True, timeout=0.05)
-        if msg == "stop":
+        if isinstance(msg, tuple) and msg[0] == "stop_at":
+            logging.info("Stop time set to %s", msg[1])
+            self.histogrammer.set_stop_time(msg[1])
+        elif msg == "stop":
             logging.info("Stopping histogramming process")
             return True
         elif msg == "clear":
@@ -365,6 +375,15 @@ class HistogramProcess:
                 self._stats_queue.get()
 
             self._process.join()
+
+    def set_stop_time(self, stop_time):
+        """
+        Make the process stop at the given (pulse) time.
+
+        :param stop_time: The stop time in ms since the Unix epoch.
+        """
+        if self._process.is_alive():
+            self._msg_queue.put(("stop_at", stop_time))
 
     def clear(self):
         if self._process.is_alive():

@@ -86,7 +86,7 @@ class StubEventSource:
             (
                 (123, pulse_time_ms),  # Kafka timestamp tuple of (type, timestamp)
                 123,  # Kafka offset (irrelevant for these tests)
-                (source_name, pulse_time_ms * 1e6, time_of_flight, detector_id),
+                (source_name, pulse_time_ms * 1_000_000, time_of_flight, detector_id),
             )
         )
 
@@ -95,7 +95,7 @@ class StubEventSource:
             (
                 (123, pulse_time_ms),  # Kafka timestamp tuple of (type, timestamp)
                 123,  # Kafka offset (irrelevant for these tests)
-                (source_name, pulse_time_ms * 1e6, binned_data, None),
+                (source_name, pulse_time_ms * 1_000_000, binned_data, None),
             )
         )
 
@@ -150,14 +150,15 @@ class TestHistogramProcess:
             consumer.add_messages(
                 [
                     StubConsumerRecord(0, 0, b""),
-                    StubConsumerRecord(123, 1, b""),
+                    StubConsumerRecord(1_123, 1, b""),
                 ]
             )
             return consumer
 
         create_event_source(
             config,
-            start=123,
+            # Seeks to the Kafka time 1 s (the seek margin) before the start
+            start=2_123,
             stop=None,
             deserialise_func=lambda x: x,
             kafka_security_config={},
@@ -266,41 +267,59 @@ class TestHistogramProcess:
         _, (_, _, last_msg) = producer.messages[~0]
         return json.loads(last_msg)["state"]
 
-    def test_window_ends_as_soon_as_stop_time_passed_and_data_read_to_the_end(self):
+    def _windowed_processor(self, source=None):
         config = copy.deepcopy(CONFIG_1D)
         config["start"] = 1_000
         config["stop"] = 2_000
+        if source:
+            config["histograms"][0]["source"] = source
         start_time, stop_time, hist_configs, _, _ = parse_config(config)
-        event_source, processor, producer, time_source, _ = self.generate_processor(
-            hist_configs, start_time, stop_time
-        )
+        return self.generate_processor(hist_configs, start_time, stop_time)
 
-        time_source.curr_time_ns = 2_000 * 1_000_000
+    def test_window_ends_when_source_sends_pulse_after_stop_and_all_is_read(self):
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
+        )
+        event_source.append_data("det", 1_500, [5], [1])
+        event_source.append_data("det", 2_001, [5], [1])
+
         processor.process()
         assert not processor.processing_finished
-
-        time_source.curr_time_ns = 2_001 * 1_000_000
         processor.process()
 
         assert processor.processing_finished
         assert self._last_state(producer) == HISTOGRAM_STATES["FINISHED"]
+        _, (last_hist, _, _) = producer.messages[~0]
+        assert np.array_equal(last_hist.data, [1, 0, 0, 0, 0])
 
-    def _settling_processor(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["start"] = 1_000
-        config["stop"] = 2_000
-        start_time, stop_time, hist_configs, _, _ = parse_config(config)
-        event_source, processor, producer, time_source, _ = self.generate_processor(
-            hist_configs, start_time, stop_time
+    def test_window_does_not_end_while_data_is_still_waiting_in_kafka(self):
+        # Another partition may still hold older pulses
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
         )
-        processor.end_settle_ms = 250
-        return event_source, processor, producer, time_source
+        event_source.end_confirmed = False
+        event_source.append_data("det", 2_001, [5], [1])
+        processor.process()
+        processor.process()
+        assert not processor.processing_finished
+
+        event_source.append_data("det", 1_999, [5], [1])
+        event_source.end_confirmed = True
+        processor.process()
+        processor.process()
+
+        assert processor.processing_finished
+        _, (last_hist, _, _) = producer.messages[~0]
+        assert np.array_equal(last_hist.data, [1, 0, 0, 0, 0])
 
     def test_end_must_hold_for_the_settle_time(self):
-        event_source, processor, producer, time_source = self._settling_processor()
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
+        )
+        processor.end_settle_ms = 250
         time_source.curr_time_ns = 2_100 * 1_000_000
-        event_source.append_data("::source::", 1_500, [5], [123])
-        event_source.append_data("::source::", 2_001, [5], [123])
+        event_source.append_data("det", 1_500, [5], [1])
+        event_source.append_data("det", 2_001, [5], [1])
         processor.process()
         processor.process()
         assert not processor.processing_finished
@@ -313,15 +332,19 @@ class TestHistogramProcess:
         processor.process()
         assert processor.processing_finished
 
-    def test_earlier_message_delivered_late_to_another_partition_is_counted(self):
+    def test_earlier_pulse_delivered_late_to_another_partition_is_counted(self):
         # A backlog can reach the partitions out of order
-        event_source, processor, producer, time_source = self._settling_processor()
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
+        )
+        processor.end_settle_ms = 250
         time_source.curr_time_ns = 2_100 * 1_000_000
-        event_source.append_data("::source::", 2_001, [5], [123])
+        event_source.append_data("det", 2_001, [5], [1])
+        processor.process()
         processor.process()
 
         time_source.curr_time_ns = 2_200 * 1_000_000
-        event_source.append_data("::source::", 1_999, [15], [123])
+        event_source.append_data("det", 1_999, [15], [1])
         processor.process()
         time_source.curr_time_ns = 2_400 * 1_000_000
         processor.process()
@@ -333,36 +356,57 @@ class TestHistogramProcess:
         _, (last_hist, _, _) = producer.messages[~0]
         assert np.array_equal(last_hist.data, [0, 1, 0, 0, 0])
 
-    def test_later_messages_on_a_busy_topic_do_not_hold_the_end(self):
-        event_source, processor, producer, time_source = self._settling_processor()
-        event_source.append_data("::source::", 1_500, [5], [123])
+    def test_late_data_of_another_source_does_not_hold_the_end(self):
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
+        )
+        processor.end_settle_ms = 250
+        event_source.append_data("det", 1_500, [5], [1])
+        event_source.append_data("det", 2_001, [5], [1])
         for now in range(2_100, 2_500, 20):
             time_source.curr_time_ns = now * 1_000_000
-            event_source.append_data("::source::", now, [5], [123])
+            event_source.append_data("monitor", 1_900, [5], [1])
             for _ in range(3):
                 processor.process()
 
         assert processor.processing_finished
-        _, (last_hist, _, _) = producer.messages[~0]
-        assert np.array_equal(last_hist.data, [1, 0, 0, 0, 0])
 
-    def test_window_waits_while_end_of_data_not_confirmed(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["start"] = 1_000
-        config["stop"] = 2_000
-        start_time, stop_time, hist_configs, _, _ = parse_config(config)
-        event_source, processor, producer, time_source, _ = self.generate_processor(
-            hist_configs, start_time, stop_time
+    def test_later_pulses_on_a_busy_topic_do_not_hold_the_end(self):
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
         )
-        event_source.end_confirmed = False
+        processor.end_settle_ms = 250
+        event_source.append_data("det", 1_500, [5], [1])
+        event_source.append_data("det", 2_001, [5], [1])
+        for now in range(2_100, 2_500, 20):
+            time_source.curr_time_ns = now * 1_000_000
+            event_source.append_data("monitor", now, [5], [1])
+            for _ in range(3):
+                processor.process()
 
-        time_source.curr_time_ns = 3_000 * 1_000_000
+        assert processor.processing_finished
+
+    def test_pulse_after_stop_from_another_source_does_not_end_window(self):
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
+        )
+        event_source.append_data("monitor", 2_500, [5], [1])
+        processor.process()
+        processor.process()
+
+        assert not processor.processing_finished
+
+    def test_wall_clock_past_stop_does_not_end_window_while_pulses_may_come(self):
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
+        )
+        time_source.curr_time_ns = (2_000 + 4_000) * 1_000_000
         processor.process()
         assert not processor.processing_finished
 
-        # Data that was still on its way when the stop time passed is counted.
-        event_source.append_data("::source::", 1_500, [5], [123])
-        event_source.end_confirmed = True
+        # Pulse inside the window, produced late
+        event_source.append_data("det", 1_900, [5], [1])
+        event_source.append_data("det", 2_100, [5], [1])
         processor.process()
         processor.process()
 
@@ -370,23 +414,42 @@ class TestHistogramProcess:
         _, (last_hist, _, _) = producer.messages[~0]
         assert np.array_equal(last_hist.data, [1, 0, 0, 0, 0])
 
-    def test_window_ends_after_leeway_if_end_of_data_never_confirmed(self):
-        config = copy.deepcopy(CONFIG_1D)
-        config["start"] = 1_000
-        config["stop"] = 2_000
-        start_time, stop_time, hist_configs, _, _ = parse_config(config)
-        event_source, processor, producer, time_source, _ = self.generate_processor(
-            hist_configs, start_time, stop_time
+    def test_window_of_a_silent_source_ends_after_leeway(self):
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
         )
-        event_source.end_confirmed = False
-
         time_source.curr_time_ns = (2_000 + 5_000) * 1_000_000
         processor.process()
         assert not processor.processing_finished
 
         time_source.curr_time_ns = (2_000 + 5_001) * 1_000_000
         processor.process()
+
         assert processor.processing_finished
+        assert self._last_state(producer) == HISTOGRAM_STATES["FINISHED"]
+        assert json.loads(producer.messages[~0][1][2])["no_data_after_stop"] is True
+
+    def test_window_ended_by_a_pulse_has_no_missing_data_flag(self):
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
+        )
+        event_source.append_data("det", 1_500, [5], [1])
+        event_source.append_data("det", 2_001, [5], [1])
+        processor.process()
+        processor.process()
+
+        assert processor.processing_finished
+        assert "no_data_after_stop" not in json.loads(producer.messages[~0][1][2])
+
+    def test_window_of_a_silent_source_waits_for_kafka_to_be_read(self):
+        event_source, processor, producer, time_source, _ = self._windowed_processor(
+            "det"
+        )
+        event_source.end_confirmed = False
+        time_source.curr_time_ns = 10**18
+        processor.process()
+
+        assert not processor.processing_finished
 
     def test_open_ended_window_never_ends_by_itself(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -399,6 +462,48 @@ class TestHistogramProcess:
         processor.process()
 
         assert not processor.processing_finished
+
+    def test_stop_time_sent_later_ends_an_open_window(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 1_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+        event_source, processor, producer, time_source, msg_queue = (
+            self.generate_processor(hist_configs, start_time, stop_time)
+        )
+        event_source.append_data("det", 1_500, [5], [1])
+        processor.process()
+
+        msg_queue.put(("stop_at", 2_000))
+        time.sleep(0.05)
+        event_source.append_data("det", 1_900, [5], [1])
+        event_source.append_data("det", 2_100, [5], [1])
+        for _ in range(3):
+            processor.process()
+
+        assert processor.processing_finished
+        _, (last_hist, _, last_msg) = producer.messages[~0]
+        assert np.array_equal(last_hist.data, [2, 0, 0, 0, 0])
+        assert json.loads(last_msg)["stop"] == 2_000
+        assert "stop_overrun_ms" not in json.loads(last_msg)
+
+    def test_stop_time_before_data_already_counted_is_reported(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 1_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+        event_source, processor, producer, time_source, msg_queue = (
+            self.generate_processor(hist_configs, start_time, stop_time)
+        )
+        event_source.append_data("det", 2_250, [5], [1])
+        processor.process()
+
+        msg_queue.put(("stop_at", 2_000))
+        time.sleep(0.05)
+        processor.process()
+
+        assert processor.processing_finished
+        _, (_, _, last_msg) = producer.messages[~0]
+        assert json.loads(last_msg)["stop_overrun_ms"] == 250
+        assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
 
     def test_counting_for_an_interval_with_only_one_event_message_gets_data(self):
         config = copy.deepcopy(CONFIG_1D)
@@ -460,13 +565,11 @@ class TestHistogramProcess:
         irrelevant_det_ids = [123] * len(tofs)
 
         for time_offset in [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000]:
-            # Inject some fake data
             event_source.append_data(
                 "::source::", start_time + time_offset, tofs, irrelevant_det_ids
             )
+        for _ in range(10):
             processor.process()
-
-        processor.process()
 
         _, (last_hist, _, last_msg) = producer.messages[~0]
 

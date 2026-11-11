@@ -58,11 +58,13 @@ class EventSource:
         start_time: Optional[int],
         stop_time: Optional[int] = None,
         deserialise_function=deserialise_ev42,
+        seek_margin_ms: int = 0,
     ):
         self.consumer = consumer
         self.start_time = start_time
         self.stop_time = stop_time
         self.deserialise_function = deserialise_function
+        self.seek_margin_ms = seek_margin_ms
 
     def get_new_data(self):
         """
@@ -81,7 +83,8 @@ class EventSource:
 
     def seek_to_start_time(self):
         """
-        Repositions the consumer to the first message >= the start time.
+        Repositions the consumer to the first message >= the start time
+        minus the seek margin.
 
         Note: this is the Kafka message time.
 
@@ -90,31 +93,40 @@ class EventSource:
         offset_ranges = self.consumer.get_offset_range()
 
         # Kafka uses milliseconds
-        offsets = self.consumer.offset_for_time(self.start_time)
+        start_offsets = self.consumer.offset_for_time(self.start_time)
+        if self.seek_margin_ms:
+            seek_offsets = self.consumer.offset_for_time(
+                self.start_time - self.seek_margin_ms
+            )
+        else:
+            seek_offsets = list(start_offsets)
 
         for i, (lowest, highest) in enumerate(offset_ranges):
             if lowest == highest:
                 # Empty partition
-                offsets[i] = highest
+                seek_offsets[i] = highest
                 continue
 
-            if offsets[i] == -1:
+            if start_offsets[i] == -1:
                 logging.warning(
                     "Could not find corresponding offset for start time, so set "
                     "position to latest message"
                 )
-                offsets[i] = highest
+                start_offsets[i] = highest
 
-            if offsets[i] == lowest and lowest > 0:
+            if start_offsets[i] == lowest and lowest > 0:
                 # Only too old if Kafka has deleted data from the partition
                 raise TooOldTimeRequestedException(
                     "Cannot find start time in the data, either the supplied "
                     "time is too old or there is no data available"
                 )  # pragma: no mutate
 
-        self.consumer.seek_by_offsets(offsets)
+            if seek_offsets[i] == -1:
+                seek_offsets[i] = highest
 
-        return offsets
+        self.consumer.seek_by_offsets(seek_offsets)
+
+        return seek_offsets
 
 
 class HistogramSource:
