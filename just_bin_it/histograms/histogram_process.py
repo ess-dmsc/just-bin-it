@@ -15,6 +15,12 @@ from just_bin_it.histograms.histogram_factory import HistogramFactory
 from just_bin_it.histograms.histogrammer import HISTOGRAM_STATES, Histogrammer
 from just_bin_it.utilities import time_in_ns
 
+STOP_LEEWAY_MS = 5000
+
+# A producer can deliver a backlog to the partitions out of order, so the end
+# of the data has to hold for this long.
+END_SETTLE_MS = 250
+
 
 def create_simulated_event_source(configuration, start, stop):
     """
@@ -91,6 +97,7 @@ class Processor:
         stats_queue,
         publish_interval,
         time_source=Time(),
+        end_settle_ms=END_SETTLE_MS,
     ):
         """
         Constructor.
@@ -113,6 +120,8 @@ class Processor:
         self.publish_interval = publish_interval
         self.processing_finished = False
         self.time = time_source
+        self.end_settle_ms = end_settle_ms
+        self._end_since_ms = None
 
         # Publish initial empty histograms and stats.
         self.publish_data(self.time.time_in_ns())
@@ -134,13 +143,12 @@ class Processor:
                 # Even if the stop time has been exceeded there still may be data
                 # in the buffer to add.
                 self.histogrammer.add_data(event_buffer)
+                if self._has_data_up_to_stop(event_buffer):
+                    self._end_since_ms = None
 
-                if self.histogrammer.is_finished():
-                    self.processing_finished = True
-            else:
-                self.processing_finished |= self.is_stop_time_exceeded(
-                    self.time.time_in_ns() // 1_000_000, self.histogrammer.stop
-                )
+            self.processing_finished |= self.is_window_over(
+                self.time.time_in_ns() // 1_000_000, data_arriving=bool(event_buffer)
+            )
 
         if self.processing_finished:
             self.histogrammer.set_finished()
@@ -152,14 +160,48 @@ class Processor:
             self.time_to_publish = curr_time // 1_000_000 + self.publish_interval
             self.time_to_publish -= self.time_to_publish % self.publish_interval
 
-    def is_stop_time_exceeded(self, current_time_ms, stop_time_ms, stop_leeway_ms=5000):
+    def _has_data_up_to_stop(self, event_buffer):
+        stop = self.histogrammer.stop
+        if stop is None:
+            return False
+        return any(msg_time <= stop for (_, msg_time), _, _ in event_buffer)
+
+    def is_window_over(
+        self, current_time_ms, stop_leeway_ms=STOP_LEEWAY_MS, data_arriving=False
+    ):
         """
-        Compare the "wall-clock" time against the stop time.
+        The window is over when the stop time has passed and all partitions
+        have been read to their end for END_SETTLE_MS. If the end cannot be
+        confirmed it is over after the leeway.
+
+        :param current_time_ms: The "wall-clock" time.
+        :param stop_leeway_ms: How long to wait for data that cannot be confirmed.
+        :param data_arriving: Whether data came in just now (then keep reading).
         """
+        stop_time_ms = self.histogrammer.stop
         if stop_time_ms is None:
             return False
+        past_stop = self.histogrammer.is_finished() or (
+            not data_arriving and current_time_ms > stop_time_ms
+        )
+        if not past_stop:
+            self._end_since_ms = None
+            return False
 
-        if current_time_ms > stop_time_ms + stop_leeway_ms:
+        if self._end_since_ms is None:
+            self._end_since_ms = current_time_ms
+        if (
+            current_time_ms - self._end_since_ms >= self.end_settle_ms
+            and self.event_source.at_end()
+        ):
+            return True
+
+        if not data_arriving and current_time_ms > stop_time_ms + stop_leeway_ms:
+            logging.warning(
+                "Stopping %s ms after the stop time without reaching the end of the "
+                "data",
+                stop_leeway_ms,
+            )
             return True
         return False
 

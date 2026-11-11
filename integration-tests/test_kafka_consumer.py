@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 import time
 
 import pytest
@@ -11,6 +12,7 @@ from integration_settings import BROKERS
 
 from just_bin_it.endpoints.kafka_consumer import Consumer
 from just_bin_it.endpoints.kafka_tools import are_kafka_settings_valid
+from just_bin_it.exceptions import KafkaException
 from just_bin_it.utilities import time_in_ns
 
 POLL_INTERVAL_S = 0.05
@@ -21,6 +23,21 @@ def create_topics(admin_client, topics):
     futures = admin_client.create_topics(topics)
     for future in futures.values():
         future.result(timeout=KAFKA_TIMEOUT_S)
+
+    # Wait until every partition has a leader, otherwise early requests fail.
+    deadline = time.monotonic() + KAFKA_TIMEOUT_S
+    names = [topic.topic for topic in topics]
+    while time.monotonic() < deadline:
+        metadata = admin_client.list_topics(timeout=KAFKA_TIMEOUT_S).topics
+        if all(
+            name in metadata
+            and metadata[name].partitions
+            and all(p.leader >= 0 for p in metadata[name].partitions.values())
+            for name in names
+        ):
+            return
+        time.sleep(POLL_INTERVAL_S)
+    raise AssertionError(f"Topics {names} have no leaders")
 
 
 def wait_for_messages(consumer, number_messages, timeout=KAFKA_TIMEOUT_S):
@@ -82,8 +99,15 @@ class TestKafkaConsumer:
         self.producer.flush()
 
     def create_consumer(self, topic):
-        consumer = Consumer(BROKERS, [topic], {})
-        return consumer
+        # A new topic can briefly report "not leader for partition".
+        deadline = time.monotonic() + KAFKA_TIMEOUT_S
+        while True:
+            try:
+                return Consumer(BROKERS, [topic], {})
+            except KafkaException:
+                if time.monotonic() > deadline:
+                    raise
+                time.sleep(POLL_INTERVAL_S)
 
     def test_all_data_retrieved_when_one_partition(self):
         consumer = self.create_consumer(self.one_partition_topic_name)
@@ -118,6 +142,74 @@ class TestKafkaConsumer:
         assert isinstance(data[0].offset(), int)
         assert isinstance(data[0].timestamp()[1], int)
         assert isinstance(data[0].value(), bytes)
+
+    def wait_for_end(self, consumer, timeout=KAFKA_TIMEOUT_S):
+        deadline = time.monotonic() + timeout
+        messages = []
+        while time.monotonic() < deadline:
+            messages.extend(consumer.get_new_messages())
+            if consumer.at_end():
+                return messages
+            time.sleep(POLL_INTERVAL_S)
+        raise AssertionError("Timed out waiting for the end of the partitions")
+
+    def test_end_of_an_empty_topic_is_reached(self):
+        consumer = self.create_consumer(self.three_partition_topic_name)
+
+        assert self.wait_for_end(consumer) == []
+
+    def test_end_is_reached_only_after_all_partitions_are_read(self):
+        # Partition 2 stays empty.
+        self.put_messages_in(self.three_partition_topic_name, 10, partitions=2)
+        consumer = self.create_consumer(self.three_partition_topic_name)
+        consumer.seek_by_offsets([0, 0, 0])
+
+        assert not consumer.at_end()
+        assert len(self.wait_for_end(consumer)) == 10
+
+    def test_end_is_left_when_new_data_arrives_until_it_is_read(self):
+        consumer = self.create_consumer(self.one_partition_topic_name)
+        self.wait_for_end(consumer)
+
+        self.put_messages_in(self.one_partition_topic_name, 1)
+        # Let the fetch bring the new end of the partition, without reading.
+        time.sleep(0.5)
+
+        assert not consumer.at_end()
+        assert len(self.wait_for_end(consumer)) == 1
+
+    def test_end_is_reached_while_data_keeps_arriving(self):
+        # Must be at the end even though new data keeps coming
+        consumer = self.create_consumer(self.three_partition_topic_name)
+        self.wait_for_end(consumer)
+        stop = threading.Event()
+
+        def produce():
+            i = 0
+            while not stop.is_set():
+                self.producer.produce(
+                    self.three_partition_topic_name, b"x", partition=i % 3
+                )
+                self.producer.poll(0)
+                i += 1
+                time.sleep(1 / 14)
+
+        thread = threading.Thread(target=produce)
+        thread.start()
+        try:
+            checks = at_end = 0
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                consumer.get_new_messages()
+                checks += 1
+                at_end += consumer.at_end()
+                time.sleep(0.005)
+        finally:
+            stop.set()
+            thread.join()
+            self.producer.flush()
+
+        assert at_end > checks / 2
 
     def test_get_offsets_for_time_after_last_message(self):
         self.put_messages_in(

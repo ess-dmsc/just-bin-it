@@ -73,6 +73,12 @@ class EventSource:
         msgs = self.consumer.get_new_messages()
         return convert_messages(msgs, self.deserialise_function)
 
+    def at_end(self):
+        """
+        :return: True if all the data available in Kafka has been read.
+        """
+        return self.consumer.at_end()
+
     def seek_to_start_time(self):
         """
         Repositions the consumer to the first message >= the start time.
@@ -87,6 +93,11 @@ class EventSource:
         offsets = self.consumer.offset_for_time(self.start_time)
 
         for i, (lowest, highest) in enumerate(offset_ranges):
+            if lowest == highest:
+                # Empty partition
+                offsets[i] = highest
+                continue
+
             if offsets[i] == -1:
                 logging.warning(
                     "Could not find corresponding offset for start time, so set "
@@ -94,8 +105,8 @@ class EventSource:
                 )
                 offsets[i] = highest
 
-            if offsets[i] == lowest:
-                # We've gone back as far as we can.
+            if offsets[i] == lowest and lowest > 0:
+                # Only too old if Kafka has deleted data from the partition
                 raise TooOldTimeRequestedException(
                     "Cannot find start time in the data, either the supplied "
                     "time is too old or there is no data available"
@@ -196,6 +207,12 @@ class SimulatedEventSource:
                 data,
             )
         ]
+
+    def at_end(self):
+        """
+        Simulated data is always available.
+        """
+        return True
 
     def seek_to_start_time(self):
         """

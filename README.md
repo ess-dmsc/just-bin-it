@@ -182,6 +182,10 @@ If `stop` is supplied then histogramming will stop at that time.
 If both `start` and `stop` are in the past then historic data will be used
 (provided it still exists).
 
+Histogramming finishes once `stop` has passed and the data topic has been read
+to its end, or 5 seconds after `stop` if the end cannot be confirmed.
+An empty data topic gives empty histograms.
+
 `interval` starts counting immediately and stops after the interval time is exceeded.
 
 If `interval`"` is defined in combination with `start` and/or `stop` then the

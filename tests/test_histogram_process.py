@@ -69,9 +69,14 @@ class SpyHistogrammer:
 class StubEventSource:
     def __init__(self):
         self.data = []
+        # Whether Kafka has confirmed the end of every partition
+        self.end_confirmed = True
 
     def get_new_data(self):
         return [self.data.pop(0)] if self.data else None
+
+    def at_end(self):
+        return self.end_confirmed and not self.data
 
     def seek_to_start_time(self):
         pass
@@ -119,7 +124,14 @@ class TestHistogramProcess:
         time_source = StubTime()
         msg_queue = Queue()
         processor = Processor(
-            histogrammer, event_source, hist_sink, msg_queue, Queue(), 1000, time_source
+            histogrammer,
+            event_source,
+            hist_sink,
+            msg_queue,
+            Queue(),
+            1000,
+            time_source,
+            end_settle_ms=0,
         )
         return event_source, processor, producer, time_source, msg_queue
 
@@ -249,6 +261,144 @@ class TestHistogramProcess:
         assert json.loads(last_msg)["diff"] == 0
         assert json.loads(last_msg)["rate"] == 0
         assert json.loads(last_msg)["state"] == HISTOGRAM_STATES["FINISHED"]
+
+    def _last_state(self, producer):
+        _, (_, _, last_msg) = producer.messages[~0]
+        return json.loads(last_msg)["state"]
+
+    def test_window_ends_as_soon_as_stop_time_passed_and_data_read_to_the_end(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 1_000
+        config["stop"] = 2_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+        event_source, processor, producer, time_source, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
+        )
+
+        time_source.curr_time_ns = 2_000 * 1_000_000
+        processor.process()
+        assert not processor.processing_finished
+
+        time_source.curr_time_ns = 2_001 * 1_000_000
+        processor.process()
+
+        assert processor.processing_finished
+        assert self._last_state(producer) == HISTOGRAM_STATES["FINISHED"]
+
+    def _settling_processor(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 1_000
+        config["stop"] = 2_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+        event_source, processor, producer, time_source, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
+        )
+        processor.end_settle_ms = 250
+        return event_source, processor, producer, time_source
+
+    def test_end_must_hold_for_the_settle_time(self):
+        event_source, processor, producer, time_source = self._settling_processor()
+        time_source.curr_time_ns = 2_100 * 1_000_000
+        event_source.append_data("::source::", 1_500, [5], [123])
+        event_source.append_data("::source::", 2_001, [5], [123])
+        processor.process()
+        processor.process()
+        assert not processor.processing_finished
+
+        time_source.curr_time_ns = 2_300 * 1_000_000
+        processor.process()
+        assert not processor.processing_finished
+
+        time_source.curr_time_ns = 2_400 * 1_000_000
+        processor.process()
+        assert processor.processing_finished
+
+    def test_earlier_message_delivered_late_to_another_partition_is_counted(self):
+        # A backlog can reach the partitions out of order
+        event_source, processor, producer, time_source = self._settling_processor()
+        time_source.curr_time_ns = 2_100 * 1_000_000
+        event_source.append_data("::source::", 2_001, [5], [123])
+        processor.process()
+
+        time_source.curr_time_ns = 2_200 * 1_000_000
+        event_source.append_data("::source::", 1_999, [15], [123])
+        processor.process()
+        time_source.curr_time_ns = 2_400 * 1_000_000
+        processor.process()
+        assert not processor.processing_finished
+
+        time_source.curr_time_ns = 2_500 * 1_000_000
+        processor.process()
+        assert processor.processing_finished
+        _, (last_hist, _, _) = producer.messages[~0]
+        assert np.array_equal(last_hist.data, [0, 1, 0, 0, 0])
+
+    def test_later_messages_on_a_busy_topic_do_not_hold_the_end(self):
+        event_source, processor, producer, time_source = self._settling_processor()
+        event_source.append_data("::source::", 1_500, [5], [123])
+        for now in range(2_100, 2_500, 20):
+            time_source.curr_time_ns = now * 1_000_000
+            event_source.append_data("::source::", now, [5], [123])
+            for _ in range(3):
+                processor.process()
+
+        assert processor.processing_finished
+        _, (last_hist, _, _) = producer.messages[~0]
+        assert np.array_equal(last_hist.data, [1, 0, 0, 0, 0])
+
+    def test_window_waits_while_end_of_data_not_confirmed(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 1_000
+        config["stop"] = 2_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+        event_source, processor, producer, time_source, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
+        )
+        event_source.end_confirmed = False
+
+        time_source.curr_time_ns = 3_000 * 1_000_000
+        processor.process()
+        assert not processor.processing_finished
+
+        # Data that was still on its way when the stop time passed is counted.
+        event_source.append_data("::source::", 1_500, [5], [123])
+        event_source.end_confirmed = True
+        processor.process()
+        processor.process()
+
+        assert processor.processing_finished
+        _, (last_hist, _, _) = producer.messages[~0]
+        assert np.array_equal(last_hist.data, [1, 0, 0, 0, 0])
+
+    def test_window_ends_after_leeway_if_end_of_data_never_confirmed(self):
+        config = copy.deepcopy(CONFIG_1D)
+        config["start"] = 1_000
+        config["stop"] = 2_000
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+        event_source, processor, producer, time_source, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
+        )
+        event_source.end_confirmed = False
+
+        time_source.curr_time_ns = (2_000 + 5_000) * 1_000_000
+        processor.process()
+        assert not processor.processing_finished
+
+        time_source.curr_time_ns = (2_000 + 5_001) * 1_000_000
+        processor.process()
+        assert processor.processing_finished
+
+    def test_open_ended_window_never_ends_by_itself(self):
+        config = copy.deepcopy(CONFIG_1D)
+        start_time, stop_time, hist_configs, _, _ = parse_config(config)
+        event_source, processor, producer, time_source, _ = self.generate_processor(
+            hist_configs, start_time, stop_time
+        )
+
+        time_source.curr_time_ns = 10**18
+        processor.process()
+
+        assert not processor.processing_finished
 
     def test_counting_for_an_interval_with_only_one_event_message_gets_data(self):
         config = copy.deepcopy(CONFIG_1D)

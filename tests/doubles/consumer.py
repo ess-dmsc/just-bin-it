@@ -72,11 +72,20 @@ class StubConsumer(Consumer):
         for tp, offset in zip(self.topic_partitions.values(), offsets):
             tp["offset"] = offset
 
+    def delete_messages(self, count, partition=0):
+        """
+        Simulate Kafka's retention deleting the oldest messages.
+        """
+        tp = self.topic_partitions[partition]
+        tp["deleted"] = count
+        tp["offset"] = max(tp["offset"], count)
+
     def get_offset_range(self):
         offset_ranges = []
         for tp in self.topic_partitions.values():
+            deleted = tp.get("deleted", 0)
             if tp["messages"]:
-                offset_ranges.append((0, len(tp["messages"])))
+                offset_ranges.append((deleted, len(tp["messages"])))
             else:
                 offset_ranges.append((0, 0))
 
@@ -85,9 +94,9 @@ class StubConsumer(Consumer):
     def offset_for_time(self, requested_time):
         result = []
         for tp in self.topic_partitions.values():
-            count = 0
+            count = tp.get("deleted", 0)
             found = False
-            for msg in tp["messages"]:
+            for msg in tp["messages"][count:]:
                 if msg.timestamp() >= requested_time:
                     result.append(count)
                     found = True
@@ -97,6 +106,11 @@ class StubConsumer(Consumer):
             if not found:
                 result.append(None)
         return result
+
+    def at_end(self):
+        return all(
+            tp["offset"] >= len(tp["messages"]) for tp in self.topic_partitions.values()
+        )
 
     def get_positions(self):
         positions = []

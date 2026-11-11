@@ -118,6 +118,7 @@ class TestEventSourceSinglePartition:
         assert compare_two_messages(self.messages[45], new_data[0])
 
     def test_given_too_old_time_then_throws(self):
+        self.consumer.delete_messages(10)
         self.event_source.start_time = -1
 
         with pytest.raises(TooOldTimeRequestedException):
@@ -238,3 +239,46 @@ class TestEventSourceMultiplePartitions:
         offsets = self.event_source.seek_to_start_time()
 
         assert offsets == [50, 50, 49]
+
+
+class TestEventSourceEmptyPartitions:
+    def test_seeking_on_an_empty_topic_does_not_throw(self):
+        consumer = StubConsumer(["broker"], ["topic"])
+        event_source = EventSource(consumer, 1234, deserialise_function=lambda x: x)
+
+        offsets = event_source.seek_to_start_time()
+
+        assert offsets == [0]
+        assert event_source.get_new_data() == []
+
+    def test_seeking_with_one_empty_partition_does_not_throw(self):
+        messages = get_fake_ev42_messages(20)
+        consumer = StubConsumer(["broker"], ["topic"], num_partitions=2)
+        consumer.add_messages(serialise_messages(messages), 0)
+        event_source = EventSource(consumer, 0, deserialise_function=lambda x: x)
+        _, _, expected_message = messages[5]
+        event_source.start_time = expected_message.pulse_time
+
+        offsets = event_source.seek_to_start_time()
+
+        assert offsets == [5, 0]
+        assert compare_two_messages(messages[5], event_source.get_new_data()[0])
+
+    def test_too_old_time_on_a_partition_with_deleted_data_still_throws(self):
+        messages = get_fake_ev42_messages(20)
+        consumer = StubConsumer(["broker"], ["topic"], num_partitions=2)
+        consumer.add_messages(serialise_messages(messages), 0)
+        consumer.delete_messages(5, 0)
+        event_source = EventSource(consumer, -1, deserialise_function=lambda x: x)
+
+        with pytest.raises(TooOldTimeRequestedException):
+            event_source.seek_to_start_time()
+
+    def test_partition_that_starts_after_the_start_time_is_not_too_old(self):
+        # Nothing was ever deleted, so nothing after the start is missing.
+        messages = get_fake_ev42_messages(20)
+        consumer = StubConsumer(["broker"], ["topic"], num_partitions=2)
+        consumer.add_messages(serialise_messages(messages), 0)
+        event_source = EventSource(consumer, -1, deserialise_function=lambda x: x)
+
+        assert event_source.seek_to_start_time() == [0, 0]

@@ -29,6 +29,7 @@ class Consumer:
         """
         self.topic_partitions = []
         self._assigned = False
+        self._next_offsets = {}
         try:
             self.consumer = self._create_consumer(brokers, security_config)
             self._assign_topics(topics, assign_to_end)
@@ -36,7 +37,12 @@ class Consumer:
             raise KafkaException(error)
 
     def _create_consumer(self, brokers, security_config):
-        options = {"bootstrap.servers": ",".join(brokers), "group.id": uuid.uuid4()}
+        options = {
+            "bootstrap.servers": ",".join(brokers),
+            "group.id": uuid.uuid4(),
+            # So at_end() notices idle partitions quickly
+            "fetch.wait.max.ms": 100,
+        }
         return KafkaConsumer({**options, **security_config})
 
     def _assign_topics(self, topics, assign_to_end):
@@ -61,6 +67,7 @@ class Consumer:
                     1
                 ]
                 tp.offset = high_watermark
+                self._next_offsets[tp.partition] = high_watermark
 
             self.consumer.assign(self.topic_partitions)
             self._assigned = True
@@ -77,6 +84,10 @@ class Consumer:
             if not messages:
                 break
             for message in messages:
+                if message.error():
+                    logging.warning("Kafka consumer error: %s", message.error())
+                    continue
+                self._next_offsets[message.partition()] = message.offset() + 1
                 data.append(message)
 
             for tp in self.topic_partitions:
@@ -86,6 +97,25 @@ class Consumer:
                     self.consumer.position([tp])[0].offset,
                 )
         return data
+
+    def at_end(self):
+        """
+        Whether all partitions have been read up to their high watermark, as
+        of the last fetch (no request to the broker).
+
+        :return: True if all partitions have been read to their end.
+        """
+        if not self._assigned:
+            return False
+        try:
+            for tp in self.topic_partitions:
+                _, high = self.consumer.get_watermark_offsets(tp, cached=True)
+                if high < 0 or self._next_offsets.get(tp.partition, -1) < high:
+                    return False
+        except KafkaError as error:
+            logging.debug("Could not get cached watermarks: %s", error)
+            return False
+        return True
 
     def offset_for_time(self, start_time: int):
         """
@@ -113,6 +143,7 @@ class Consumer:
         """
         for tp, offset in zip(self.topic_partitions, offsets):
             tp.offset = offset
+            self._next_offsets[tp.partition] = offset
 
         if self._assigned:
             for tp in self.topic_partitions:
